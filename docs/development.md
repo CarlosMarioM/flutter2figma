@@ -35,7 +35,9 @@ packages/
                                    project resolution, class discovery, expression → DartValue
   compiler/lib/src/compiler.dart   widget dispatch + per-widget handlers + sizing model
   compiler/lib/src/evaluator.dart  DartValue → colors, insets, radii, text styles, alignment
-  compiler/lib/src/material_theme.dart   M3 color scheme / typescale / elevation shadows
+  compiler/lib/src/material_theme.dart   MaterialTheme (resolved theme), M3 baseline schemes / typescale / shadows
+  compiler/lib/src/theme_extractor.dart  MaterialApp → ThemeData → MaterialTheme
+  compiler/lib/src/color_scheme.dart     ColorScheme fallbacks, .light/.dark defaults, fromSeed
   compiler/lib/src/text_style.dart TextStyleSpec (partial style, merge, resolve)
   compiler/lib/src/simplify.dart   wrapper folding pass
   figma/lib/src/renderer.dart      IR → design.json
@@ -82,7 +84,9 @@ npm test
 | --- | --- | --- | --- |
 | IR | `packages/ir/test` | – | JSON round trip, colors |
 | Analyzer | `packages/analyzer/test` | `examples/basic` pub get | discovery, constants into the SDK, inlining, locals, bindings |
-| Compiler | `packages/compiler/test` | – | handlers, sizing, folding, theme defaults. Inputs are hand-built `DartValue`s (`w()`, `v()`, `lit()`, `ref()` helpers), so no SDK is needed |
+| Theme extraction | `packages/compiler/test/theme_extraction_test.dart` | `examples/basic` pub get | static theme equals Flutter's resolved theme (fixture below) |
+| Flutter ground truth | `examples/basic/test` | FVM Flutter | dumps the real `Theme.of(context)` into the fixture |
+| Compiler | `packages/compiler/test` | – | handlers, sizing, folding, theme behavior (`theme_test.dart`). Inputs are hand-built `DartValue`s (`w()`, `v()`, `lit()`, `ref()` helpers), so no SDK is needed |
 | Renderer | `packages/figma/test` | – | Figma enums, font style names, downgrades |
 | Golden | `packages/cli/test` | `examples/basic` pub get | full pipeline → `basic.design.json` |
 | Plugin | `figma-plugin/test` | the golden | imports the golden into the strict mock; fonts, stack/absolute placement |
@@ -102,6 +106,23 @@ cd ../../figma-plugin && npm test # the plugin must still import it
 ```
 
 Commit the golden together with the code that changed it.
+
+### The theme fixture
+
+`packages/compiler/test/goldens/basic_theme.json` is written by **Flutter**,
+not by us, and it is the reference the extractor must match. Regenerate it
+when the example's theme or the Flutter version changes:
+
+```sh
+cd examples/basic && UPDATE_GOLDENS=1 fvm flutter test test/theme_ground_truth_test.dart
+cd ../../packages/compiler && dart test test/theme_extraction_test.dart
+```
+
+If the second command fails after a Flutter upgrade, Flutter's theme
+resolution changed. Fix the extractor rather than the fixture. To support a
+new theme property, add it to both dumps, the Flutter test and
+`theme_extraction_test.dart`'s `dump()`, so it's checked against the real
+thing.
 
 ### The Figma mock
 
@@ -234,7 +255,7 @@ in the plugin UI.
 | Symptom | Where to look |
 | --- | --- |
 | Widget shows as `⚠ Unresolved: …` | `analyze --json`: the value is an `UnknownValue`. Usually a method call returns the widget (`buildHeader()`), which isn't followed yet. |
-| Wrong color or size value | `analyze --json`: check whether the `RefValue` has a `constant`. If not, the declaration isn't `const` or its initializer isn't available. |
+| Wrong color or size value | `analyze --json`: check whether the `RefValue` has `resolved` (or the `CallValue` has `result`). If not, the declaration isn't `const`, isn't in the project, or has no single return expression. |
 | Wrong fixed/hug/fill | `build/flutter2figma/ir.json`: follow `width`/`height` down from the screen and apply the sizing checklist. |
 | Layer missing after folding | Look at the node's `origin` in `ir.json`; folded widgets are listed there. Folding rules: `simplify.dart`. |
 | Figma warns or rejects a combination | `design.json` → `diagnostics`; the renderer logs each downgrade. |
@@ -250,15 +271,24 @@ in the plugin UI.
     `namePart.typeName`.
   - Named arguments are `NamedArgument` (there is no `NamedExpression`).
   - Expect breaking changes when upgrading, and upgrade on purpose.
-- **Material defaults assume `ThemeData()`**, i.e. the baseline M3 scheme.
-  Apps that use `ColorScheme.fromSeed` will export baseline colors until theme
-  extraction exists.
+- **`MaterialApp.theme` is not what widgets render with.** Font sizes and line
+  heights are only merged in by `Theme.of(context)`, through `ThemeData.localize`.
+  That is why the ground truth reads `Theme.of` inside the app.
+- **Pin `material_color_utilities` to the SDK's version**, which is 0.13.0 in
+  `packages/flutter/pubspec.yaml`. Otherwise `fromSeed` colors drift. Bump it
+  together with `.fvmrc`.
+- **`TextTheme.apply(displayColor:)`** covers display\* and
+  headlineLarge/Medium only; `headlineSmall` takes `bodyColor`. This is a
+  Flutter quirk that we mirror.
 - **TypeScript 7** doesn't pick up `@figma/plugin-typings` through `typeRoots`.
   `tsconfig.json` lists it under `types`.
 - **Node 21's `node --test`** doesn't accept a directory, so the npm script
   names the test file.
-- **`.fvmrc` pins the `stable` channel**, not an exact version. If Flutter's
-  M3 defaults change upstream, re-check `material_theme.dart` against the SDK.
+- **`.fvmrc` pins the `stable` channel**, not an exact version. After a Flutter
+  upgrade:
+  - re-run the theme ground truth;
+  - regenerate the baseline scheme tables in `material_theme.dart` from
+    `theme_data.dart`. Don't edit them by hand.
 
 ## Conventions
 

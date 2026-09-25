@@ -57,10 +57,10 @@ void main() {
     final container = (column['children'] as ListValue).items[2] as ObjectValue;
     final color = (container['decoration'] as ObjectValue)['color'] as RefValue;
     expect(color.dotted, 'Colors.blue');
-    final swatch = color.constant as ObjectValue;
+    final swatch = color.resolved as ObjectValue;
     expect(swatch.type, 'MaterialColor');
     final primary = swatch.arg(0) as RefValue;
-    expect((primary.constant as LiteralValue).value, 0xFF2196F3);
+    expect((primary.resolved as LiteralValue).value, 0xFF2196F3);
   });
 
   test('inlines project widgets with constructor arguments bound', () {
@@ -101,5 +101,38 @@ void main() {
         .arg(0);
     expect(value, isA<UnknownValue>());
     expect((value as UnknownValue).code, 'value');
+  });
+
+  test('follows project getters and static methods with bound arguments', () {
+    // theme: AppTheme.light  →  static get light => _build(Brightness.light)
+    final app = widget('MainApp').tree as ObjectValue;
+    final theme = app['theme'] as RefValue;
+    expect(theme.dotted, 'AppTheme.light');
+    final call = theme.resolved as CallValue;
+    expect(call.method, '_build');
+
+    // _build returns ThemeData(colorScheme: colorScheme, ...) where
+    // `final colorScheme = ColorScheme.fromSeed(brightness: brightness, ...)`.
+    final data = call.result as ObjectValue;
+    expect(data.type, 'ThemeData');
+    final scheme = data['colorScheme'] as ObjectValue;
+    expect(scheme.displayName, 'ColorScheme.fromSeed');
+    expect((scheme['brightness'] as RefValue).dotted, 'Brightness.light');
+    final seed = scheme['seedColor'] as RefValue;
+    expect(seed.dotted, 'seed');
+    expect((seed.resolved as ObjectValue).type, 'Color');
+  });
+
+  test('inlines instance helper methods with named arguments', () {
+    final profile = widget('ProfileScreen').tree as ObjectValue;
+    final column = (profile['body'] as ObjectValue)['child'] as ObjectValue;
+    final actions = (column['children'] as ListValue).items.last as CallValue;
+    expect(actions.method, '_actions');
+    final row = actions.result as ObjectValue;
+    expect(row.type, 'Row');
+    expect(row.source, 'lib/profile_screen.dart:40');
+    final save = (row['children'] as ListValue).items.last as ObjectValue;
+    final label = save['child'] as ObjectValue;
+    expect((label.arg(0) as LiteralValue).value, 'Save');
   });
 }

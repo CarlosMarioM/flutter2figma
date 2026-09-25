@@ -29,17 +29,21 @@ class ProfileScreen extends StatelessWidget {
               ],
             ),
             const Spacer(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(onPressed: () {}, child: const Text('Cancel')),
-                const SizedBox(width: 8),
-                FilledButton(onPressed: () {}, child: const Text('Save')),
-              ],
-            ),
+            _actions(primary: 'Save'),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _actions({required String primary}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        TextButton(onPressed: () {}, child: const Text('Cancel')),
+        const SizedBox(width: 8),
+        FilledButton(onPressed: () {}, child: Text(primary)),
+      ],
     );
   }
 }

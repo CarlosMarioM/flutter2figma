@@ -53,7 +53,7 @@ test('imports the basic example exported by the CLI', async () => {
   assert.deepEqual(JSON.parse(column.pluginData.get(PLUGIN_DATA_KEY)!).origin, ['Padding', 'Column', 'SizedBox']);
 
   const welcome = find(home, 'Welcome') as MockText;
-  assert.deepEqual(welcome.fontName, { family: 'Roboto', style: 'Bold' });
+  assert.deepEqual(welcome.fontName, { family: 'Inter', style: 'Bold' }); // from the app's ThemeData
   assert.equal(welcome.fontSize, 32);
   assert.equal(welcome.characters, 'Welcome');
 

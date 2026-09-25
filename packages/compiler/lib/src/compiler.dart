@@ -5,6 +5,7 @@ import 'evaluator.dart';
 import 'material_theme.dart';
 import 'simplify.dart';
 import 'text_style.dart';
+import 'theme_extractor.dart';
 
 /// Layout constraints flowing down the tree, reduced to what matters for
 /// choosing fixed / hug / fill.
@@ -71,7 +72,6 @@ const _passThrough = {
   'Form',
   'Directionality',
   'MediaQuery',
-  'Theme',
   'IconTheme',
   'ConstrainedBox',
   'LimitedBox',
@@ -105,14 +105,25 @@ const _passThrough = {
 /// Compiles analyzed Flutter widget trees into [IrDocument]s.
 class FlutterCompiler {
   FlutterCompiler({
-    this.theme = const MaterialTheme(),
+    MaterialTheme theme = const MaterialTheme(),
+    this.extractTheme = true,
+    this.brightness,
     this.screenWidth = 390,
     this.screenHeight = 844,
     this.listPreviewCount = 3,
   }) : eval = ValueEvaluator(theme);
 
-  final MaterialTheme theme;
+  /// Read the app's `MaterialApp` theme in [compile]. When false, the
+  /// constructor's `theme` is used as is.
+  final bool extractTheme;
+
+  /// Which app theme to export; null follows `MaterialApp.themeMode`.
+  final ThemeBrightness? brightness;
+
   final ValueEvaluator eval;
+
+  /// The ambient theme (`Theme.of(context)`) at the current point.
+  MaterialTheme get theme => eval.theme;
   final double screenWidth;
   final double screenHeight;
 
@@ -123,6 +134,11 @@ class FlutterCompiler {
 
   IrDocument compile(ProjectAnalysis analysis) {
     _diagnostics.clear();
+    if (extractTheme) {
+      final extractor = ThemeExtractor(eval);
+      eval.theme = extractor.fromProject(analysis, brightness: brightness);
+      _absorb(extractor.diagnostics);
+    }
     final screens = [
       for (final w in analysis.screens)
         compileScreen(w.name, w.tree!, w.source),
@@ -165,6 +181,12 @@ class FlutterCompiler {
       source: source,
       root: simplify(root) as IrFrame,
     );
+  }
+
+  void _absorb(Iterable<IrDiagnostic> diagnostics) {
+    for (final d in diagnostics) {
+      _diagnostics.putIfAbsent('${d.message}@${d.source}', () => d);
+    }
   }
 
   void _warn(
@@ -307,6 +329,13 @@ class FlutterCompiler {
         );
       case 'SelectableText':
         return _text(w, c, eval.text(w.arg(0)));
+      case 'Theme':
+        final extractor = ThemeExtractor(eval);
+        final nested = extractor.themeData(w['data'], current: theme);
+        _absorb(extractor.diagnostics);
+        final node = _withTheme(nested, () => _widget(w['child'], c));
+        node.origin = ['Theme', ...node.origin];
+        return node;
       case 'DefaultTextStyle':
         return _widget(w['child'], c.withText(eval.textStyle(w['style'])));
       case 'Icon':
@@ -384,6 +413,17 @@ class FlutterCompiler {
   // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
+
+  /// Compiles with [nested] as `Theme.of(context)`.
+  T _withTheme<T>(MaterialTheme nested, T Function() body) {
+    final outer = eval.theme;
+    eval.theme = nested;
+    try {
+      return body();
+    } finally {
+      eval.theme = outer;
+    }
+  }
 
   bool _isLiteral(DartValue? v, Object? value) =>
       v is LiteralValue && v.value == value;
@@ -498,19 +538,27 @@ class FlutterCompiler {
       origin: ['Scaffold'],
       width: const IrSizing.fill(),
       height: const IrSizing.fill(),
-      fill: eval.color(w['backgroundColor']) ?? theme.color('surface'),
+      fill:
+          eval.color(w['backgroundColor']) ??
+          theme.scaffoldBackground ??
+          theme.color('surface'),
       children: children,
     );
   }
 
   IrFrame _appBar(ObjectValue w, _Ctx c) {
+    final appBarTheme = theme.appBar;
     final foreground =
-        eval.color(w['foregroundColor']) ?? theme.color('onSurface');
+        eval.color(w['foregroundColor']) ??
+        appBarTheme.foregroundColor ??
+        theme.color('onSurface');
+    final titleStyle =
+        eval.textStyle(w['titleTextStyle']) ??
+        appBarTheme.titleTextStyle ??
+        TextStyleSpec(color: foreground);
     final titleCtx = c
         .withText(
-          theme
-              .textStyle('titleLarge')!
-              .merge(TextStyleSpec(color: foreground)),
+          theme.textStyle('titleLarge')!.merge(titleStyle),
           iconColor: foreground,
         )
         .withBox(const _Box(forceW: true));
@@ -518,7 +566,10 @@ class FlutterCompiler {
     final title = w['title'];
     final actions = eval.deref(w['actions']);
     final hasActions = actions is ListValue && actions.items.isNotEmpty;
-    final centerTitle = _isLiteral(w['centerTitle'], true);
+    final centerTitle = switch (w['centerTitle']) {
+      LiteralValue(value: final bool b) => b,
+      _ => appBarTheme.centerTitle ?? false,
+    };
 
     final titleNode = title == null ? null : _widget(title, titleCtx);
     if (titleNode is IrText && centerTitle) {
@@ -531,15 +582,22 @@ class FlutterCompiler {
       origin: ['AppBar'],
       direction: IrLayoutDirection.horizontal,
       width: const IrSizing.fill(),
-      height: IrSizing.fixed(eval.number(w['toolbarHeight']) ?? 64),
+      height: IrSizing.fixed(
+        eval.number(w['toolbarHeight']) ?? appBarTheme.toolbarHeight ?? 64,
+      ),
       crossAlign: IrCrossAlign.center,
       gap: leading != null ? 16 : 0,
       padding: IrInsets(
         left: leading != null ? 4 : 16,
         right: hasActions ? 4 : 16,
       ),
-      fill: eval.color(w['backgroundColor']) ?? theme.color('surface'),
-      shadows: theme.shadows(eval.number(w['elevation']) ?? 0),
+      fill:
+          eval.color(w['backgroundColor']) ??
+          appBarTheme.backgroundColor ??
+          theme.color('surface'),
+      shadows: theme.shadows(
+        eval.number(w['elevation']) ?? appBarTheme.elevation ?? 0,
+      ),
       children: [
         if (leading != null) _widget(leading, titleCtx.withBox(const _Box())),
         if (titleNode != null) titleNode..width = const IrSizing.fill(),
@@ -812,7 +870,9 @@ class FlutterCompiler {
   IrNode _card(ObjectValue w, _Ctx c) {
     final ws = _hugOrFill(c.box.forceW);
     final hs = _hugOrFill(c.box.forceH);
+    final cardTheme = theme.card;
     final (shapeCorners, shapeStroke) = eval.shape(w['shape']);
+    final (themeCorners, themeStroke) = eval.shape(cardTheme.shape);
     final (
       defaultFill,
       defaultElevation,
@@ -832,10 +892,12 @@ class FlutterCompiler {
       origin: ['Card'],
       width: ws,
       height: hs,
-      fill: eval.color(w['color']) ?? defaultFill,
-      corners: shapeCorners ?? const IrCorners.all(12),
-      stroke: shapeStroke ?? defaultStroke,
-      shadows: theme.shadows(eval.number(w['elevation']) ?? defaultElevation),
+      fill: eval.color(w['color']) ?? cardTheme.color ?? defaultFill,
+      corners: shapeCorners ?? themeCorners ?? const IrCorners.all(12),
+      stroke: shapeStroke ?? themeStroke ?? defaultStroke,
+      shadows: theme.shadows(
+        eval.number(w['elevation']) ?? cardTheme.elevation ?? defaultElevation,
+      ),
       clip: w['clipBehavior'] != null,
     );
     if (w['child'] != null) {
@@ -843,7 +905,7 @@ class FlutterCompiler {
     }
     return _withMargin(
       frame,
-      eval.insets(w['margin']) ?? const IrInsets.all(4),
+      eval.insets(w['margin']) ?? cardTheme.margin ?? const IrInsets.all(4),
     );
   }
 
@@ -1213,16 +1275,24 @@ class FlutterCompiler {
     double? fixedWidth, fixedHeight;
     var minWidth = 64.0, minHeight = 40.0;
     final style = eval.deref(w['style']);
-    Map<String, DartValue>? overrides;
+    Map<String, DartValue>? widgetStyle;
     if (style is CallValue && style.method == 'styleFrom') {
-      overrides = style.named;
+      widgetStyle = style.named;
     }
     if (style is ObjectValue && style.type == 'ButtonStyle') {
-      overrides = style.named;
+      widgetStyle = style.named;
     }
-    if (overrides != null) {
-      background = eval.color(overrides['backgroundColor']) ?? background;
-      foreground = eval.color(overrides['foregroundColor']) ?? foreground;
+    TextStyleSpec? labelStyle;
+    // Theme style first, then the widget's own: per property, the widget wins.
+    for (final overrides in [theme.buttonStyles[kind], widgetStyle].nonNulls) {
+      final (bgKey, fgKey) = enabled
+          ? ('backgroundColor', 'foregroundColor')
+          : ('disabledBackgroundColor', 'disabledForegroundColor');
+      background = eval.color(overrides[bgKey]) ?? background;
+      foreground = eval.color(overrides[fgKey]) ?? foreground;
+      labelStyle =
+          eval.textStyle(eval.unwrapStateProperty(overrides['textStyle'])) ??
+          labelStyle;
       padding = eval.insets(overrides['padding']) ?? padding;
       elevation =
           eval.number(eval.unwrapStateProperty(overrides['elevation'])) ??
@@ -1250,6 +1320,7 @@ class FlutterCompiler {
         .withText(
           theme
               .textStyle('labelLarge')!
+              .merge(labelStyle)
               .merge(TextStyleSpec(color: foreground)),
           iconColor: foreground,
         )

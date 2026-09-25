@@ -9,6 +9,9 @@ environment:
 dependencies:
   flutter2figma_analyzer: any
   flutter2figma_ir: any
+  # Must match the version pinned by the Flutter SDK (packages/flutter/pubspec.yaml)
+  # so ColorScheme.fromSeed produces identical colors.
+  material_color_utilities: 0.13.0
 
 dev_dependencies:
   test: ^1.25.0

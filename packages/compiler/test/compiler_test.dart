@@ -3,55 +3,7 @@ import 'package:flutter2figma_compiler/flutter2figma_compiler.dart';
 import 'package:flutter2figma_ir/flutter2figma_ir.dart';
 import 'package:test/test.dart';
 
-// Builders for analyzer output, so compiler tests don't need a Flutter SDK.
-
-ObjectValue w(
-  String type, {
-  String? ctor,
-  Map<String, DartValue> named = const {},
-  List<DartValue> positional = const [],
-}) => ObjectValue(
-  type: type,
-  constructor: ctor,
-  library: 'package:flutter/src/widgets/$type.dart',
-  isWidget: true,
-  named: named,
-  positional: positional,
-);
-
-ObjectValue v(
-  String type, {
-  String? ctor,
-  Map<String, DartValue> named = const {},
-  List<DartValue> positional = const [],
-}) => ObjectValue(
-  type: type,
-  constructor: ctor,
-  library: 'package:flutter/src/painting/$type.dart',
-  named: named,
-  positional: positional,
-);
-
-LiteralValue lit(Object? value) => LiteralValue(value);
-RefValue ref(String dotted, {DartValue? constant}) =>
-    RefValue(dotted.split('.'), constant: constant);
-ListValue list(List<DartValue> items) => ListValue(items);
-ObjectValue text(String s, {DartValue? style}) =>
-    w('Text', positional: [lit(s)], named: {'style': ?style});
-ObjectValue gap(double h) => w('SizedBox', named: {'height': lit(h)});
-
-IrFrame screen(DartValue body, {DartValue? appBar}) {
-  final compiler = FlutterCompiler();
-  return compiler
-      .compileScreen(
-        'Test',
-        w('Scaffold', named: {'body': body, 'appBar': ?appBar}),
-        null,
-      )
-      .root;
-}
-
-IrNode body(DartValue widget) => screen(widget).children.single;
+import 'builders.dart';
 
 void main() {
   group('the §17 reference screen', () {
@@ -295,7 +247,7 @@ void main() {
   group('colors', () {
     final blue = ref(
       'Colors.blue',
-      constant: v(
+      resolved: v(
         'MaterialColor',
         positional: [
           lit(0xFF2196F3),
@@ -379,7 +331,7 @@ void main() {
         named: {
           'color': ref(
             'Colors.black',
-            constant: v('Color', positional: [lit(0xFF000000)]),
+            resolved: v('Color', positional: [lit(0xFF000000)]),
           ),
           'child': text(r'$9'),
         },

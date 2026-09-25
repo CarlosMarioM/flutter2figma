@@ -24,9 +24,9 @@ from `flutter pub get`. For each `StatelessWidget` / `StatefulWidget`
 | --- | --- |
 | `Container(...)`, `EdgeInsets.all(16)` | `ObjectValue` (type, named ctor, library URI, `isWidget` from the static type) |
 | `16`, `'Hi'`, `null`, string interpolation | `LiteralValue` (non-constant interpolations become `{name}`) |
-| `Colors.blue`, `kPadding`, `CrossAxisAlignment.start` | `RefValue` + analyzed `const` initializer when there is one |
+| `Colors.blue`, `kPadding`, `AppTheme.light`, `CrossAxisAlignment.start` | `RefValue` + `resolved`: any `const` initializer (SDK included), or a project `final`/getter body |
 | `textTheme.bodyLarge`, `color.shade200` | `AccessValue` |
-| `Theme.of(context)`, `style.copyWith(...)` | `CallValue` |
+| `Theme.of(context)`, `style.copyWith(...)`, `_buildHeader()` | `CallValue` + `result` for project functions and methods (arguments bound to parameters) |
 | `a ? b : c`, collection `if` | `ConditionalValue` |
 | closures | `FunctionValue` (+ single return expression) |
 | anything else | `UnknownValue` (source text) |
@@ -35,6 +35,47 @@ Local variables in `build` are substituted with their initializers. When a widge
 in the project is constructed, its `build` is expanded into `ObjectValue.build`,
 with call-site arguments bound to fields (`label`, `widget.label`,
 `this.label`).
+
+Project declarations are indexed by element (`_declKey`): top-level and static
+variables, getters, functions and methods. References to them are analyzed
+where they are declared:
+
+- **Static and top-level members** are analyzed in a detached scope and cached.
+- **Instance members of the widget being expanded** are analyzed in the widget's
+  scope, so they see the bound fields. Examples: `_actions()`, `Widget get _header`.
+- **Parameters** get the call-site arguments.
+
+Recursion is bounded by the `expanding` set and a depth limit.
+
+## Compiler: theme extraction
+
+`ThemeExtractor` finds the project's `MaterialApp`, picks `theme` or
+`darkTheme` (`--brightness`, else a literal `themeMode`), and replays the
+Flutter code paths that build what `Theme.of(context)` returns:
+
+| Flutter | Here |
+| --- | --- |
+| `ThemeData` factory: `colorScheme ?? fromSeed(colorSchemeSeed) ?? baseline` | `_build` |
+| `ColorScheme` getters' fallbacks (`surfaceContainerLow ?? surface`, …), `.light()`/`.dark()` defaults | `color_scheme.dart` `completeColorScheme` |
+| `ColorScheme.fromSeed` → `DynamicScheme` → `MaterialDynamicColors` | `seedColorScheme` (same `material_color_utilities` version as the SDK) |
+| Typography: `onSurface` colors, `fontFamily` applied, user `textTheme` merged | `MaterialTheme.textStyle` |
+| `ThemeData.localize`: M3 geometry (sizes, heights) under the theme's styles | geometry `m3TextTheme` merged first |
+| `ThemeData.copyWith`, `Theme(data: Theme.of(context).copyWith(...))` | `_copyWith`; the compiler swaps `eval.theme` for the subtree |
+
+Component themes currently applied:
+- `scaffoldBackgroundColor`;
+- `appBarTheme`: colors, elevation, `centerTitle`, title style, height;
+- `cardTheme`: color, elevation, margin, shape;
+- the four button themes, applied under the widget's own `style`.
+
+Every other `ThemeData` argument is reported, never silently dropped.
+
+**Ground truth.** `examples/basic/test/theme_ground_truth_test.dart` pumps the
+app, reads `Theme.of(context)` in light and dark, and writes
+`packages/compiler/test/goldens/basic_theme.json`.
+`theme_extraction_test.dart` requires the static extraction to match that file
+exactly: every color role, every text style property, and the component
+themes.
 
 ## Compiler: sizing model
 

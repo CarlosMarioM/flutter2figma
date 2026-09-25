@@ -275,6 +275,11 @@ class IrColor {
 
   IrColor withAlpha(double alpha) => IrColor(r, g, b, alpha);
 
+  int toArgb32() {
+    int c(double v) => (v * 255).round().clamp(0, 255);
+    return (c(a) << 24) | (c(r) << 16) | (c(g) << 8) | c(b);
+  }
+
   String toHex() {
     String c(double v) =>
         (v * 255).round().clamp(0, 255).toRadixString(16).padLeft(2, '0');

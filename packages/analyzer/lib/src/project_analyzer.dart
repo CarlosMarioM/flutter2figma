@@ -105,14 +105,43 @@ class FlutterProjectAnalyzer {
     }
 
     final index = <String, ClassDeclaration>{};
+    final declarations = <String, AstNode>{};
+    void declare(Element? element, AstNode node) {
+      final key = _declKey(element);
+      if (key != null) declarations[key] = node;
+    }
+
     for (final unit in units) {
-      for (final decl in unit.unit.declarations.whereType<ClassDeclaration>()) {
-        final element = decl.declaredFragment?.element;
-        if (element != null) index[_key(element)] = decl;
+      for (final decl in unit.unit.declarations) {
+        switch (decl) {
+          case ClassDeclaration():
+            final element = decl.declaredFragment?.element;
+            if (element != null) index[_key(element)] = decl;
+            for (final member in decl.body.members) {
+              switch (member) {
+                case FieldDeclaration():
+                  for (final v in member.fields.variables) {
+                    declare(v.declaredFragment?.element, v);
+                  }
+                case MethodDeclaration():
+                  declare(member.declaredFragment?.element, member);
+                default:
+                  break;
+              }
+            }
+          case TopLevelVariableDeclaration():
+            for (final v in decl.variables.variables) {
+              declare(v.declaredFragment?.element, v);
+            }
+          case FunctionDeclaration():
+            declare(decl.declaredFragment?.element, decl);
+          default:
+            break;
+        }
       }
     }
 
-    final expander = _Expander(root, index);
+    final expander = _Expander(root, index, declarations);
     final widgets = <WidgetClass>[];
     for (final decl in index.values) {
       final element = decl.declaredFragment!.element;
@@ -153,6 +182,29 @@ const _frameworkUri = 'package:flutter/src/widgets/framework.dart';
 
 String _key(InterfaceElement e) => '${e.library.uri}#${e.name}';
 
+/// Identity for top-level and member declarations. Implicit getters of
+/// fields/variables map to the variable itself.
+String? _declKey(Element? element) {
+  var e = element;
+  if (e is PropertyAccessorElement && e.isOriginVariable) e = e.variable;
+  if (e == null || e.name == null) return null;
+  final enclosing = e.enclosingElement;
+  final owner = enclosing is InterfaceElement ? enclosing.name : '';
+  return '${e.library?.uri}#$owner.${e.name}';
+}
+
+/// Whether [element] belongs to an instance rather than a class or library.
+bool _isInstanceMember(Element? element) {
+  var e = element;
+  if (e is PropertyAccessorElement && e.isOriginVariable) e = e.variable;
+  if (e?.enclosingElement is! InterfaceElement) return false;
+  return switch (e) {
+    VariableElement(:final isStatic) => !isStatic,
+    ExecutableElement(:final isStatic) => !isStatic,
+    _ => false,
+  };
+}
+
 bool _isFlutterClass(InterfaceType t, String name) =>
     t.element.name == name && t.element.library.uri.toString() == _frameworkUri;
 
@@ -176,7 +228,31 @@ class _Scope {
     required this.owners,
     required this.expanding,
     required this.depth,
+    this.params = const {},
   });
+
+  /// A scope for a declaration outside any widget: no fields, no locals.
+  _Scope.detached({
+    required this.locals,
+    required this.expanding,
+    required this.depth,
+    this.params = const {},
+  }) : bindings = const {},
+       owners = const {};
+
+  _Scope copyWith({
+    Map<String, Expression>? locals,
+    Map<String, DartValue>? params,
+    Set<String>? expanding,
+    int? depth,
+  }) => _Scope(
+    bindings: bindings,
+    locals: locals ?? this.locals,
+    owners: owners,
+    expanding: expanding ?? this.expanding,
+    depth: depth ?? this.depth,
+    params: params ?? this.params,
+  );
 
   /// Constructor arguments of the widget being expanded, by field name.
   final Map<String, DartValue> bindings;
@@ -191,17 +267,24 @@ class _Scope {
   final Set<String> expanding;
 
   final int depth;
+
+  /// Arguments bound to the parameters of a project function being inlined.
+  final Map<String, DartValue> params;
 }
 
 class _Expander {
-  _Expander(this.root, this.index);
+  _Expander(this.root, this.index, this.declarations);
 
   static const _maxDepth = 16;
   static const _maxConstDepth = 8;
 
   final String root;
   final Map<String, ClassDeclaration> index;
+
+  /// Project variables, getters, functions and methods by [_declKey].
+  final Map<String, AstNode> declarations;
   final _constCache = <Element, DartValue?>{};
+  final _staticCache = <String, DartValue?>{};
 
   String? location(AstNode node, {int? offset}) {
     final unit = node.root;
@@ -263,8 +346,12 @@ class _Expander {
     return null;
   }
 
-  Expression? _returnExpression(MethodDeclaration? method) {
-    final body = method?.body;
+  Expression? _returnExpression(MethodDeclaration? method) =>
+      _bodyReturn(method?.body);
+
+  /// The expression a function body returns: its `=>` expression, or the
+  /// last top-level `return`.
+  Expression? _bodyReturn(FunctionBody? body) {
     if (body is ExpressionFunctionBody) return body.expression;
     if (body is BlockFunctionBody) {
       for (final s in body.block.statements.reversed) {
@@ -323,11 +410,16 @@ class _Expander {
         return _object(e, s, loc);
       case MethodInvocation():
         final target = e.target;
+        final positional = _positional(e.argumentList, s);
+        final named = _named(e.argumentList, s);
         return CallValue(
           target == null ? null : value(target, s),
           e.methodName.name,
-          positional: _positional(e.argumentList, s),
-          named: _named(e.argumentList, s),
+          positional: positional,
+          named: named,
+          result: target == null || target is ThisExpression || _isStatic(e)
+              ? _invoke(e.methodName.element, positional, named, s)
+              : null,
           source: loc,
         );
       case PrefixedIdentifier():
@@ -335,8 +427,8 @@ class _Expander {
       case PropertyAccess():
         final target = e.target;
         final name = e.propertyName.name;
-        if (target is ThisExpression && s.bindings.containsKey(name)) {
-          return s.bindings[name]!;
+        if (target is ThisExpression) {
+          return _member(e.propertyName, s, loc);
         }
         if (target == null) return UnknownValue(e.toSource(), source: loc);
         return AccessValue(value(target, s), name, source: loc);
@@ -480,7 +572,7 @@ class _Expander {
     if (prefixElement is InterfaceElement) {
       return RefValue(
         [e.prefix.name, name],
-        constant: _constantOf(e.element, s.depth),
+        resolved: _resolve(e.element, s),
         source: loc,
       );
     }
@@ -502,32 +594,149 @@ class _Expander {
       final init = s.locals[name];
       if (init != null) {
         // Guard against `final a = a;` style self references.
-        final locals = {...s.locals}..remove(name);
-        return value(
-          init,
-          _Scope(
-            bindings: s.bindings,
-            locals: locals,
-            owners: s.owners,
-            expanding: s.expanding,
-            depth: s.depth,
-          ),
-        );
+        return value(init, s.copyWith(locals: {...s.locals}..remove(name)));
       }
       return UnknownValue(name, source: loc);
+    }
+    if (element is FormalParameterElement) {
+      return s.params[name] ?? UnknownValue(name, source: loc);
     }
     if (element is InterfaceElement) {
       return RefValue([name], source: loc);
     }
-    final owner = element?.enclosingElement?.name;
-    if (owner != null && s.owners.contains(owner)) {
-      return s.bindings[name] ?? UnknownValue(name, source: loc);
-    }
-    final constant = _constantOf(element, s.depth);
-    if (constant != null) {
-      return RefValue([name], constant: constant, source: loc);
+    if (_isInstanceMember(element)) return _member(e, s, loc);
+    final resolved = _resolve(element, s);
+    if (resolved != null) {
+      return RefValue([name], resolved: resolved, source: loc);
     }
     return UnknownValue(name, source: loc);
+  }
+
+  /// A field or getter of the widget (or `State`) being expanded: the bound
+  /// constructor argument, else its initializer / getter body.
+  DartValue _member(SimpleIdentifier e, _Scope s, String? loc) {
+    final name = e.name;
+    final owner = e.element?.enclosingElement?.name;
+    if (owner == null || !s.owners.contains(owner)) {
+      return UnknownValue(name, source: loc);
+    }
+    return s.bindings[name] ??
+        _declared(e.element, s, instance: true) ??
+        UnknownValue(name, source: loc);
+  }
+
+  bool _isStatic(MethodInvocation e) {
+    final element = e.methodName.element;
+    return element is ExecutableElement && element.isStatic;
+  }
+
+  /// Value of a non-instance declaration: any `const` (SDK included), or a
+  /// project variable / getter.
+  DartValue? _resolve(Element? element, _Scope s) =>
+      _constantOf(element, s.depth) ?? _declared(element, s, instance: false);
+
+  /// Analyzes a project variable initializer or getter body.
+  ///
+  /// Static and top-level results don't depend on the call site and are
+  /// cached; instance members are analyzed in the widget's scope.
+  DartValue? _declared(Element? element, _Scope s, {required bool instance}) {
+    final key = _declKey(element);
+    final decl = key == null ? null : declarations[key];
+    if (decl == null || s.expanding.contains(key) || s.depth >= _maxDepth) {
+      return null;
+    }
+    if (!instance && _staticCache.containsKey(key)) return _staticCache[key];
+
+    final (Expression? expr, AstNode? body) = switch (decl) {
+      VariableDeclaration(:final initializer) => (initializer, null),
+      FunctionDeclaration(:final functionExpression, :final isGetter)
+          when isGetter =>
+        (_bodyReturn(functionExpression.body), functionExpression.body),
+      MethodDeclaration(:final body, :final isGetter) when isGetter => (
+        _bodyReturn(body),
+        body,
+      ),
+      _ => (null, null),
+    };
+    if (expr == null) return null;
+
+    final locals = body == null ? const <String, Expression>{} : _locals(body);
+    final expanding = {...s.expanding, key!};
+    final result = value(
+      expr,
+      instance
+          ? s.copyWith(
+              locals: locals,
+              params: const {},
+              expanding: expanding,
+              depth: s.depth + 1,
+            )
+          : _Scope.detached(
+              locals: locals,
+              expanding: expanding,
+              depth: s.depth + 1,
+            ),
+    );
+    if (!instance) _staticCache[key] = result;
+    return result;
+  }
+
+  /// Inlines a call to a project function or method, binding arguments to
+  /// its parameters, and returns what it returns.
+  DartValue? _invoke(
+    Element? element,
+    List<DartValue> positional,
+    Map<String, DartValue> named,
+    _Scope s,
+  ) {
+    if (element is! ExecutableElement) return null;
+    final key = _declKey(element);
+    final decl = key == null ? null : declarations[key];
+    if (decl == null || s.expanding.contains(key) || s.depth >= _maxDepth) {
+      return null;
+    }
+    final FunctionBody body;
+    switch (decl) {
+      case FunctionDeclaration(:final functionExpression):
+        body = functionExpression.body;
+      case MethodDeclaration():
+        body = decl.body;
+      default:
+        return null;
+    }
+    final expr = _bodyReturn(body);
+    if (expr == null) return null;
+
+    final params = <String, DartValue>{};
+    final positionalParams = element.formalParameters
+        .where((p) => p.isPositional)
+        .toList();
+    for (var i = 0; i < positional.length && i < positionalParams.length; i++) {
+      params[positionalParams[i].name!] = positional[i];
+    }
+    params.addAll(named);
+
+    final instance = _isInstanceMember(element);
+    if (instance && !s.owners.contains(element.enclosingElement?.name)) {
+      return null;
+    }
+    final expanding = {...s.expanding, key!};
+    return value(
+      expr,
+      instance
+          ? s.copyWith(
+              locals: _locals(body),
+              params: params,
+              expanding: expanding,
+              depth: s.depth + 1,
+            )
+          : _Scope.detached(
+              locals: _locals(body),
+              params: params,
+              expanding: expanding,
+              depth: s.depth + 1,
+            ),
+    );
   }
 
   /// Analyzes the initializer of a `const` declaration, following references
@@ -546,10 +755,8 @@ class _Expander {
         ? null
         : value(
             init,
-            _Scope(
-              bindings: const {},
+            _Scope.detached(
               locals: const {},
-              owners: const {},
               expanding: const {},
               depth: depth + 1,
             ),

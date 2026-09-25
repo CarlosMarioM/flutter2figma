@@ -5,15 +5,13 @@ type Sizing = 'FIXED' | 'HUG' | 'FILL';
 
 const STYLES = ['Thin', 'ExtraLight', 'Light', 'Regular', 'Medium', 'SemiBold', 'Bold', 'ExtraBold', 'Black'];
 
-export const AVAILABLE_FONTS: FontName[] = [
-  ...STYLES.flatMap((s) => [
-    { family: 'Roboto', style: s },
-    { family: 'Roboto', style: s === 'Regular' ? 'Italic' : `${s} Italic` },
+// Like Figma: Roboto and Inter in every weight, upright and italic.
+export const AVAILABLE_FONTS: FontName[] = ['Roboto', 'Inter'].flatMap((family) =>
+  STYLES.flatMap((s) => [
+    { family, style: s },
+    { family, style: s === 'Regular' ? 'Italic' : `${s} Italic` },
   ]),
-  { family: 'Inter', style: 'Regular' },
-  { family: 'Inter', style: 'Medium' },
-  { family: 'Inter', style: 'Bold' },
-];
+);
 
 const key = (f: FontName) => `${f.family}/${f.style}`;
 

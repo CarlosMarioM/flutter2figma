@@ -15,6 +15,15 @@ The first vertical slice from the build plan (§17) works end to end:
 typography, colors, radii and shadows. The output is checked against a golden
 file that both the Dart CLI and the plugin tests use.
 
+The app's own theme is read from `MaterialApp`:
+- `theme`/`darkTheme` and `themeMode`;
+- the color scheme, including `ColorScheme.fromSeed`;
+- `fontFamily`, `textTheme` and GoogleFonts;
+- the app bar, card and button themes;
+- nested `Theme` widgets.
+
+A Flutter test checks the result against the theme Flutter itself resolves.
+
 Not built yet: `validate` (screenshot diff), `--runtime` mode, design-system
 extraction, Figma → Flutter generation.
 
@@ -31,6 +40,7 @@ dart pub get
 # 2. Analyze / export
 dart run flutter2figma analyze examples/basic
 dart run flutter2figma export examples/basic -o build/flutter2figma
+dart run flutter2figma export examples/basic --brightness dark -o build/dark
 #   → build/flutter2figma/design.json   (import this in Figma)
 #   → build/flutter2figma/ir.json       (the intermediate representation)
 ```
@@ -58,8 +68,8 @@ Any Flutter project works the same way: run `fvm flutter pub get` (or
 
 | Layer | Package | Input → output |
 | --- | --- | --- |
-| Analyzer | `packages/analyzer` | Resolves every library under `lib/` with `package:analyzer` and turns each widget class's `build` into a tree of `DartValue`s (constructor calls, literals, references, calls). It never runs Dart. `const` references are followed into their declarations, including Flutter's own source, so `Colors.blue` arrives as `MaterialColor(0xFF2196F3, …)`. Project widgets are inlined, with constructor arguments substituted for fields. |
-| Compiler | `packages/compiler` | Interprets the widget tree with Material 3 defaults transcribed from the pinned Flutter SDK, and a small layout model (tight/loose/bounded constraints) that decides fixed, hug or fill per axis. It folds wrappers such as `Padding` → frame padding and `SizedBox` spacers → auto-layout gap, but only when the result renders identically. |
+| Analyzer | `packages/analyzer` | Resolves every library under `lib/` with `package:analyzer` and turns each widget class's `build` into a tree of `DartValue`s (constructor calls, literals, references, calls). It never runs Dart. `const` references are followed into their declarations, including Flutter's own source, so `Colors.blue` arrives as `MaterialColor(0xFF2196F3, …)`. Project widgets are inlined, with constructor arguments substituted for fields. The analyzer also follows the project's own getters, `final`s and functions/methods, so `AppTheme.light` and `_buildHeader()` resolve too. |
+| Compiler | `packages/compiler` | Extracts the app's `ThemeData` the way Flutter resolves it. For `fromSeed` it uses the same `material_color_utilities` version as Flutter. It then interprets the widget tree against that theme, and a small layout model (tight/loose/bounded constraints) that decides fixed, hug or fill per axis. It folds wrappers such as `Padding` → frame padding and `SizedBox` spacers → auto-layout gap, but only when the result renders identically. |
 | IR | `packages/ir` | Framework-independent frames and text with sizing, layout, paint and typography. It also records where each node came from: the Flutter widgets that produced it and their `file:line`. |
 | Renderer | `packages/figma` | Maps IR to Figma Plugin API names and enums (`layoutMode`, `layoutSizingHorizontal`, `primaryAxisAlignItems`, …). Where Figma rejects a combination, it downgrades the node and emits a warning. |
 | Plugin | `figma-plugin` | Loads fonts, falling back to the nearest weight and then to Inter. Builds nodes in the order Figma requires and places absolute and Stack children. Writes the origin and source of each node to plugin data. |
@@ -83,9 +93,12 @@ Anything else is exported as a magenta `⚠` placeholder, or passed through if i
 
 - **Conditional UI:** `a ? b : c` and collection `if` export the `true` branch, with an info diagnostic. Plan: variants.
 - **Lists:** `ListView.builder` renders 3 sample items when `itemCount` isn't a literal.
-- **Missing values:** values that need runtime state (fields without a call site, method results) become `{placeholders}` in text.
+- **Missing values:** values that need runtime state become `{placeholders}` in text. Examples: fields without a call site, parameters of closures, and results of SDK or package methods.
 - **Icons and images:** exported as placeholders. Gradients become their first color.
-- **Theme:** the default `ThemeData()` Material 3 baseline is assumed. Custom `ThemeData` and `ColorScheme.fromSeed` aren't read yet.
+- **Theme:**
+  - Other component themes are listed as "not applied" diagnostics. These include input decoration, chips and navigation bars.
+  - Material 2 themes (`useMaterial3: false`) and `ColorScheme.fromSwatch` are exported with Material 3 defaults, with a warning.
+  - Fonts are exported by family name. The Figma plugin substitutes any that aren't installed.
 
 ## Development
 
@@ -98,6 +111,9 @@ dart analyze
 
 # Plugin: typecheck, bundle, and run against a strict mock of the Figma API
 cd figma-plugin && npx tsc --noEmit && npm run build && npm test
+
+# Theme ground truth (Flutter resolves the example's theme)
+cd examples/basic && fvm flutter test
 
 # After an intentional output change, refresh the shared golden:
 cd packages/cli && UPDATE_GOLDENS=1 dart test

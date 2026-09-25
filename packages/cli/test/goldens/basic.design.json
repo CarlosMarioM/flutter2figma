@@ -4,16 +4,20 @@
   "name": "basic",
   "fonts": [
     {
-      "family": "Roboto",
+      "family": "Inter",
       "style": "Regular"
     },
     {
-      "family": "Roboto",
+      "family": "Inter",
       "style": "Bold"
     },
     {
-      "family": "Roboto",
+      "family": "Inter",
       "style": "Medium"
+    },
+    {
+      "family": "Inter",
+      "style": "SemiBold"
     }
   ],
   "screens": [
@@ -32,9 +36,9 @@
         {
           "type": "SOLID",
           "color": {
-            "r": 0.996078431372549,
-            "g": 0.9686274509803922,
-            "b": 1.0
+            "r": 0.9568627450980393,
+            "g": 0.9803921568627451,
+            "b": 0.9803921568627451
           },
           "opacity": 1.0
         }
@@ -56,9 +60,9 @@
             {
               "type": "SOLID",
               "color": {
-                "r": 0.996078431372549,
-                "g": 0.9686274509803922,
-                "b": 1.0
+                "r": 0.9568627450980393,
+                "g": 0.9803921568627451,
+                "b": 0.9803921568627451
               },
               "opacity": 1.0
             }
@@ -70,7 +74,7 @@
               "name": "Home",
               "characters": "Home",
               "fontName": {
-                "family": "Roboto",
+                "family": "Inter",
                 "style": "Regular"
               },
               "fontSize": 22.0,
@@ -86,14 +90,14 @@
                 {
                   "type": "SOLID",
                   "color": {
-                    "r": 0.11372549019607843,
-                    "g": 0.10588235294117647,
-                    "b": 0.12549019607843137
+                    "r": 0.08627450980392157,
+                    "g": 0.11372549019607843,
+                    "b": 0.11372549019607843
                   },
                   "opacity": 1.0
                 }
               ],
-              "textAlignHorizontal": "LEFT",
+              "textAlignHorizontal": "CENTER",
               "textAutoResize": "HEIGHT",
               "layoutSizingHorizontal": "FILL",
               "layoutSizingVertical": "HUG",
@@ -135,7 +139,7 @@
               "name": "Welcome",
               "characters": "Welcome",
               "fontName": {
-                "family": "Roboto",
+                "family": "Inter",
                 "style": "Bold"
               },
               "fontSize": 32.0,
@@ -151,9 +155,9 @@
                 {
                   "type": "SOLID",
                   "color": {
-                    "r": 0.11372549019607843,
-                    "g": 0.10588235294117647,
-                    "b": 0.12549019607843137
+                    "r": 0.08627450980392157,
+                    "g": 0.11372549019607843,
+                    "b": 0.11372549019607843
                   },
                   "opacity": 1.0
                 }
@@ -199,7 +203,7 @@
                   "name": "Hello",
                   "characters": "Hello",
                   "fontName": {
-                    "family": "Roboto",
+                    "family": "Inter",
                     "style": "Regular"
                   },
                   "fontSize": 14.0,
@@ -260,9 +264,9 @@
                 {
                   "type": "SOLID",
                   "color": {
-                    "r": 0.9686274509803922,
-                    "g": 0.9490196078431372,
-                    "b": 0.9803921568627451
+                    "r": 0.9372549019607843,
+                    "g": 0.9607843137254902,
+                    "b": 0.9607843137254902
                   },
                   "opacity": 1.0
                 }
@@ -311,7 +315,7 @@
                   "name": "Continue",
                   "characters": "Continue",
                   "fontName": {
-                    "family": "Roboto",
+                    "family": "Inter",
                     "style": "Medium"
                   },
                   "fontSize": 14.0,
@@ -327,9 +331,9 @@
                     {
                       "type": "SOLID",
                       "color": {
-                        "r": 0.403921568627451,
-                        "g": 0.3137254901960784,
-                        "b": 0.6431372549019608
+                        "r": 0.0,
+                        "g": 0.4117647058823529,
+                        "b": 0.43137254901960786
                       },
                       "opacity": 1.0
                     }
@@ -398,9 +402,9 @@
         {
           "type": "SOLID",
           "color": {
-            "r": 0.996078431372549,
-            "g": 0.9686274509803922,
-            "b": 1.0
+            "r": 0.9568627450980393,
+            "g": 0.9803921568627451,
+            "b": 0.9803921568627451
           },
           "opacity": 1.0
         }
@@ -422,9 +426,9 @@
             {
               "type": "SOLID",
               "color": {
-                "r": 0.996078431372549,
-                "g": 0.9686274509803922,
-                "b": 1.0
+                "r": 0.9568627450980393,
+                "g": 0.9803921568627451,
+                "b": 0.9803921568627451
               },
               "opacity": 1.0
             }
@@ -436,7 +440,7 @@
               "name": "Profile",
               "characters": "Profile",
               "fontName": {
-                "family": "Roboto",
+                "family": "Inter",
                 "style": "Regular"
               },
               "fontSize": 22.0,
@@ -452,14 +456,14 @@
                 {
                   "type": "SOLID",
                   "color": {
-                    "r": 0.11372549019607843,
-                    "g": 0.10588235294117647,
-                    "b": 0.12549019607843137
+                    "r": 0.08627450980392157,
+                    "g": 0.11372549019607843,
+                    "b": 0.11372549019607843
                   },
                   "opacity": 1.0
                 }
               ],
-              "textAlignHorizontal": "LEFT",
+              "textAlignHorizontal": "CENTER",
               "textAutoResize": "HEIGHT",
               "layoutSizingHorizontal": "FILL",
               "layoutSizingVertical": "HUG",
@@ -501,8 +505,8 @@
               "name": "Ada Lovelace",
               "characters": "Ada Lovelace",
               "fontName": {
-                "family": "Roboto",
-                "style": "Regular"
+                "family": "Inter",
+                "style": "SemiBold"
               },
               "fontSize": 28.0,
               "lineHeight": {
@@ -517,9 +521,9 @@
                 {
                   "type": "SOLID",
                   "color": {
-                    "r": 0.11372549019607843,
-                    "g": 0.10588235294117647,
-                    "b": 0.12549019607843137
+                    "r": 0.08627450980392157,
+                    "g": 0.11372549019607843,
+                    "b": 0.11372549019607843
                   },
                   "opacity": 1.0
                 }
@@ -540,7 +544,7 @@
               "name": "Analyst & programmer",
               "characters": "Analyst & programmer",
               "fontName": {
-                "family": "Roboto",
+                "family": "Inter",
                 "style": "Regular"
               },
               "fontSize": 16.0,
@@ -550,7 +554,7 @@
               },
               "letterSpacing": {
                 "unit": "PIXELS",
-                "value": 0.5
+                "value": 0.2
               },
               "fills": [
                 {
@@ -617,50 +621,14 @@
                         {
                           "type": "SOLID",
                           "color": {
-                            "r": 0.9686274509803922,
-                            "g": 0.9490196078431372,
-                            "b": 0.9803921568627451
+                            "r": 0.8901960784313725,
+                            "g": 0.9137254901960784,
+                            "b": 0.9137254901960784
                           },
                           "opacity": 1.0
                         }
                       ],
                       "cornerRadius": 12.0,
-                      "effects": [
-                        {
-                          "type": "DROP_SHADOW",
-                          "color": {
-                            "r": 0.0,
-                            "g": 0.0,
-                            "b": 0.0,
-                            "a": 0.3
-                          },
-                          "offset": {
-                            "x": 0.0,
-                            "y": 1.0
-                          },
-                          "radius": 2.0,
-                          "spread": 0.0,
-                          "visible": true,
-                          "blendMode": "NORMAL"
-                        },
-                        {
-                          "type": "DROP_SHADOW",
-                          "color": {
-                            "r": 0.0,
-                            "g": 0.0,
-                            "b": 0.0,
-                            "a": 0.15
-                          },
-                          "offset": {
-                            "x": 0.0,
-                            "y": 1.0
-                          },
-                          "radius": 3.0,
-                          "spread": 1.0,
-                          "visible": true,
-                          "blendMode": "NORMAL"
-                        }
-                      ],
                       "clipsContent": false,
                       "children": [
                         {
@@ -682,7 +650,7 @@
                               "name": "128",
                               "characters": "128",
                               "fontName": {
-                                "family": "Roboto",
+                                "family": "Inter",
                                 "style": "Regular"
                               },
                               "fontSize": 24.0,
@@ -698,9 +666,9 @@
                                 {
                                   "type": "SOLID",
                                   "color": {
-                                    "r": 0.11372549019607843,
-                                    "g": 0.10588235294117647,
-                                    "b": 0.12549019607843137
+                                    "r": 0.08627450980392157,
+                                    "g": 0.11372549019607843,
+                                    "b": 0.11372549019607843
                                   },
                                   "opacity": 1.0
                                 }
@@ -713,7 +681,7 @@
                                 "origin": [
                                   "Text"
                                 ],
-                                "source": "lib/profile_screen.dart:61"
+                                "source": "lib/profile_screen.dart:65"
                               }
                             },
                             {
@@ -721,7 +689,7 @@
                               "name": "Posts",
                               "characters": "Posts",
                               "fontName": {
-                                "family": "Roboto",
+                                "family": "Inter",
                                 "style": "Regular"
                               },
                               "fontSize": 14.0,
@@ -752,7 +720,7 @@
                                 "origin": [
                                   "Text"
                                 ],
-                                "source": "lib/profile_screen.dart:62"
+                                "source": "lib/profile_screen.dart:66"
                               }
                             }
                           ],
@@ -763,7 +731,7 @@
                               "Padding",
                               "Column"
                             ],
-                            "source": "lib/profile_screen.dart:58"
+                            "source": "lib/profile_screen.dart:62"
                           }
                         }
                       ],
@@ -785,7 +753,7 @@
                       "StatCard",
                       "margin"
                     ],
-                    "source": "lib/profile_screen.dart:55"
+                    "source": "lib/profile_screen.dart:59"
                   }
                 },
                 {
@@ -817,50 +785,14 @@
                         {
                           "type": "SOLID",
                           "color": {
-                            "r": 0.9686274509803922,
-                            "g": 0.9490196078431372,
-                            "b": 0.9803921568627451
+                            "r": 0.8901960784313725,
+                            "g": 0.9137254901960784,
+                            "b": 0.9137254901960784
                           },
                           "opacity": 1.0
                         }
                       ],
                       "cornerRadius": 12.0,
-                      "effects": [
-                        {
-                          "type": "DROP_SHADOW",
-                          "color": {
-                            "r": 0.0,
-                            "g": 0.0,
-                            "b": 0.0,
-                            "a": 0.3
-                          },
-                          "offset": {
-                            "x": 0.0,
-                            "y": 1.0
-                          },
-                          "radius": 2.0,
-                          "spread": 0.0,
-                          "visible": true,
-                          "blendMode": "NORMAL"
-                        },
-                        {
-                          "type": "DROP_SHADOW",
-                          "color": {
-                            "r": 0.0,
-                            "g": 0.0,
-                            "b": 0.0,
-                            "a": 0.15
-                          },
-                          "offset": {
-                            "x": 0.0,
-                            "y": 1.0
-                          },
-                          "radius": 3.0,
-                          "spread": 1.0,
-                          "visible": true,
-                          "blendMode": "NORMAL"
-                        }
-                      ],
                       "clipsContent": false,
                       "children": [
                         {
@@ -882,7 +814,7 @@
                               "name": "4.2k",
                               "characters": "4.2k",
                               "fontName": {
-                                "family": "Roboto",
+                                "family": "Inter",
                                 "style": "Regular"
                               },
                               "fontSize": 24.0,
@@ -898,9 +830,9 @@
                                 {
                                   "type": "SOLID",
                                   "color": {
-                                    "r": 0.11372549019607843,
-                                    "g": 0.10588235294117647,
-                                    "b": 0.12549019607843137
+                                    "r": 0.08627450980392157,
+                                    "g": 0.11372549019607843,
+                                    "b": 0.11372549019607843
                                   },
                                   "opacity": 1.0
                                 }
@@ -913,7 +845,7 @@
                                 "origin": [
                                   "Text"
                                 ],
-                                "source": "lib/profile_screen.dart:61"
+                                "source": "lib/profile_screen.dart:65"
                               }
                             },
                             {
@@ -921,7 +853,7 @@
                               "name": "Followers",
                               "characters": "Followers",
                               "fontName": {
-                                "family": "Roboto",
+                                "family": "Inter",
                                 "style": "Regular"
                               },
                               "fontSize": 14.0,
@@ -952,7 +884,7 @@
                                 "origin": [
                                   "Text"
                                 ],
-                                "source": "lib/profile_screen.dart:62"
+                                "source": "lib/profile_screen.dart:66"
                               }
                             }
                           ],
@@ -963,7 +895,7 @@
                               "Padding",
                               "Column"
                             ],
-                            "source": "lib/profile_screen.dart:58"
+                            "source": "lib/profile_screen.dart:62"
                           }
                         }
                       ],
@@ -985,7 +917,7 @@
                       "StatCard",
                       "margin"
                     ],
-                    "source": "lib/profile_screen.dart:55"
+                    "source": "lib/profile_screen.dart:59"
                   }
                 }
               ],
@@ -1059,7 +991,7 @@
                       "name": "Cancel",
                       "characters": "Cancel",
                       "fontName": {
-                        "family": "Roboto",
+                        "family": "Inter",
                         "style": "Medium"
                       },
                       "fontSize": 14.0,
@@ -1075,9 +1007,9 @@
                         {
                           "type": "SOLID",
                           "color": {
-                            "r": 0.403921568627451,
-                            "g": 0.3137254901960784,
-                            "b": 0.6431372549019608
+                            "r": 0.0,
+                            "g": 0.4117647058823529,
+                            "b": 0.43137254901960786
                           },
                           "opacity": 1.0
                         }
@@ -1090,7 +1022,7 @@
                         "origin": [
                           "Text"
                         ],
-                        "source": "lib/profile_screen.dart:35"
+                        "source": "lib/profile_screen.dart:43"
                       }
                     }
                   ],
@@ -1100,7 +1032,7 @@
                     "origin": [
                       "TextButton"
                     ],
-                    "source": "lib/profile_screen.dart:35",
+                    "source": "lib/profile_screen.dart:43",
                     "role": "button"
                   }
                 },
@@ -1121,14 +1053,14 @@
                     {
                       "type": "SOLID",
                       "color": {
-                        "r": 0.403921568627451,
-                        "g": 0.3137254901960784,
-                        "b": 0.6431372549019608
+                        "r": 0.0,
+                        "g": 0.4117647058823529,
+                        "b": 0.43137254901960786
                       },
                       "opacity": 1.0
                     }
                   ],
-                  "cornerRadius": 20.0,
+                  "cornerRadius": 8.0,
                   "clipsContent": false,
                   "children": [
                     {
@@ -1136,7 +1068,7 @@
                       "name": "Save",
                       "characters": "Save",
                       "fontName": {
-                        "family": "Roboto",
+                        "family": "Inter",
                         "style": "Medium"
                       },
                       "fontSize": 14.0,
@@ -1167,7 +1099,7 @@
                         "origin": [
                           "Text"
                         ],
-                        "source": "lib/profile_screen.dart:37"
+                        "source": "lib/profile_screen.dart:45"
                       }
                     }
                   ],
@@ -1177,7 +1109,7 @@
                     "origin": [
                       "FilledButton"
                     ],
-                    "source": "lib/profile_screen.dart:37",
+                    "source": "lib/profile_screen.dart:45",
                     "role": "button"
                   }
                 }
@@ -1189,7 +1121,7 @@
                   "Row",
                   "SizedBox"
                 ],
-                "source": "lib/profile_screen.dart:32"
+                "source": "lib/profile_screen.dart:40"
               }
             }
           ],

@@ -81,16 +81,19 @@ class ObjectValue extends DartValue {
   };
 }
 
-/// A static reference such as `Colors.blue` or `CrossAxisAlignment.start`.
+/// A reference such as `Colors.blue`, `CrossAxisAlignment.start`,
+/// `AppTheme.light` or `kPadding`.
 ///
-/// When the referenced declaration is a constant whose initializer is
-/// available, [constant] holds the analyzed initializer, so
-/// `Colors.blue` also carries `MaterialColor(0xFF2196F3, {...})`.
+/// [resolved] holds the analyzed declaration when one is statically known:
+/// the initializer of any `const` (following into Flutter's own source, so
+/// `Colors.blue` carries `MaterialColor(0xFF2196F3, {...})`), or, for
+/// declarations in the analyzed project, the initializer of a `final`/`var`
+/// or the returned expression of a getter.
 class RefValue extends DartValue {
-  const RefValue(this.path, {this.constant, super.source});
+  const RefValue(this.path, {this.resolved, super.source});
 
   final List<String> path;
-  final DartValue? constant;
+  final DartValue? resolved;
 
   String get dotted => path.join('.');
   String get last => path.last;
@@ -98,7 +101,7 @@ class RefValue extends DartValue {
   @override
   Map<String, Object?> toJson() => {
     'ref': dotted,
-    if (constant != null) 'constant': constant!.toJson(),
+    if (resolved != null) 'resolved': resolved!.toJson(),
   };
 }
 
@@ -113,13 +116,18 @@ class AccessValue extends DartValue {
   Map<String, Object?> toJson() => {'get': name, 'on': target.toJson()};
 }
 
-/// Method call: `Theme.of(context)`, `style.copyWith(...)`.
+/// Method call: `Theme.of(context)`, `style.copyWith(...)`, `buildHeader()`.
+///
+/// [result] is the analyzed return expression when the callee is a function
+/// or method declared in the analyzed project, with arguments bound to its
+/// parameters.
 class CallValue extends DartValue {
   const CallValue(
     this.target,
     this.method, {
     this.positional = const [],
     this.named = const {},
+    this.result,
     super.source,
   });
 
@@ -127,6 +135,7 @@ class CallValue extends DartValue {
   final String method;
   final List<DartValue> positional;
   final Map<String, DartValue> named;
+  final DartValue? result;
 
   @override
   Map<String, Object?> toJson() => {
@@ -136,6 +145,7 @@ class CallValue extends DartValue {
       'positional': [for (final p in positional) p.toJson()],
     if (named.isNotEmpty)
       'named': {for (final e in named.entries) e.key: e.value.toJson()},
+    if (result != null) 'result': result!.toJson(),
   };
 }
 

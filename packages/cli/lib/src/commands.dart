@@ -118,6 +118,18 @@ class ExportCommand extends _ProjectCommand {
         help: 'Screen frame size as WIDTHxHEIGHT.',
         defaultsTo: '390x844',
       )
+      ..addOption(
+        'brightness',
+        help: 'Which app theme to export.',
+        allowed: ['auto', 'light', 'dark'],
+        allowedHelp: {
+          'auto':
+              'Follow MaterialApp.themeMode (light unless it is ThemeMode.dark).',
+          'light': 'MaterialApp.theme.',
+          'dark': 'MaterialApp.darkTheme (falls back to theme).',
+        },
+        defaultsTo: 'auto',
+      )
       ..addFlag('verbose', abbr: 'v', help: 'Show info diagnostics.');
   }
 
@@ -141,6 +153,11 @@ class ExportCommand extends _ProjectCommand {
     final analysis = await analyzeProject();
     stdout.writeln('Building intermediate representation...');
     final ir = FlutterCompiler(
+      brightness: switch (argResults!.option('brightness')) {
+        'light' => ThemeBrightness.light,
+        'dark' => ThemeBrightness.dark,
+        _ => null,
+      },
       screenWidth: double.parse(size.group(1)!),
       screenHeight: double.parse(size.group(2)!),
     ).compile(analysis);

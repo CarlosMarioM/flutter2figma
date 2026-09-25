@@ -1,22 +1,85 @@
+import 'package:flutter2figma_analyzer/flutter2figma_analyzer.dart';
 import 'package:flutter2figma_ir/flutter2figma_ir.dart';
 
 import 'text_style.dart';
 
-/// Material 3 defaults, transcribed from the Flutter SDK
-/// (`theme_data.dart` `_colorSchemeLightM3`, `typography.dart` `_M3Typography`).
+enum ThemeBrightness { light, dark }
+
+/// The subset of `AppBarThemeData` the exporter applies.
+class AppBarThemeSpec {
+  const AppBarThemeSpec({
+    this.backgroundColor,
+    this.foregroundColor,
+    this.elevation,
+    this.centerTitle,
+    this.titleTextStyle,
+    this.toolbarHeight,
+  });
+
+  final IrColor? backgroundColor;
+  final IrColor? foregroundColor;
+  final double? elevation;
+  final bool? centerTitle;
+  final TextStyleSpec? titleTextStyle;
+  final double? toolbarHeight;
+}
+
+/// The subset of `CardThemeData` the exporter applies.
+class CardThemeSpec {
+  const CardThemeSpec({this.color, this.elevation, this.margin, this.shape});
+
+  final IrColor? color;
+  final double? elevation;
+  final IrInsets? margin;
+
+  /// Unevaluated `ShapeBorder`, interpreted like a widget's `shape:`.
+  final DartValue? shape;
+}
+
+/// A resolved Material 3 theme: what `Theme.of(context)` would return.
 ///
-/// Used when a widget doesn't specify a value and Flutter would fall back to
-/// `ThemeData()`.
+/// The default is `ThemeData()` (the M3 baseline), transcribed from the
+/// Flutter SDK. `ThemeExtractor` builds one from the app's `ThemeData`.
 class MaterialTheme {
   const MaterialTheme({
+    this.brightness = ThemeBrightness.light,
     this.fontFamily = 'Roboto',
     this.colorScheme = m3LightColorScheme,
     this.textTheme = m3TextTheme,
+    this.scaffoldBackground,
+    this.appBar = const AppBarThemeSpec(),
+    this.card = const CardThemeSpec(),
+    this.buttonStyles = const {},
   });
 
+  /// `ThemeData(brightness: b)` with no other arguments.
+  factory MaterialTheme.baseline(ThemeBrightness b) => MaterialTheme(
+    brightness: b,
+    colorScheme: b == ThemeBrightness.dark
+        ? m3DarkColorScheme
+        : m3LightColorScheme,
+  );
+
+  final ThemeBrightness brightness;
+
+  /// Font used when a text style names none.
   final String fontFamily;
+
+  /// Every `ColorScheme` role as ARGB.
   final Map<String, int> colorScheme;
+
+  /// Localized text theme entries (geometry + family + user overrides).
+  /// Colors are only present when the app set them; see [textStyle].
   final Map<String, TextStyleSpec> textTheme;
+
+  final IrColor? scaffoldBackground;
+  final AppBarThemeSpec appBar;
+  final CardThemeSpec card;
+
+  /// `elevatedButtonTheme` etc.: button type → `ButtonStyle` arguments.
+  final Map<String, Map<String, DartValue>> buttonStyles;
+
+  bool get isDark => brightness == ThemeBrightness.dark;
 
   IrColor color(String role) => IrColor.fromArgb32(colorScheme[role]!);
 
@@ -25,9 +88,16 @@ class MaterialTheme {
     return argb == null ? null : IrColor.fromArgb32(argb);
   }
 
-  /// A text theme entry, colored like `ThemeData.textTheme` (onSurface).
-  TextStyleSpec? textStyle(String name) =>
-      textTheme[name]?.merge(TextStyleSpec(color: color('onSurface')));
+  /// A text theme entry as widgets see it. M3 typography colors every style
+  /// `onSurface` unless the app's text theme says otherwise.
+  TextStyleSpec? textStyle(String name) {
+    final entry = textTheme[name];
+    if (entry == null) return null;
+    return TextStyleSpec(
+      fontFamily: fontFamily,
+      color: color('onSurface'),
+    ).merge(entry);
+  }
 
   /// Figma approximation of Material 3 elevation levels (M3 design kit).
   List<IrShadow> shadows(double elevation) {
@@ -58,19 +128,33 @@ class MaterialTheme {
   }
 }
 
+// Generated from `_colorSchemeLightM3` / `_colorSchemeDarkM3` in the Flutter
+// SDK's theme_data.dart. Regenerate rather than edit by hand.
 const m3LightColorScheme = <String, int>{
   'primary': 0xFF6750A4,
   'onPrimary': 0xFFFFFFFF,
   'primaryContainer': 0xFFEADDFF,
   'onPrimaryContainer': 0xFF4F378B,
+  'primaryFixed': 0xFFEADDFF,
+  'primaryFixedDim': 0xFFD0BCFF,
+  'onPrimaryFixed': 0xFF21005D,
+  'onPrimaryFixedVariant': 0xFF4F378B,
   'secondary': 0xFF625B71,
   'onSecondary': 0xFFFFFFFF,
   'secondaryContainer': 0xFFE8DEF8,
   'onSecondaryContainer': 0xFF4A4458,
+  'secondaryFixed': 0xFFE8DEF8,
+  'secondaryFixedDim': 0xFFCCC2DC,
+  'onSecondaryFixed': 0xFF1D192B,
+  'onSecondaryFixedVariant': 0xFF4A4458,
   'tertiary': 0xFF7D5260,
   'onTertiary': 0xFFFFFFFF,
   'tertiaryContainer': 0xFFFFD8E4,
   'onTertiaryContainer': 0xFF633B48,
+  'tertiaryFixed': 0xFFFFD8E4,
+  'tertiaryFixedDim': 0xFFEFB8C8,
+  'onTertiaryFixed': 0xFF31111D,
+  'onTertiaryFixedVariant': 0xFF633B48,
   'error': 0xFFB3261E,
   'onError': 0xFFFFFFFF,
   'errorContainer': 0xFFF9DEDC,
@@ -96,6 +180,57 @@ const m3LightColorScheme = <String, int>{
   'onInverseSurface': 0xFFF5EFF7,
   'inversePrimary': 0xFFD0BCFF,
   'surfaceTint': 0xFF6750A4,
+};
+const m3DarkColorScheme = <String, int>{
+  'primary': 0xFFD0BCFF,
+  'onPrimary': 0xFF381E72,
+  'primaryContainer': 0xFF4F378B,
+  'onPrimaryContainer': 0xFFEADDFF,
+  'primaryFixed': 0xFFEADDFF,
+  'primaryFixedDim': 0xFFD0BCFF,
+  'onPrimaryFixed': 0xFF21005D,
+  'onPrimaryFixedVariant': 0xFF4F378B,
+  'secondary': 0xFFCCC2DC,
+  'onSecondary': 0xFF332D41,
+  'secondaryContainer': 0xFF4A4458,
+  'onSecondaryContainer': 0xFFE8DEF8,
+  'secondaryFixed': 0xFFE8DEF8,
+  'secondaryFixedDim': 0xFFCCC2DC,
+  'onSecondaryFixed': 0xFF1D192B,
+  'onSecondaryFixedVariant': 0xFF4A4458,
+  'tertiary': 0xFFEFB8C8,
+  'onTertiary': 0xFF492532,
+  'tertiaryContainer': 0xFF633B48,
+  'onTertiaryContainer': 0xFFFFD8E4,
+  'tertiaryFixed': 0xFFFFD8E4,
+  'tertiaryFixedDim': 0xFFEFB8C8,
+  'onTertiaryFixed': 0xFF31111D,
+  'onTertiaryFixedVariant': 0xFF633B48,
+  'error': 0xFFF2B8B5,
+  'onError': 0xFF601410,
+  'errorContainer': 0xFF8C1D18,
+  'onErrorContainer': 0xFFF9DEDC,
+  'background': 0xFF141218,
+  'onBackground': 0xFFE6E0E9,
+  'surface': 0xFF141218,
+  'surfaceBright': 0xFF3B383E,
+  'surfaceContainerLowest': 0xFF0F0D13,
+  'surfaceContainerLow': 0xFF1D1B20,
+  'surfaceContainer': 0xFF211F26,
+  'surfaceContainerHigh': 0xFF2B2930,
+  'surfaceContainerHighest': 0xFF36343B,
+  'surfaceDim': 0xFF141218,
+  'onSurface': 0xFFE6E0E9,
+  'surfaceVariant': 0xFF49454F,
+  'onSurfaceVariant': 0xFFCAC4D0,
+  'outline': 0xFF938F99,
+  'outlineVariant': 0xFF49454F,
+  'shadow': 0xFF000000,
+  'scrim': 0xFF000000,
+  'inverseSurface': 0xFFE6E0E9,
+  'onInverseSurface': 0xFF322F35,
+  'inversePrimary': 0xFF6750A4,
+  'surfaceTint': 0xFFD0BCFF,
 };
 
 const m3TextTheme = <String, TextStyleSpec>{

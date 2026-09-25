@@ -1,23 +1,36 @@
 import 'package:flutter2figma_analyzer/flutter2figma_analyzer.dart';
 import 'package:flutter2figma_ir/flutter2figma_ir.dart';
 
+import 'color_scheme.dart';
 import 'material_theme.dart';
 import 'text_style.dart';
+
+/// A statically computed `ColorScheme`.
+typedef ColorSchemeValue = ({
+  Map<String, int> roles,
+  ThemeBrightness brightness,
+});
 
 /// Interprets analyzed Dart values (`EdgeInsets.all(16)`, `Colors.blue`, ...)
 /// as design values.
 class ValueEvaluator {
-  const ValueEvaluator(this.theme);
+  ValueEvaluator(this.theme);
 
-  final MaterialTheme theme;
+  /// The theme `Theme.of(context)` resolves to at the current point in the
+  /// tree. The compiler swaps it inside `Theme` widgets.
+  MaterialTheme theme;
 
-  /// Follows `const` references to their initializers.
+  /// Follows references and project calls to the values they stand for.
   DartValue? deref(DartValue? v) {
     var current = v;
-    for (var i = 0; i < 16 && current is RefValue; i++) {
-      final constant = current.constant;
-      if (constant == null) return current;
-      current = constant;
+    for (var i = 0; i < 16; i++) {
+      final next = switch (current) {
+        RefValue(:final resolved?) => resolved,
+        CallValue(:final result?) => result,
+        _ => null,
+      };
+      if (next == null) return current;
+      current = next;
     }
     return current;
   }
@@ -94,10 +107,8 @@ class ValueEvaluator {
           }
           return null;
         }
-        if (_endsWith(target, const {'colorScheme'})) {
-          return theme.maybeColor(name);
-        }
-        return null;
+        final argb = colorScheme(target)?.roles[name];
+        return argb == null ? null : IrColor.fromArgb32(argb);
       case CallValue(:final target, :final method):
         final base = color(target);
         if (base == null) return null;
@@ -382,6 +393,16 @@ class ValueEvaluator {
       case AccessValue(:final target, :final name)
           when _endsWith(target, const {'textTheme', 'primaryTextTheme'}):
         return theme.textStyle(name);
+      case CallValue(target: RefValue(path: ['GoogleFonts']), :final method)
+          when !method.endsWith('TextTheme'):
+        // GoogleFonts.inter(textStyle: ..., fontSize: ...) or getFont('Inter').
+        final family = method == 'getFont'
+            ? string(d.positional.firstOrNull)
+            : googleFontFamily(method);
+        return TextStyleSpec(fontFamily: family)
+            .merge(textStyle(d.named['textStyle']))
+            .merge(textStyle(ObjectValue(type: 'TextStyle', named: d.named)))
+            .merge(TextStyleSpec(fontFamily: family));
       case CallValue(target: final target?, method: 'copyWith'):
         final base = textStyle(target) ?? const TextStyleSpec();
         return base.merge(
@@ -395,6 +416,146 @@ class ValueEvaluator {
         return base.merge(TextStyleSpec(color: color(d.named['color'])));
       case ConditionalValue(:final then):
         return textStyle(then);
+      default:
+        return null;
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Theme values
+  // -------------------------------------------------------------------------
+
+  /// Evaluates a `ColorScheme` expression: the constructors, `fromSeed`,
+  /// `copyWith`, or `Theme.of(context).colorScheme`.
+  ColorSchemeValue? colorScheme(DartValue? v) {
+    final d = deref(v);
+    ThemeBrightness? brightnessOf(DartValue? b) => switch (enumName(b)) {
+      'dark' => ThemeBrightness.dark,
+      'light' => ThemeBrightness.light,
+      _ => null,
+    };
+    Map<String, int> rolesIn(Map<String, DartValue> named) => {
+      for (final role in allColorRoles)
+        if (color(named[role]) case final c?) role: c.toArgb32(),
+    };
+
+    switch (d) {
+      case ObjectValue(type: 'ColorScheme'):
+        switch (d.constructor) {
+          case null:
+            final roles = completeColorScheme(rolesIn(d.named));
+            final brightness = brightnessOf(d['brightness']);
+            if (roles == null || brightness == null) return null;
+            return (roles: roles, brightness: brightness);
+          case 'light' || 'dark':
+            final brightness = d.constructor == 'dark'
+                ? ThemeBrightness.dark
+                : ThemeBrightness.light;
+            final defaults = brightness == ThemeBrightness.dark
+                ? colorSchemeDarkDefaults
+                : colorSchemeLightDefaults;
+            final roles = completeColorScheme({
+              ...defaults,
+              ...rolesIn(d.named),
+            });
+            return (roles: roles!, brightness: brightness);
+          case 'fromSeed':
+            final seed = color(d['seedColor']);
+            if (seed == null) return null;
+            final brightness =
+                brightnessOf(d['brightness']) ?? ThemeBrightness.light;
+            return (
+              roles: seedColorScheme(
+                seed.toArgb32(),
+                brightness: brightness,
+                variant: enumName(d['dynamicSchemeVariant']) ?? 'tonalSpot',
+                contrastLevel: number(d['contrastLevel']) ?? 0,
+                overrides: rolesIn(d.named),
+              ),
+              brightness: brightness,
+            );
+        }
+        return null;
+      case CallValue(target: final target?, method: 'copyWith'):
+        final base = colorScheme(target);
+        if (base == null) return null;
+        return (
+          roles: {...base.roles, ...rolesIn(d.named)},
+          brightness: brightnessOf(d.named['brightness']) ?? base.brightness,
+        );
+      case AccessValue(name: 'colorScheme'):
+        // `Theme.of(context).colorScheme` and friends: the ambient theme.
+        return (roles: theme.colorScheme, brightness: theme.brightness);
+      default:
+        return null;
+    }
+  }
+
+  /// Evaluates a `TextTheme` expression into the entries it sets.
+  ///
+  /// `TextTheme(...)` yields only the named entries (as Flutter's partial
+  /// text themes do); `Theme.of(context).textTheme` yields the full theme.
+  Map<String, TextStyleSpec>? textTheme(DartValue? v) {
+    final d = deref(v);
+    switch (d) {
+      case ObjectValue(type: 'TextTheme'):
+        return {
+          for (final MapEntry(:key, :value) in d.named.entries)
+            key: ?textStyle(value),
+        };
+      case AccessValue(name: 'textTheme'):
+        return {
+          for (final name in theme.textTheme.keys) name: theme.textStyle(name)!,
+        };
+      case CallValue(target: RefValue(path: ['GoogleFonts']), :final method)
+          when method.endsWith('TextTheme'):
+        // Flutter's google_fonts starts from ThemeData.light().textTheme.
+        final baseline = MaterialTheme.baseline(ThemeBrightness.light);
+        final base =
+            textTheme(d.positional.firstOrNull) ??
+            {
+              for (final name in baseline.textTheme.keys)
+                name: baseline.textStyle(name)!,
+            };
+        final family = googleFontFamily(
+          method.substring(0, method.length - 'TextTheme'.length),
+        );
+        return {
+          for (final MapEntry(:key, :value) in base.entries)
+            key: value.merge(TextStyleSpec(fontFamily: family)),
+        };
+      case CallValue(target: final target?, method: 'apply'):
+        final base = textTheme(target);
+        if (base == null) return null;
+        final family = string(d.named['fontFamily']);
+        final display = color(d.named['displayColor']);
+        final body = color(d.named['bodyColor']);
+        return {
+          for (final MapEntry(:key, :value) in base.entries)
+            key: value.merge(
+              TextStyleSpec(
+                fontFamily: family,
+                color: _displayColorStyles.contains(key) ? display : body,
+              ),
+            ),
+        };
+      case CallValue(target: final target?, method: 'copyWith'):
+        final base = textTheme(target);
+        if (base == null) return null;
+        return {
+          ...base,
+          for (final MapEntry(:key, :value) in d.named.entries)
+            key: ?textStyle(value),
+        };
+      case CallValue(target: final target?, method: 'merge'):
+        final base = textTheme(target);
+        final other = textTheme(d.positional.firstOrNull);
+        if (base == null) return other;
+        if (other == null) return base;
+        return {
+          for (final key in {...base.keys, ...other.keys})
+            key: (base[key] ?? const TextStyleSpec()).merge(other[key]),
+        };
       default:
         return null;
     }
@@ -429,4 +590,25 @@ class ValueEvaluator {
     }
     return buffer.toString();
   }
+}
+
+/// Styles `TextTheme.apply(displayColor:)` colors; the rest take `bodyColor`
+/// (note `headlineSmall` is in the body group in Flutter).
+const _displayColorStyles = {
+  'displayLarge',
+  'displayMedium',
+  'displaySmall',
+  'headlineLarge',
+  'headlineMedium',
+};
+
+/// `GoogleFonts.robotoMono` → `Roboto Mono`.
+String googleFontFamily(String method) {
+  final words = method
+      .replaceAllMapped(RegExp(r'(?<=[a-z0-9])(?=[A-Z])'), (_) => ' ')
+      .split(' ');
+  return [
+    for (final w in words)
+      if (w.isNotEmpty) w[0].toUpperCase() + w.substring(1),
+  ].join(' ');
 }
