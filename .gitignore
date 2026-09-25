@@ -1,0 +1,14 @@
+# FVM Version Cache
+.fvm/
+
+# Dart
+.dart_tool/
+pubspec.lock
+!examples/**/pubspec.lock
+
+# Build output
+build/
+
+# Figma plugin
+figma-plugin/node_modules/
+figma-plugin/dist/

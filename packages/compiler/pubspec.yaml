@@ -1,0 +1,14 @@
+name: flutter2figma_compiler
+description: Compiles analyzed Flutter widget trees into Flutter2Figma IR.
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter2figma_analyzer: any
+  flutter2figma_ir: any
+
+dev_dependencies:
+  test: ^1.25.0

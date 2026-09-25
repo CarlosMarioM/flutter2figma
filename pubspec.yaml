@@ -1,0 +1,15 @@
+name: flutter2figma_workspace
+publish_to: none
+
+environment:
+  sdk: ^3.11.0
+
+workspace:
+  - packages/ir
+  - packages/analyzer
+  - packages/compiler
+  - packages/figma
+  - packages/cli
+
+dev_dependencies:
+  lints: ^6.0.0

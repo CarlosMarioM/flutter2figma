@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body {
+        font: 12px Inter, system-ui, sans-serif;
+        margin: 0;
+        padding: 16px;
+        color: var(--figma-color-text);
+        background: var(--figma-color-bg);
+      }
+      h1 { font-size: 13px; font-weight: 600; margin: 0 0 4px; }
+      p { margin: 0 0 12px; color: var(--figma-color-text-secondary); }
+      code { font-family: ui-monospace, monospace; font-size: 11px; }
+      #drop {
+        border: 1px dashed var(--figma-color-border-strong);
+        border-radius: 6px;
+        padding: 28px 12px;
+        text-align: center;
+        cursor: pointer;
+      }
+      #drop.over { border-color: var(--figma-color-border-brand-strong); background: var(--figma-color-bg-brand-tertiary); }
+      #status { margin-top: 12px; white-space: pre-wrap; }
+      .error { color: var(--figma-color-text-danger); }
+      ul { margin: 6px 0 0; padding-left: 16px; max-height: 180px; overflow: auto; }
+      li { margin-bottom: 4px; }
+    </style>
+  </head>
+  <body>
+    <h1>Flutter2Figma</h1>
+    <p>Run <code>flutter2figma export</code>, then drop <code>design.json</code> here.</p>
+    <div id="drop">Drop design.json or click to choose</div>
+    <input id="file" type="file" accept=".json,application/json" hidden />
+    <div id="status"></div>
+
+    <script>
+      const drop = document.getElementById('drop');
+      const input = document.getElementById('file');
+      const status = document.getElementById('status');
+
+      function send(file) {
+        status.className = '';
+        status.textContent = `Importing ${file.name}…`;
+        file.text().then((json) => parent.postMessage({ pluginMessage: { type: 'import', json } }, '*'));
+      }
+
+      drop.addEventListener('click', () => input.click());
+      input.addEventListener('change', () => input.files[0] && send(input.files[0]));
+      drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('over'); });
+      drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+      drop.addEventListener('drop', (e) => {
+        e.preventDefault();
+        drop.classList.remove('over');
+        const file = e.dataTransfer.files[0];
+        if (file) send(file);
+      });
+
+      onmessage = (event) => {
+        const msg = event.data.pluginMessage;
+        if (!msg) return;
+        if (msg.type === 'error') {
+          status.className = 'error';
+          status.textContent = msg.message;
+          return;
+        }
+        status.className = '';
+        status.textContent = `✓ ${msg.screens} screens, ${msg.nodes} layers`;
+        const notes = [
+          ...Object.entries(msg.fontSubstitutions).map(([from, to]) => `Font "${from}" unavailable, used "${to}"`),
+          ...msg.warnings.map((w) => w.message + (w.source ? ` (${w.source})` : '')),
+        ];
+        if (notes.length) {
+          const list = document.createElement('ul');
+          for (const note of notes) {
+            const li = document.createElement('li');
+            li.textContent = note;
+            list.appendChild(li);
+          }
+          status.appendChild(list);
+        }
+      };
+    </script>
+  </body>
+</html>
