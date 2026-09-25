@@ -89,6 +89,8 @@ Anything else is exported as a magenta `⚠` placeholder, or passed through if i
 
 ## Development
 
+Full guide: [docs/development.md](docs/development.md). It covers setup, adding widget support, adding IR properties end to end, plugin development in Figma, debugging and known gotchas.
+
 ```sh
 # Dart (from each package dir, or loop)
 for p in ir analyzer compiler figma cli; do (cd packages/$p && dart test); done
