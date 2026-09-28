@@ -90,10 +90,19 @@ class ObjectValue extends DartValue {
 /// declarations in the analyzed project, the initializer of a `final`/`var`
 /// or the returned expression of a getter.
 class RefValue extends DartValue {
-  const RefValue(this.path, {this.resolved, super.source});
+  const RefValue(
+    this.path, {
+    this.resolved,
+    this.inProject = false,
+    super.source,
+  });
 
   final List<String> path;
   final DartValue? resolved;
+
+  /// Declared in the analyzed project (not the SDK or a package), e.g.
+  /// `AppColors.brand`. Such references are the app's own design tokens.
+  final bool inProject;
 
   String get dotted => path.join('.');
   String get last => path.last;
@@ -101,6 +110,7 @@ class RefValue extends DartValue {
   @override
   Map<String, Object?> toJson() => {
     'ref': dotted,
+    if (inProject) 'inProject': true,
     if (resolved != null) 'resolved': resolved!.toJson(),
   };
 }

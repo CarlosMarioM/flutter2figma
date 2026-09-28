@@ -573,6 +573,7 @@ class _Expander {
       return RefValue(
         [e.prefix.name, name],
         resolved: _resolve(e.element, s),
+        inProject: _inProject(e.element),
         source: loc,
       );
     }
@@ -607,7 +608,15 @@ class _Expander {
     if (_isInstanceMember(element)) return _member(e, s, loc);
     final resolved = _resolve(element, s);
     if (resolved != null) {
-      return RefValue([name], resolved: resolved, source: loc);
+      // A static member referenced from inside its class: keep the class
+      // name so the reference reads like it does from outside.
+      final enclosing = element?.enclosingElement;
+      return RefValue(
+        [if (enclosing is InterfaceElement) enclosing.name!, name],
+        resolved: resolved,
+        inProject: _inProject(element),
+        source: loc,
+      );
     }
     return UnknownValue(name, source: loc);
   }
@@ -623,6 +632,11 @@ class _Expander {
     return s.bindings[name] ??
         _declared(e.element, s, instance: true) ??
         UnknownValue(name, source: loc);
+  }
+
+  bool _inProject(Element? element) {
+    final path = element?.library?.firstFragment.source.fullName;
+    return path != null && p.isWithin(root, path);
   }
 
   bool _isStatic(MethodInvocation e) {

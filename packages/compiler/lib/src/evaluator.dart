@@ -20,6 +20,10 @@ class ValueEvaluator {
   /// tree. The compiler swaps it inside `Theme` widgets.
   MaterialTheme theme;
 
+  /// Colors referenced through project constants (`AppColors.brand`), by
+  /// token name. They become design tokens alongside the color scheme.
+  final projectColors = <String, IrColor>{};
+
   /// Follows references and project calls to the values they stand for.
   DartValue? deref(DartValue? v) {
     var current = v;
@@ -81,6 +85,15 @@ class ValueEvaluator {
 
   IrColor? color(DartValue? v) {
     final unwrapped = unwrapStateProperty(v);
+    if (unwrapped is RefValue &&
+        unwrapped.inProject &&
+        unwrapped.resolved != null) {
+      final value = color(unwrapped.resolved);
+      if (value == null || value.token != null) return value;
+      final token = projectToken(unwrapped.path);
+      projectColors[token] = value;
+      return value.withToken(token);
+    }
     if (unwrapped is RefValue) {
       switch (unwrapped.dotted) {
         case 'Colors.transparent':
@@ -107,8 +120,13 @@ class ValueEvaluator {
           }
           return null;
         }
-        final argb = colorScheme(target)?.roles[name];
-        return argb == null ? null : IrColor.fromArgb32(argb);
+        final scheme = colorScheme(target);
+        final argb = scheme?.roles[name];
+        if (argb == null) return null;
+        // Reading the app's own scheme: bind to the theme token.
+        return _sameRoles(scheme!.roles, theme.colorScheme)
+            ? theme.color(name)
+            : IrColor.fromArgb32(argb);
       case CallValue(:final target, :final method):
         final base = color(target);
         if (base == null) return null;
@@ -612,3 +630,12 @@ String googleFontFamily(String method) {
       if (w.isNotEmpty) w[0].toUpperCase() + w.substring(1),
   ].join(' ');
 }
+
+bool _sameRoles(Map<String, int> a, Map<String, int> b) =>
+    identical(a, b) ||
+    (a.length == b.length && a.entries.every((e) => b[e.key] == e.value));
+
+/// Token name for a project constant: `AppColors.brand` → `AppColors/brand`,
+/// `kBrand` → `Constants/kBrand`.
+String projectToken(List<String> path) =>
+    path.length == 1 ? 'Constants/${path.single}' : path.join('/');

@@ -1,7 +1,7 @@
 import 'package:flutter2figma_ir/flutter2figma_ir.dart';
 
 const designFormat = 'flutter2figma/design';
-const designVersion = 1;
+const designVersion = 2;
 
 /// Renders IR into `design.json`: a tree of nodes whose properties use Figma
 /// Plugin API names and enums, so the plugin can apply them almost verbatim.
@@ -31,11 +31,14 @@ class FigmaRenderer {
       screens.add(node);
       x += screen.width + screenSpacing;
     }
+    final system = doc.designSystem;
+    final designSystem = system == null ? null : _designSystem(doc, system);
     return {
       'format': designFormat,
       'version': designVersion,
       'name': doc.project,
       'fonts': _fonts.values.toList(),
+      'designSystem': ?designSystem,
       'screens': screens,
       'diagnostics': [
         for (final d in [...doc.diagnostics, ..._diagnostics]) d.toJson(),
@@ -72,6 +75,13 @@ class FigmaRenderer {
     if (node.width.isFixed) json['width'] = node.width.value;
     if (node.height.isFixed) json['height'] = node.height.value;
 
+    if (node.instance case final ref?) {
+      json['instance'] = {
+        'component': ref.component,
+        'variant': ref.key,
+        if (ref.props.isNotEmpty) 'props': ref.props,
+      };
+    }
     json['pluginData'] = {
       if (node.origin.isNotEmpty) 'origin': node.origin,
       if (node.source != null) 'source': node.source,
@@ -173,18 +183,8 @@ class FigmaRenderer {
       }
     }
     if (f.shadows.isNotEmpty) {
-      json['effects'] = [
-        for (final s in f.shadows)
-          {
-            'type': 'DROP_SHADOW',
-            'color': _rgba(s.color),
-            'offset': {'x': s.x, 'y': s.y},
-            'radius': s.blur,
-            'spread': s.spread,
-            'visible': true,
-            'blendMode': 'NORMAL',
-          },
-      ];
+      json['effects'] = [for (final e in f.shadows) _effect(e)];
+      if (f.shadowToken != null) json['effectStyle'] = f.shadowToken;
     }
     json['clipsContent'] = f.clip;
     json['children'] = [
@@ -195,21 +195,12 @@ class FigmaRenderer {
 
   Map<String, Object?> _text(IrText t) {
     final s = t.style;
-    final fontName = {
-      'family': s.fontFamily,
-      'style': figmaFontStyle(s.fontWeight, italic: s.italic),
-    };
-    _fonts['${fontName['family']}/${fontName['style']}'] = fontName;
     return {
       'type': 'TEXT',
       'name': t.name,
       'characters': t.text,
-      'fontName': fontName,
-      'fontSize': s.fontSize,
-      'lineHeight': s.lineHeight == null
-          ? {'unit': 'AUTO'}
-          : {'unit': 'PIXELS', 'value': s.lineHeight},
-      'letterSpacing': {'unit': 'PIXELS', 'value': s.letterSpacing},
+      ..._typography(s),
+      if (s.token != null) 'textStyle': s.token,
       'fills': [_paint(s.color)],
       'textAlignHorizontal': switch (t.align) {
         IrTextAlign.left => 'LEFT',
@@ -222,10 +213,82 @@ class FigmaRenderer {
     };
   }
 
+  /// Font, size, line height and letter spacing, in Figma's shape.
+  Map<String, Object?> _typography(IrTextStyle s) {
+    final fontName = {
+      'family': s.fontFamily,
+      'style': figmaFontStyle(s.fontWeight, italic: s.italic),
+    };
+    _fonts['${fontName['family']}/${fontName['style']}'] = fontName;
+    return {
+      'fontName': fontName,
+      'fontSize': s.fontSize,
+      'lineHeight': s.lineHeight == null
+          ? {'unit': 'AUTO'}
+          : {'unit': 'PIXELS', 'value': s.lineHeight},
+      'letterSpacing': {'unit': 'PIXELS', 'value': s.letterSpacing},
+    };
+  }
+
+  /// A solid paint. Token colors name the variable to bind; the alpha stays
+  /// on the paint so e.g. `onSurface` at 38% binds to `onSurface`.
   Map<String, Object?> _paint(IrColor c) => {
     'type': 'SOLID',
     'color': {'r': c.r, 'g': c.g, 'b': c.b},
     'opacity': c.a,
+    if (c.token != null) 'variable': c.token,
+  };
+
+  Map<String, Object?> _designSystem(IrDocument doc, IrDesignSystem ds) => {
+    'collection': '${doc.project} theme',
+    'modes': ds.modes,
+    'activeMode': ds.activeMode,
+    'variables': [
+      for (final c in ds.colors)
+        {
+          'name': c.name,
+          'type': 'COLOR',
+          'values': {
+            for (final MapEntry(key: mode, value: v) in c.values.entries)
+              mode: _rgba(v),
+          },
+        },
+    ],
+    'textStyles': [
+      for (final t in ds.textStyles) {'name': t.name, ..._typography(t.style)},
+    ],
+    'effectStyles': [
+      for (final s in ds.shadows)
+        {
+          'name': s.name,
+          'effects': [for (final e in s.shadows) _effect(e)],
+        },
+    ],
+    'components': [
+      for (final c in ds.components)
+        {
+          'name': c.name,
+          if (c.source != null) 'source': c.source,
+          'variants': [
+            for (final v in c.variants)
+              {
+                'key': IrInstanceRef(c.name, v.props).key,
+                'name': IrInstanceRef(c.name, v.props).variantName,
+                'uses': v.uses,
+              },
+          ],
+        },
+    ],
+  };
+
+  Map<String, Object?> _effect(IrShadow s) => {
+    'type': 'DROP_SHADOW',
+    'color': _rgba(s.color),
+    'offset': {'x': s.x, 'y': s.y},
+    'radius': s.blur,
+    'spread': s.spread,
+    'visible': true,
+    'blendMode': 'NORMAL',
   };
 
   Map<String, Object?> _rgba(IrColor c) => {

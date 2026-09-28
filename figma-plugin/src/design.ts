@@ -3,13 +3,14 @@
 // mirror the Figma Plugin API.
 
 export const DESIGN_FORMAT = 'flutter2figma/design';
-export const DESIGN_VERSION = 1;
+export const DESIGN_VERSION = 2;
 
 export interface DesignDocument {
   format: typeof DESIGN_FORMAT;
   version: number;
   name: string;
   fonts: FontName[];
+  designSystem?: DesignSystemSpec;
   screens: FrameSpec[];
   diagnostics: Diagnostic[];
 }
@@ -25,6 +26,41 @@ export interface Position {
   top?: number;
   right?: number;
   bottom?: number;
+}
+
+/** A solid paint; `variable` names the color variable to bind. */
+export interface PaintSpec extends SolidPaint {
+  variable?: string;
+}
+
+export interface DesignSystemSpec {
+  /** Variable collection name. */
+  collection: string;
+  modes: string[];
+  activeMode: string;
+  variables: { name: string; type: 'COLOR'; values: Record<string, RGBA> }[];
+  textStyles: {
+    name: string;
+    fontName: FontName;
+    fontSize: number;
+    lineHeight: LineHeight;
+    letterSpacing: LetterSpacing;
+  }[];
+  effectStyles: { name: string; effects: DropShadowEffect[] }[];
+  components: ComponentSpec[];
+}
+
+export interface ComponentSpec {
+  name: string;
+  source?: string;
+  variants: { key: string; name: string; uses: number }[];
+}
+
+export interface InstanceSpec {
+  component: string;
+  /** Variant key, shared by every occurrence of that variant. */
+  variant: string;
+  props?: Record<string, string>;
 }
 
 export interface PluginDataSpec {
@@ -43,7 +79,8 @@ interface BaseSpec {
   layoutSizingVertical: 'FIXED' | 'HUG' | 'FILL';
   layoutPositioning?: 'AUTO' | 'ABSOLUTE';
   position?: Position;
-  fills: SolidPaint[];
+  fills: PaintSpec[];
+  instance?: InstanceSpec;
   pluginData: PluginDataSpec;
 }
 
@@ -59,7 +96,7 @@ export interface FrameSpec extends BaseSpec {
   paddingLeft?: number;
   minWidth?: number;
   minHeight?: number;
-  strokes?: SolidPaint[];
+  strokes?: PaintSpec[];
   strokeWeight?: number;
   strokeAlign?: 'CENTER' | 'INSIDE' | 'OUTSIDE';
   cornerRadius?: number;
@@ -68,6 +105,8 @@ export interface FrameSpec extends BaseSpec {
   bottomRightRadius?: number;
   bottomLeftRadius?: number;
   effects?: DropShadowEffect[];
+  /** Effect style name the effects came from. */
+  effectStyle?: string;
   clipsContent: boolean;
   children: NodeSpec[];
 }
@@ -79,6 +118,8 @@ export interface TextSpec extends BaseSpec {
   fontSize: number;
   lineHeight: LineHeight;
   letterSpacing: LetterSpacing;
+  /** Text style name whose typography this matches. */
+  textStyle?: string;
   textAlignHorizontal: 'LEFT' | 'CENTER' | 'RIGHT' | 'JUSTIFIED';
   textAutoResize: 'WIDTH_AND_HEIGHT' | 'HEIGHT';
   maxLines?: number;

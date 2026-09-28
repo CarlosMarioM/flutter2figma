@@ -1,4 +1,5 @@
-import type { DesignDocument, FrameSpec, NodeSpec, TextSpec } from './design';
+import type { ComponentSpec, DesignDocument, FrameSpec, NodeSpec, TextSpec } from './design';
+import { DesignSystem, setupDesignSystem, toPaints } from './design-system';
 
 export const PLUGIN_DATA_KEY = 'flutter2figma';
 
@@ -8,7 +9,17 @@ export interface ImportResult {
   nodeCount: number;
   /** Requested font → substituted font, for fonts that weren't available. */
   fontSubstitutions: Record<string, string>;
+  variables: number;
+  textStyles: number;
+  effectStyles: number;
+  /** Component masters created, and instances placed in the screens. */
+  components: number;
+  instances: number;
+  notes: string[];
 }
+
+/** Built nodes: plain frames and text, or component instances. */
+type Built = FrameNode | TextNode | InstanceNode;
 
 const FALLBACK_FAMILY = 'Inter';
 
@@ -71,51 +82,85 @@ function hasKnownWeight(style: string): boolean {
   return base in WEIGHT_BY_STYLE;
 }
 
-function isAutoLayout(node: BaseNode & ChildrenMixin): boolean {
+function isAutoLayout(node: BaseNode): boolean {
   return 'layoutMode' in node && (node as FrameNode).layoutMode !== 'NONE';
 }
 
 export async function importDesign(api: PluginAPI, doc: DesignDocument): Promise<ImportResult> {
   const fonts = await loadFonts(api, doc.fonts);
+  const fontFor = (f: FontName) => fonts.get(fontKey(f)) ?? { family: FALLBACK_FAMILY, style: 'Regular' };
 
   const page = api.createPage();
   page.name = `Flutter2Figma · ${doc.name}`;
   await api.setCurrentPageAsync(page);
 
-  let nodeCount = 0;
+  const ds: DesignSystem | null = doc.designSystem
+    ? await setupDesignSystem(api, doc.designSystem, fontFor)
+    : null;
 
-  const build = (spec: NodeSpec, parent: BaseNode & ChildrenMixin): FrameNode | TextNode => {
+  // Component masters live in their own frame below the screens.
+  const componentSpecs = doc.designSystem?.components ?? [];
+  const library = componentSpecs.length > 0 ? createLibraryFrame(api, page) : null;
+  const masters = new Map<string, ComponentNode>();
+  let nodeCount = 0;
+  let instances = 0;
+
+  /** Builds [spec] under [parent], as an instance when it is a component occurrence. */
+  const build = async (spec: NodeSpec, parent: BaseNode & ChildrenMixin): Promise<Built> => {
+    const variant = library ? spec.instance?.variant : undefined;
+    if (variant === undefined) return buildNode(spec, parent);
+
+    const master = masters.get(variant);
+    if (master) {
+      const instance = master.createInstance();
+      instance.name = spec.name;
+      parent.appendChild(instance);
+      layout(instance, spec, parent);
+      applyTextOverrides(spec, instance);
+      instances++;
+      nodeCount++;
+      return instance;
+    }
+
+    // First occurrence: build it for real so Figma measures it, turn it into
+    // the component, put an instance in its place and move the master into
+    // the library.
+    const node = (await buildNode(spec, parent)) as FrameNode;
+    const width = node.width;
+    const height = node.height;
+    const component = api.createComponentFromNode(node);
+    const instance = component.createInstance();
+    parent.insertChild(parent.children.indexOf(component), instance);
+    instance.name = spec.name;
+    layout(instance, spec, parent);
+    // FILL only made sense inside the screen: the master keeps the measured
+    // size. Fix it before moving into the (hugging) library frame.
+    for (const axis of ['Horizontal', 'Vertical'] as const) {
+      if (component[`layoutSizing${axis}`] === 'FILL') component[`layoutSizing${axis}`] = 'FIXED';
+    }
+    component.resize(Math.max(0.01, width), Math.max(0.01, height));
+    library!.appendChild(component);
+    component.layoutPositioning = 'AUTO';
+    component.name = spec.instance!.props ? variantName(spec.instance!.props) : spec.instance!.component;
+    masters.set(variant, component);
+    instances++;
+    return instance;
+  };
+
+  const buildNode = async (spec: NodeSpec, parent: BaseNode & ChildrenMixin): Promise<FrameNode | TextNode> => {
     nodeCount++;
-    const node = spec.type === 'TEXT' ? buildText(spec) : buildFrame(spec);
+    const node = spec.type === 'TEXT' ? await buildText(spec) : await buildFrame(spec);
     node.name = spec.name;
     parent.appendChild(node);
-
-    const parentIsAutoLayout = isAutoLayout(parent);
-    if (spec.layoutPositioning === 'ABSOLUTE' && parentIsAutoLayout) {
-      node.layoutPositioning = 'ABSOLUTE';
-    }
-
-    // Fixed dimensions first, then sizing modes (FILL needs the node attached
-    // to an auto-layout parent; HUG needs the node itself to be auto-layout
-    // or text).
-    if (spec.width !== undefined || spec.height !== undefined) {
-      node.resize(Math.max(0.01, spec.width ?? node.width), Math.max(0.01, spec.height ?? node.height));
-    }
-    if (spec.x !== undefined) node.x = spec.x;
-    if (spec.y !== undefined) node.y = spec.y;
-    const canFill = parentIsAutoLayout && spec.layoutPositioning !== 'ABSOLUTE';
-    for (const axis of ['Horizontal', 'Vertical'] as const) {
-      const mode = spec[`layoutSizing${axis}`];
-      if (mode === 'FILL' && !canFill) continue; // Handled by the parent (stack stretch).
-      node[`layoutSizing${axis}`] = mode;
-    }
+    layout(node, spec, parent);
     if (spec.type === 'TEXT') (node as TextNode).textAutoResize = spec.textAutoResize;
 
     if (spec.type === 'FRAME') {
       const frame = node as FrameNode;
       if (spec.minWidth !== undefined) frame.minWidth = spec.minWidth;
       if (spec.minHeight !== undefined) frame.minHeight = spec.minHeight;
-      const children = spec.children.map((child) => [child, build(child, frame)] as const);
+      const children: (readonly [NodeSpec, Built])[] = [];
+      for (const child of spec.children) children.push([child, await build(child, frame)]);
       placeAbsoluteChildren(frame, children);
     }
 
@@ -123,9 +168,9 @@ export async function importDesign(api: PluginAPI, doc: DesignDocument): Promise
     return node;
   };
 
-  const buildFrame = (spec: FrameSpec): FrameNode => {
+  const buildFrame = async (spec: FrameSpec): Promise<FrameNode> => {
     const frame = api.createFrame();
-    frame.fills = spec.fills;
+    frame.fills = toPaints(api, spec.fills, ds);
     frame.clipsContent = spec.clipsContent;
     frame.layoutMode = spec.layoutMode;
     if (spec.layoutMode !== 'NONE') {
@@ -138,7 +183,7 @@ export async function importDesign(api: PluginAPI, doc: DesignDocument): Promise
       frame.paddingLeft = spec.paddingLeft ?? 0;
     }
     if (spec.strokes) {
-      frame.strokes = spec.strokes;
+      frame.strokes = toPaints(api, spec.strokes, ds);
       frame.strokeWeight = spec.strokeWeight ?? 1;
       frame.strokeAlign = spec.strokeAlign ?? 'INSIDE';
     }
@@ -150,18 +195,28 @@ export async function importDesign(api: PluginAPI, doc: DesignDocument): Promise
       frame.bottomRightRadius = spec.bottomRightRadius ?? 0;
       frame.bottomLeftRadius = spec.bottomLeftRadius ?? 0;
     }
-    if (spec.effects) frame.effects = spec.effects;
+    const effectStyle = spec.effectStyle ? ds?.effectStyles.get(spec.effectStyle) : undefined;
+    if (effectStyle) {
+      await frame.setEffectStyleIdAsync(effectStyle.id);
+    } else if (spec.effects) {
+      frame.effects = spec.effects;
+    }
     return frame;
   };
 
-  const buildText = (spec: TextSpec): TextNode => {
+  const buildText = async (spec: TextSpec): Promise<TextNode> => {
     const text = api.createText();
-    text.fontName = fonts.get(fontKey(spec.fontName)) ?? { family: FALLBACK_FAMILY, style: 'Regular' };
+    text.fontName = fontFor(spec.fontName);
     text.characters = spec.characters;
-    text.fontSize = spec.fontSize;
-    text.lineHeight = spec.lineHeight;
-    text.letterSpacing = spec.letterSpacing;
-    text.fills = spec.fills;
+    const style = spec.textStyle ? ds?.textStyles.get(spec.textStyle) : undefined;
+    if (style) {
+      await text.setTextStyleIdAsync(style.id);
+    } else {
+      text.fontSize = spec.fontSize;
+      text.lineHeight = spec.lineHeight;
+      text.letterSpacing = spec.letterSpacing;
+    }
+    text.fills = toPaints(api, spec.fills, ds);
     text.textAlignHorizontal = spec.textAlignHorizontal;
     text.textAutoResize = spec.textAutoResize;
     if (spec.maxLines !== undefined) {
@@ -173,17 +228,125 @@ export async function importDesign(api: PluginAPI, doc: DesignDocument): Promise
 
   const screens: FrameNode[] = [];
   for (const screen of doc.screens) {
-    screens.push(build(screen, page) as FrameNode);
+    const frame = (await build(screen, page)) as FrameNode;
+    if (ds) frame.setExplicitVariableModeForCollection(ds.collection, ds.activeModeId);
+    screens.push(frame);
+  }
+
+  if (library) {
+    finishLibrary(api, library, componentSpecs, masters, screens);
+    if (ds) library.setExplicitVariableModeForCollection(ds.collection, ds.activeModeId);
   }
 
   page.selection = screens;
-  api.viewport.scrollAndZoomIntoView(screens);
+  api.viewport.scrollAndZoomIntoView(library ? [...screens, library] : screens);
 
   const fontSubstitutions: Record<string, string> = {};
   for (const [requested, actual] of fonts) {
     if (requested !== fontKey(actual)) fontSubstitutions[requested] = fontKey(actual);
   }
-  return { page, screens, nodeCount, fontSubstitutions };
+  return {
+    page,
+    screens,
+    nodeCount,
+    fontSubstitutions,
+    variables: ds?.variables.size ?? 0,
+    textStyles: ds?.textStyles.size ?? 0,
+    effectStyles: ds?.effectStyles.size ?? 0,
+    components: masters.size,
+    instances,
+    notes: ds?.notes ?? [],
+  };
+}
+
+/**
+ * Position and size for a node already attached to [parent]: fixed
+ * dimensions first, then sizing modes (FILL needs an auto-layout parent;
+ * HUG needs the node itself to be auto-layout or text).
+ */
+function layout(node: Built, spec: NodeSpec, parent: BaseNode): void {
+  const parentIsAutoLayout = isAutoLayout(parent);
+  if (spec.layoutPositioning === 'ABSOLUTE' && parentIsAutoLayout) {
+    node.layoutPositioning = 'ABSOLUTE';
+  }
+  if (spec.width !== undefined || spec.height !== undefined) {
+    node.resize(Math.max(0.01, spec.width ?? node.width), Math.max(0.01, spec.height ?? node.height));
+  }
+  if (spec.x !== undefined) node.x = spec.x;
+  if (spec.y !== undefined) node.y = spec.y;
+  const canFill = parentIsAutoLayout && spec.layoutPositioning !== 'ABSOLUTE';
+  for (const axis of ['Horizontal', 'Vertical'] as const) {
+    const mode = spec[`layoutSizing${axis}`];
+    if (mode === 'FILL' && !canFill) continue; // Handled by the parent (stack stretch).
+    node[`layoutSizing${axis}`] = mode;
+  }
+}
+
+function variantName(props: Record<string, string>): string {
+  return Object.entries(props)
+    .map(([k, v]) => `${k}=${v}`)
+    .join(', ');
+}
+
+/**
+ * Instances share their master's structure (the compiler only groups
+ * occurrences that differ in text), so walking both trees in parallel
+ * finds every text to override.
+ */
+function applyTextOverrides(spec: NodeSpec, node: SceneNode): void {
+  if (spec.type === 'TEXT') {
+    if (node.type === 'TEXT' && node.characters !== spec.characters) node.characters = spec.characters;
+    return;
+  }
+  if (!('children' in node)) return;
+  spec.children.forEach((child, i) => {
+    const target = node.children[i];
+    if (target) applyTextOverrides(child, target);
+  });
+}
+
+function createLibraryFrame(api: PluginAPI, page: PageNode): FrameNode {
+  const library = api.createFrame();
+  library.name = 'Components';
+  page.appendChild(library);
+  library.layoutMode = 'VERTICAL';
+  library.itemSpacing = 48;
+  library.paddingTop = library.paddingBottom = library.paddingLeft = library.paddingRight = 48;
+  library.layoutSizingHorizontal = 'HUG';
+  library.layoutSizingVertical = 'HUG';
+  library.fills = [];
+  return library;
+}
+
+/** Combines variants into component sets and places the library below the screens. */
+function finishLibrary(
+  api: PluginAPI,
+  library: FrameNode,
+  specs: ComponentSpec[],
+  masters: Map<string, ComponentNode>,
+  screens: FrameNode[],
+): void {
+  for (const spec of specs) {
+    const variants = spec.variants.map((v) => masters.get(v.key)).filter((m): m is ComponentNode => !!m);
+    if (variants.length === 0) continue;
+    const hasProps = spec.variants.some((v) => v.name !== '');
+    const description = spec.source ? `Flutter widget: ${spec.source}` : `Flutter ${spec.name}`;
+    if (hasProps) {
+      const set = api.combineAsVariants(variants, library);
+      set.name = spec.name;
+      set.description = description;
+      set.layoutMode = 'HORIZONTAL';
+      set.itemSpacing = 24;
+      set.paddingTop = set.paddingBottom = set.paddingLeft = set.paddingRight = 24;
+      set.layoutSizingHorizontal = 'HUG';
+      set.layoutSizingVertical = 'HUG';
+    } else {
+      variants[0].name = spec.name;
+      variants[0].description = description;
+    }
+  }
+  library.x = 0;
+  library.y = Math.max(0, ...screens.map((s) => s.y + s.height)) + 200;
 }
 
 /**
@@ -191,7 +354,7 @@ export async function importDesign(api: PluginAPI, doc: DesignDocument): Promise
  * children such as a FAB inside auto layout). Runs after the parent's
  * children exist, so auto-layout sizes are known.
  */
-function placeAbsoluteChildren(frame: FrameNode, children: ReadonlyArray<readonly [NodeSpec, FrameNode | TextNode]>): void {
+function placeAbsoluteChildren(frame: FrameNode, children: ReadonlyArray<readonly [NodeSpec, Built]>): void {
   const absoluteLayout = frame.layoutMode === 'NONE';
   for (const [spec, node] of children) {
     if (!absoluteLayout && spec.layoutPositioning !== 'ABSOLUTE') continue;

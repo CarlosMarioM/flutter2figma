@@ -5,8 +5,8 @@
 | Boundary | Format | Defined in |
 | --- | --- | --- |
 | analyzer → compiler | `DartValue` tree (in-memory; `analyze --json` prints it) | `packages/analyzer/lib/src/values.dart` |
-| compiler → renderer | IR, `flutter2figma/ir` v1 (`ir.json`) | `packages/ir/lib/src/model.dart` |
-| renderer → plugin | `flutter2figma/design` v1 (`design.json`) | `packages/figma/lib/src/renderer.dart`, `figma-plugin/src/design.ts` |
+| compiler → renderer | IR, `flutter2figma/ir` v2 (`ir.json`) | `packages/ir/lib/src/model.dart` |
+| renderer → plugin | `flutter2figma/design` v2 (`design.json`) | `packages/figma/lib/src/renderer.dart`, `figma-plugin/src/design.ts` |
 
 The IR is the stable centre. Adding an HTML/React backend means writing another
 renderer over `IrDocument`. Runtime inspection (`--runtime`) would be another
@@ -76,6 +76,77 @@ app, reads `Theme.of(context)` in light and dark, and writes
 `theme_extraction_test.dart` requires the static extraction to match that file
 exactly: every color role, every text style property, and the component
 themes.
+
+## Design system
+
+### Tokens by provenance
+
+The compiler records where a value came from and does not guess from the
+value. `IrColor.token`, `IrTextStyle.token` and `IrFrame.shadowToken` are
+set as follows:
+
+| Value | Token |
+| --- | --- |
+| `MaterialTheme.color(role)`: every theme default, `Theme.of(context).colorScheme.x`, and any `ColorScheme` value equal to the ambient one (e.g. a local `colorScheme` inside the theme builder) | `ColorScheme/<role>` |
+| A painted color reached through a project `RefValue` (`inProject`) | `AppColors/brand` (single-segment names: `Constants/<name>`) |
+| `withOpacity`/`withValues` on a token color | same token; the alpha becomes paint opacity |
+| Text: the most specific theme style merged into the text's style | `TextTheme/<name>`, **kept only if the final typography equals that style**; otherwise the first theme style with identical typography, otherwise none. Color is never part of a text style |
+| Shadows produced by `theme.shadows(elevation)` | `Elevation/level1..5` |
+
+The `IrDesignSystem` contains:
+- every non-deprecated scheme role, with a value per mode;
+- the painted project colors;
+- the 15 text theme styles;
+- the 5 elevation levels.
+
+The modes come from extracting `theme` and `darkTheme` separately. When there
+is no `darkTheme`, there is a single mode.
+
+### Components
+
+The compiler marks occurrences with `IrNode.instance` in two places:
+- **`_button`:** `Button` with `Type`, `State` and `Icon` props, when the content is a label.
+- **`_projectWidget`:** the class name, with no props.
+
+`ComponentExtractor` then groups them:
+
+1. Project widgets with fewer than `minComponentUses` (default 2) occurrences
+   are unmarked. Buttons are always components.
+2. Occurrences are grouped by their semantic props, then by `signature()`.
+   The signature is the node's JSON without text content, provenance, and the
+   root's own size and position.
+3. A semantic group with more than one signature gets a `Variant=1..n` prop.
+
+So instances of one variant differ **only in text**. The IR keeps each
+occurrence's full subtree, so renderers without components can ignore the
+markers. `simplify()` never folds outer padding into an occurrence, because
+the component's padding must stay its own.
+
+### In Figma (plugin)
+
+1. **Design system upsert (`design-system.ts`).**
+   - The variable collection is reused by name. Its default mode is renamed
+     to the first mode, and further modes are added. Plan limits are caught
+     and reported.
+   - Variables and styles are also matched by name, so re-importing updates
+     them instead of duplicating them.
+2. **Paints.** The `variable` key is stripped from each paint, then the paint
+   is bound with `setBoundVariableForPaint`.
+3. **Styles.** Text nodes with a `textStyle` use `setTextStyleIdAsync`. Frames
+   with an `effectStyle` use `setEffectStyleIdAsync`.
+4. **Components.**
+   - The first occurrence of a variant is built as ordinary frames, so Figma
+     measures its real size.
+   - `createComponentFromNode` turns it into the master. An instance is
+     inserted in its place.
+   - The master is fixed to its measured size and moved into the
+     `Components` frame below the screens.
+   - Later occurrences are `createInstance()` plus text overrides. The spec
+     and instance trees are walked in parallel.
+   - Variants with props are combined with `combineAsVariants` into a
+     component set.
+5. **Mode.** Screens and the library get `setExplicitVariableModeForCollection`
+   for the exported mode.
 
 ## Compiler: sizing model
 

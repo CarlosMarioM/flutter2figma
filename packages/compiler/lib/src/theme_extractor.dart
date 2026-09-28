@@ -213,16 +213,30 @@ class ThemeExtractor {
             .merge(user[key]),
     };
 
-    return MaterialTheme(
+    final base = MaterialTheme(
       brightness: brightness,
       fontFamily: fontFamily,
       colorScheme: roles,
       textTheme: textTheme,
-      scaffoldBackground: eval.color(args['scaffoldBackgroundColor']),
-      appBar: _appBarTheme(args['appBarTheme']),
-      card: _cardTheme(args['cardTheme']),
-      buttonStyles: _buttonStyles(args),
     );
+    // Component themes often read the scheme being built (a local
+    // `colorScheme`); evaluate them against it so they bind to its tokens.
+    final outer = eval.theme;
+    eval.theme = base;
+    try {
+      return MaterialTheme(
+        brightness: brightness,
+        fontFamily: fontFamily,
+        colorScheme: roles,
+        textTheme: textTheme,
+        scaffoldBackground: eval.color(args['scaffoldBackgroundColor']),
+        appBar: _appBarTheme(args['appBarTheme']),
+        card: _cardTheme(args['cardTheme']),
+        buttonStyles: _buttonStyles(args),
+      );
+    } finally {
+      eval.theme = outer;
+    }
   }
 
   /// `ThemeData.copyWith`: replaces what's given, keeps the rest.

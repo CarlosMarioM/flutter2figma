@@ -119,7 +119,8 @@ void main() {
     expect(scheme.displayName, 'ColorScheme.fromSeed');
     expect((scheme['brightness'] as RefValue).dotted, 'Brightness.light');
     final seed = scheme['seedColor'] as RefValue;
-    expect(seed.dotted, 'seed');
+    expect(seed.dotted, 'AppTheme.seed');
+    expect(seed.inProject, isTrue);
     expect((seed.resolved as ObjectValue).type, 'Color');
   });
 

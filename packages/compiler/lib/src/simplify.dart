@@ -33,7 +33,9 @@ IrNode? _fold(IrFrame wrapper) {
   if (!padding.isZero) {
     // Padding moves inside the child, so the child must not paint (its fill
     // would spread under the padding) and must not already have padding.
+    // Component occurrences must keep the component's own padding.
     if (child is! IrFrame ||
+        child.instance != null ||
         !child.isBare ||
         !child.padding.isZero ||
         child.direction == IrLayoutDirection.stack) {

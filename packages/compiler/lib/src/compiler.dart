@@ -1,6 +1,7 @@
 import 'package:flutter2figma_analyzer/flutter2figma_analyzer.dart';
 import 'package:flutter2figma_ir/flutter2figma_ir.dart';
 
+import 'component_extractor.dart';
 import 'evaluator.dart';
 import 'material_theme.dart';
 import 'simplify.dart';
@@ -111,7 +112,16 @@ class FlutterCompiler {
     this.screenWidth = 390,
     this.screenHeight = 844,
     this.listPreviewCount = 3,
+    this.designSystem = true,
+    this.minComponentUses = 2,
   }) : eval = ValueEvaluator(theme);
+
+  /// Emit an [IrDesignSystem]: color variables (per theme mode), text and
+  /// effect styles, and components.
+  final bool designSystem;
+
+  /// A project widget becomes a component once used this many times.
+  final int minComponentUses;
 
   /// Read the app's `MaterialApp` theme in [compile]. When false, the
   /// constructor's `theme` is used as is.
@@ -143,9 +153,33 @@ class FlutterCompiler {
       for (final w in analysis.screens)
         compileScreen(w.name, w.tree!, w.source),
     ];
+
+    IrDesignSystem? system;
+    _painted.clear();
+    for (final s in screens) {
+      _collectTokens(s.root);
+    }
+    if (designSystem) {
+      final components = ComponentExtractor(
+        minUses: minComponentUses,
+        sources: {for (final w in analysis.widgets) w.name: w.source},
+      ).extract(screens);
+      system = _designSystem(analysis, components);
+    } else {
+      void clear(IrNode n) {
+        n.instance = null;
+        if (n is IrFrame) n.children.forEach(clear);
+      }
+
+      for (final s in screens) {
+        clear(s.root);
+      }
+    }
+
     return IrDocument(
       project: analysis.name,
       screens: screens,
+      designSystem: system,
       diagnostics: [
         for (final d in analysis.diagnostics) IrDiagnostic(IrSeverity.error, d),
         ..._diagnostics.values,
@@ -154,6 +188,88 @@ class FlutterCompiler {
   }
 
   List<IrDiagnostic> get diagnostics => _diagnostics.values.toList();
+
+  /// Deprecated scheme roles that aren't exported as variables.
+  static const _deprecatedRoles = {
+    'background',
+    'onBackground',
+    'surfaceVariant',
+  };
+
+  /// Color tokens used by fills, strokes and text, in first-use order.
+  final _painted = <String>{};
+
+  void _collectTokens(IrNode n) {
+    void add(IrColor? c) {
+      if (c?.token case final token?) _painted.add(token);
+    }
+
+    switch (n) {
+      case IrText():
+        add(n.style.color);
+      case IrFrame():
+        add(n.fill);
+        add(n.stroke?.color);
+        n.children.forEach(_collectTokens);
+    }
+  }
+
+  IrDesignSystem _designSystem(
+    ProjectAnalysis analysis,
+    List<IrComponent> components,
+  ) {
+    String modeName(ThemeBrightness b) =>
+        b == ThemeBrightness.dark ? 'Dark' : 'Light';
+    final active = theme;
+
+    // Both app themes become modes of the same variables, so switching the
+    // mode in Figma recolors the screens.
+    final modes = <String, MaterialTheme>{};
+    if (extractTheme) {
+      MaterialTheme extract(ThemeBrightness b) => ThemeExtractor(
+        ValueEvaluator(const MaterialTheme()),
+      ).fromProject(analysis, brightness: b);
+      final light = extract(ThemeBrightness.light);
+      final dark = extract(ThemeBrightness.dark);
+      modes[modeName(light.brightness)] = light;
+      if (modes.keys.single != modeName(dark.brightness)) {
+        modes[modeName(dark.brightness)] = dark;
+      }
+    } else {
+      modes[modeName(active.brightness)] = active;
+    }
+    final activeMode = modes.containsKey(modeName(active.brightness))
+        ? modeName(active.brightness)
+        : modes.keys.first;
+
+    return IrDesignSystem(
+      modes: modes.keys.toList(),
+      activeMode: activeMode,
+      colors: [
+        for (final role in active.colorScheme.keys)
+          if (!_deprecatedRoles.contains(role))
+            IrColorToken(MaterialTheme.colorToken(role), {
+              for (final MapEntry(key: mode, value: t) in modes.entries)
+                mode: t.color(role),
+            }),
+        // Project constants (`AppColors.brand`) that are actually painted.
+        for (final name in _painted)
+          if (eval.projectColors[name] case final color?)
+            IrColorToken(name, {
+              for (final mode in modes.keys) mode: color.withToken(null),
+            }),
+      ],
+      textStyles: [
+        for (final name in active.textTheme.keys)
+          IrTextStyleToken(
+            MaterialTheme.textToken(name),
+            active.textStyle(name)!.resolve(active.fontFamily),
+          ),
+      ],
+      shadows: active.shadowTokens,
+      components: components,
+    );
+  }
 
   IrScreen compileScreen(String name, DartValue tree, String? source) {
     final ctx = _Ctx(
@@ -234,7 +350,10 @@ class FlutterCompiler {
     }
     final node = w.isFlutter ? _flutterWidget(w, c) : _projectWidget(w, c);
     node.source ??= w.source;
-    if (node is IrFrame) _adoptChildFill(node);
+    if (node is IrFrame) {
+      _adoptChildFill(node);
+      node.shadowToken ??= theme.shadowToken(node.shadows);
+    }
     return node;
   }
 
@@ -256,7 +375,11 @@ class FlutterCompiler {
       return _placeholder(w.type, w, c);
     }
     final node = _widget(w.build, c);
-    if (node is IrFrame) node.name = w.type;
+    if (node is IrFrame) {
+      node
+        ..name = w.type
+        ..instance = IrInstanceRef(w.type);
+    }
     node.origin = [w.type, ...node.origin];
     return node;
   }
@@ -1177,11 +1300,28 @@ class FlutterCompiler {
       name: label.isEmpty ? 'Text' : label,
       origin: [w.type],
       text: text,
-      style: style.resolve(theme.fontFamily),
+      style: _withTextToken(style.resolve(theme.fontFamily)),
       align: align,
       maxLines: eval.integer(w['maxLines']),
       width: _hugOrFill(c.box.forceW),
     );
+  }
+
+  /// Keeps the text style token only if the final typography still matches
+  /// it; otherwise looks for a theme style with identical typography.
+  IrTextStyle _withTextToken(IrTextStyle style) {
+    IrTextStyle? tokenStyle(String name) =>
+        theme.textStyle(name)?.resolve(theme.fontFamily);
+    final claimed = MaterialTheme.textStyleName(style.token);
+    if (claimed != null && tokenStyle(claimed)?.sameTypography(style) == true) {
+      return style;
+    }
+    for (final name in theme.textTheme.keys) {
+      if (tokenStyle(name)!.sameTypography(style)) {
+        return style.withToken(MaterialTheme.textToken(name));
+      }
+    }
+    return style.withToken(null);
   }
 
   IrFrame _icon(ObjectValue w, _Ctx c) {
@@ -1330,8 +1470,26 @@ class FlutterCompiler {
       if (hasIcon && w['label'] != null) _widget(w['label'], childCtx),
       if (!hasIcon && w['child'] != null) _widget(w['child'], childCtx),
     ];
+    // A button whose content is a label (optionally with an icon) is an
+    // instance of the Button component.
+    final labelled =
+        children.isNotEmpty &&
+        children.last is IrText &&
+        children.length == (hasIcon ? 2 : 1);
     return IrFrame(
       name: '${w.displayName}${enabled ? '' : ' (disabled)'}',
+      instance: labelled
+          ? IrInstanceRef('Button', {
+              'Type': switch (kind) {
+                'ElevatedButton' => 'Elevated',
+                'FilledButton' => tonal ? 'Tonal' : 'Filled',
+                'OutlinedButton' => 'Outlined',
+                _ => 'Text',
+              },
+              'State': enabled ? 'Enabled' : 'Disabled',
+              if (hasIcon) 'Icon': 'Leading',
+            })
+          : null,
       role: 'button',
       origin: [w.type],
       direction: IrLayoutDirection.horizontal,

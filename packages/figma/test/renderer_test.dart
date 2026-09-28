@@ -193,4 +193,92 @@ void main() {
     expect(figmaFontStyle(550), 'SemiBold');
     expect(figmaFontStyle(900, italic: true), 'Black Italic');
   });
+
+  test('design system: variables, styles, components, bindings', () {
+    final primary = IrColor.fromHex('#6750A4', token: 'ColorScheme/primary');
+    const labelStyle = IrTextStyle(
+      fontFamily: 'Roboto',
+      fontSize: 14,
+      fontWeight: 500,
+      color: IrColor.white,
+      lineHeight: 20,
+      token: 'TextTheme/labelLarge',
+    );
+    final button = IrFrame(
+      name: 'FilledButton',
+      instance: IrInstanceRef('Button', {'Type': 'Filled', 'State': 'Enabled'}),
+      fill: primary.withAlpha(0.5),
+      shadows: const [IrShadow(color: IrColor(0, 0, 0, 0.3), y: 1, blur: 2)],
+      shadowToken: 'Elevation/level1',
+      children: [IrText(name: 'Go', text: 'Go', style: labelStyle)],
+    );
+    final design = FigmaRenderer().render(
+      IrDocument(
+        project: 'demo',
+        screens: [
+          IrScreen(
+            name: 'S',
+            width: 390,
+            height: 844,
+            root: IrFrame(
+              name: 'S',
+              width: const IrSizing.fixed(390),
+              height: const IrSizing.fixed(844),
+              children: [button],
+            ),
+          ),
+        ],
+        designSystem: IrDesignSystem(
+          modes: ['Light', 'Dark'],
+          activeMode: 'Light',
+          colors: [
+            IrColorToken('ColorScheme/primary', {
+              'Light': IrColor.fromHex('#6750A4'),
+              'Dark': IrColor.fromHex('#D0BCFF'),
+            }),
+          ],
+          textStyles: [IrTextStyleToken('TextTheme/labelLarge', labelStyle)],
+          shadows: [IrShadowToken('Elevation/level1', button.shadows)],
+          components: [
+            IrComponent(
+              name: 'Button',
+              variants: [
+                IrComponentVariant({'Type': 'Filled', 'State': 'Enabled'}),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    expect(design['version'], 2);
+
+    final node = childrenOf(screenOf(design)).single;
+    final fill = (node['fills'] as List).single as Map;
+    expect(fill['variable'], 'ColorScheme/primary');
+    expect(fill['opacity'], 0.5);
+    expect(node['effectStyle'], 'Elevation/level1');
+    expect(node['instance'], {
+      'component': 'Button',
+      'variant': 'Button[Type=Filled, State=Enabled]',
+      'props': {'Type': 'Filled', 'State': 'Enabled'},
+    });
+    expect(childrenOf(node).single['textStyle'], 'TextTheme/labelLarge');
+
+    final ds = design['designSystem'] as Map;
+    expect(ds['collection'], 'demo theme');
+    expect(ds['modes'], ['Light', 'Dark']);
+    final variable = (ds['variables'] as List).single as Map;
+    expect((variable['values'] as Map).keys, ['Light', 'Dark']);
+    expect(((variable['values'] as Map)['Dark'] as Map)['a'], 1);
+    final textStyle = (ds['textStyles'] as List).single as Map;
+    expect(textStyle['fontName'], {'family': 'Roboto', 'style': 'Medium'});
+    expect(textStyle.containsKey('color'), isFalse);
+    expect(((ds['components'] as List).single as Map)['variants'], [
+      {
+        'key': 'Button[Type=Filled, State=Enabled]',
+        'name': 'Type=Filled, State=Enabled',
+        'uses': 1,
+      },
+    ]);
+  });
 }

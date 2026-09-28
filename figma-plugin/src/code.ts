@@ -14,12 +14,18 @@ figma.ui.onmessage = async (msg: UiMessage) => {
     const doc = parseDesign(msg.json);
     const result = await importDesign(figma, doc);
     const warnings = doc.diagnostics.filter((d) => d.severity !== 'info');
-    figma.notify(`Imported ${result.screens.length} screens (${result.nodeCount} layers)`);
+    figma.notify(`Imported ${result.screens.length} screens, ${result.components} components`);
     figma.ui.postMessage({
       type: 'done',
       screens: result.screens.length,
       nodes: result.nodeCount,
+      variables: result.variables,
+      textStyles: result.textStyles,
+      effectStyles: result.effectStyles,
+      components: result.components,
+      instances: result.instances,
       fontSubstitutions: result.fontSubstitutions,
+      notes: result.notes,
       warnings,
     });
   } catch (e) {

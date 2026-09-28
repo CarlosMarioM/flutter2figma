@@ -65,8 +65,12 @@
           return;
         }
         status.className = '';
-        status.textContent = `✓ ${msg.screens} screens, ${msg.nodes} layers`;
+        status.textContent =
+          `✓ ${msg.screens} screens, ${msg.nodes} layers\n` +
+          `${msg.variables} color variables · ${msg.textStyles} text styles · ${msg.effectStyles} effect styles\n` +
+          `${msg.components} components, ${msg.instances} instances`;
         const notes = [
+          ...msg.notes,
           ...Object.entries(msg.fontSubstitutions).map(([from, to]) => `Font "${from}" unavailable, used "${to}"`),
           ...msg.warnings.map((w) => w.message + (w.source ? ` (${w.source})` : '')),
         ];

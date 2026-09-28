@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter2figma_analyzer/flutter2figma_analyzer.dart';
 import 'package:flutter2figma_ir/flutter2figma_ir.dart';
 
@@ -81,12 +83,24 @@ class MaterialTheme {
 
   bool get isDark => brightness == ThemeBrightness.dark;
 
-  IrColor color(String role) => IrColor.fromArgb32(colorScheme[role]!);
+  /// A color scheme role, tagged with its design token.
+  IrColor color(String role) => maybeColor(role)!;
 
   IrColor? maybeColor(String role) {
     final argb = colorScheme[role];
-    return argb == null ? null : IrColor.fromArgb32(argb);
+    return argb == null
+        ? null
+        : IrColor.fromArgb32(argb, token: colorToken(role));
   }
+
+  static String colorToken(String role) => 'ColorScheme/$role';
+  static String textToken(String name) => 'TextTheme/$name';
+
+  /// The text theme entry name for a `TextTheme/...` token.
+  static String? textStyleName(String? token) =>
+      token != null && token.startsWith('TextTheme/')
+      ? token.substring(10)
+      : null;
 
   /// A text theme entry as widgets see it. M3 typography colors every style
   /// `onSurface` unless the app's text theme says otherwise.
@@ -96,7 +110,27 @@ class MaterialTheme {
     return TextStyleSpec(
       fontFamily: fontFamily,
       color: color('onSurface'),
+      token: textToken(name),
     ).merge(entry);
+  }
+
+  /// Elevations representative of M3 levels 1–5 (see [shadows]).
+  static const elevationLevels = [1.0, 3.0, 6.0, 8.0, 12.0];
+
+  /// Effect style tokens for the M3 elevation levels.
+  List<IrShadowToken> get shadowTokens => [
+    for (var i = 0; i < elevationLevels.length; i++)
+      IrShadowToken('Elevation/level${i + 1}', shadows(elevationLevels[i])),
+  ];
+
+  /// The elevation token [shadows] was produced from, if any.
+  String? shadowToken(List<IrShadow> shadows) {
+    if (shadows.isEmpty) return null;
+    final key = jsonEncodeShadows(shadows);
+    for (final t in shadowTokens) {
+      if (jsonEncodeShadows(t.shadows) == key) return t.name;
+    }
+    return null;
   }
 
   /// Figma approximation of Material 3 elevation levels (M3 design kit).
@@ -325,3 +359,6 @@ const m3TextTheme = <String, TextStyleSpec>{
     height: 1.33,
   ),
 };
+
+String jsonEncodeShadows(List<IrShadow> shadows) =>
+    jsonEncode([for (final s in shadows) s.toJson()]);

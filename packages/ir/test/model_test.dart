@@ -74,4 +74,89 @@ void main() {
       throwsFormatException,
     );
   });
+
+  test('v2: tokens, instances and design system round-trip', () {
+    final doc = IrDocument(
+      project: 'demo',
+      screens: [
+        IrScreen(
+          name: 'S',
+          width: 390,
+          height: 844,
+          root: IrFrame(
+            name: 'S',
+            width: const IrSizing.fixed(390),
+            height: const IrSizing.fixed(844),
+            fill: IrColor.fromHex('#FEF7FF', token: 'ColorScheme/surface'),
+            shadowToken: 'Elevation/level1',
+            instance: IrInstanceRef('Card', {'Variant': '1'}),
+            children: [
+              IrText(
+                name: 't',
+                text: 't',
+                style: IrTextStyle(
+                  fontFamily: 'Roboto',
+                  fontSize: 14,
+                  color: IrColor.fromHex(
+                    '#1D1B20',
+                    token: 'ColorScheme/onSurface',
+                  ).withAlpha(0.38),
+                  token: 'TextTheme/bodyMedium',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+      designSystem: IrDesignSystem(
+        modes: ['Light', 'Dark'],
+        activeMode: 'Dark',
+        colors: [
+          IrColorToken('ColorScheme/surface', {
+            'Light': IrColor.fromHex('#FEF7FF'),
+            'Dark': IrColor.fromHex('#141218'),
+          }),
+        ],
+        textStyles: [
+          IrTextStyleToken(
+            'TextTheme/bodyMedium',
+            const IrTextStyle(
+              fontFamily: 'Roboto',
+              fontSize: 14,
+              color: IrColor.black,
+              lineHeight: 20,
+            ),
+          ),
+        ],
+        shadows: [
+          IrShadowToken('Elevation/level1', const [
+            IrShadow(color: IrColor(0, 0, 0, 0.3), y: 1, blur: 2),
+          ]),
+        ],
+        components: [
+          IrComponent(
+            name: 'Card',
+            source: 'lib/card.dart:3',
+            variants: [
+              IrComponentVariant({'Variant': '1'}, uses: 2),
+            ],
+          ),
+        ],
+      ),
+    );
+    final json = jsonDecode(jsonEncode(doc.toJson())) as Map<String, Object?>;
+    expect(json['version'], 2);
+    final again = IrDocument.fromJson(json);
+    expect(jsonEncode(again.toJson()), jsonEncode(doc.toJson()));
+    final text = (again.screens.single.root.children.single as IrText).style;
+    expect(text.color.token, 'ColorScheme/onSurface');
+    expect(text.color.a, closeTo(0.38, 0.01));
+  });
+
+  test('instance keys and variant names', () {
+    final ref = IrInstanceRef('Button', {'Type': 'Filled', 'State': 'Enabled'});
+    expect(ref.variantName, 'Type=Filled, State=Enabled');
+    expect(ref.key, 'Button[Type=Filled, State=Enabled]');
+    expect(IrInstanceRef('StatCard').key, 'StatCard');
+  });
 }

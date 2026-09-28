@@ -3,21 +3,16 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 
-import { DesignDocument, FrameSpec, NodeSpec, parseDesign } from '../src/design';
+import { DesignDocument, FrameSpec, parseDesign } from '../src/design';
 import { importDesign, PLUGIN_DATA_KEY } from '../src/importer';
-import { createMockFigma, MockFrame, MockNode, MockText } from './figma-mock';
+import { createMockFigma, MockFrame, MockInstance, MockNode, MockText } from './figma-mock';
 
 // The same golden the Dart CLI test checks, so both sides share one contract.
 const GOLDEN = path.resolve(process.cwd(), '../packages/cli/test/goldens/basic.design.json');
 
-async function run(doc: DesignDocument) {
-  const api = createMockFigma();
+async function run(doc: DesignDocument, api = createMockFigma()) {
   const result = await importDesign(api as unknown as PluginAPI, doc);
   return { api, result };
-}
-
-function countSpecs(nodes: NodeSpec[]): number {
-  return nodes.reduce((n, s) => n + 1 + (s.type === 'FRAME' ? countSpecs(s.children) : 0), 0);
 }
 
 function find(node: MockNode, name: string): MockNode | undefined {
@@ -29,12 +24,24 @@ function find(node: MockNode, name: string): MockNode | undefined {
   return undefined;
 }
 
+function findAll(node: MockNode, name: string, out: MockNode[] = []): MockNode[] {
+  if (node.name === name) out.push(node);
+  for (const child of (node as MockFrame).children ?? []) findAll(child, name, out);
+  return out;
+}
+
+const golden = () => parseDesign(readFileSync(GOLDEN, 'utf8'));
+
+/** The variable a paint is bound to, by name. */
+function boundTo(api: ReturnType<typeof createMockFigma>, paint: Paint): string | undefined {
+  const id = (paint as SolidPaint).boundVariables?.color?.id;
+  return api.variableList.find((v) => v.id === id)?.name;
+}
+
 test('imports the basic example exported by the CLI', async () => {
-  const doc = parseDesign(readFileSync(GOLDEN, 'utf8'));
-  const { api, result } = await run(doc);
+  const { api, result } = await run(golden());
 
   assert.equal(result.screens.length, 2);
-  assert.equal(result.nodeCount, countSpecs(doc.screens));
   assert.deepEqual(Object.keys(result.fontSubstitutions), []);
   assert.equal(api.pages.length, 1);
 
@@ -56,12 +63,91 @@ test('imports the basic example exported by the CLI', async () => {
   assert.deepEqual(welcome.fontName, { family: 'Inter', style: 'Bold' }); // from the app's ThemeData
   assert.equal(welcome.fontSize, 32);
   assert.equal(welcome.characters, 'Welcome');
+});
 
-  const button = find(home, 'ElevatedButton') as MockFrame;
-  assert.equal(button.layoutMode, 'HORIZONTAL');
-  assert.equal(button.minHeight, 40);
-  assert.equal(button.cornerRadius, 20);
-  assert.equal(button.effects.length, 2);
+test('creates the design system: variables per mode, text and effect styles', async () => {
+  const doc = golden();
+  const { api, result } = await run(doc);
+  const ds = doc.designSystem!;
+
+  assert.equal(api.collections.length, 1);
+  const collection = api.collections[0];
+  assert.equal(collection.name, 'basic theme');
+  assert.deepEqual(collection.modes.map((m) => m.name), ['Light', 'Dark']);
+  assert.equal(result.variables, ds.variables.length);
+  assert.equal(result.textStyles, 15);
+  assert.equal(result.effectStyles, 5);
+
+  const primary = api.variableList.find((v) => v.name === 'ColorScheme/primary')!;
+  assert.equal(Object.keys(primary.valuesByMode).length, 2);
+
+  // Screens are pinned to the exported mode; paints are bound, not raw.
+  const home = result.screens[0] as unknown as MockFrame;
+  const light = collection.modes.find((m) => m.name === 'Light')!.modeId;
+  assert.equal(home.explicitModes.get(collection.id), light);
+  assert.equal(boundTo(api, home.fills[0]), 'ColorScheme/surface');
+  const hello = find(home, 'Hello') as MockText;
+  assert.equal(hello.fills[0].type, 'SOLID');
+  assert.equal(boundTo(api, hello.fills[0]), undefined, 'Colors.white is a literal, not a token');
+
+  // Theme-styled text is linked to its text style; a one-off style is not.
+  const title = find(home, 'Home') as MockText;
+  assert.equal(api.textStyleList().find((s) => s.id === title.textStyleId)?.name, 'TextTheme/titleLarge');
+  assert.equal((find(home, 'Welcome') as MockText).textStyleId, '');
+});
+
+test('turns buttons and repeated widgets into components with instances', async () => {
+  const { result } = await run(golden());
+  assert.equal(result.components, 4); // 3 Button variants + StatCard
+  assert.equal(result.instances, 5); // 3 buttons + 2 stat cards
+
+  const page = result.page as unknown as MockFrame;
+  const library = find(page, 'Components') as MockFrame;
+  const buttonSet = find(library, 'Button') as MockFrame;
+  assert.equal(buttonSet.type, 'COMPONENT_SET');
+  assert.deepEqual(buttonSet.children.map((c) => c.name).sort(), [
+    'Type=Elevated, State=Enabled',
+    'Type=Filled, State=Enabled',
+    'Type=Text, State=Enabled',
+  ]);
+
+  const home = result.screens[0] as unknown as MockFrame;
+  const elevated = find(home, 'ElevatedButton') as MockInstance;
+  assert.equal(elevated.type, 'INSTANCE');
+  assert.equal(elevated.mainComponent!.name, 'Type=Elevated, State=Enabled');
+  assert.notEqual(elevated.effectStyleId, '', 'elevation comes from an effect style');
+
+  // Both stat cards are instances of one master; the second overrides text.
+  const profile = result.screens[1] as unknown as MockFrame;
+  const cards = findAll(profile, 'StatCard') as MockInstance[];
+  assert.equal(cards.length, 2);
+  assert.ok(cards.every((c) => c.type === 'INSTANCE'));
+  assert.equal(cards[0].mainComponent, cards[1].mainComponent);
+  const master = cards[0].mainComponent!;
+  assert.equal(master.parent, library);
+  assert.ok(find(master, '128'), 'master keeps the first occurrence');
+  assert.equal((find(cards[1], '128') as MockText).characters, '4.2k');
+  assert.equal((find(cards[1], 'Posts') as MockText).characters, 'Followers');
+  // FILL only applied inside the row; the master is a standalone size.
+  assert.equal(cards[0].layoutSizingHorizontal, 'FILL');
+  assert.equal(master.layoutSizingHorizontal, 'FIXED');
+});
+
+test('re-importing updates the design system instead of duplicating it', async () => {
+  const api = createMockFigma();
+  await run(golden(), api);
+  await run(golden(), api);
+  assert.equal(api.collections.length, 1);
+  assert.equal(api.variableList.length, golden().designSystem!.variables.length);
+  assert.equal(api.textStyleList().length, 15);
+  assert.equal(api.effectStyleList().length, 5);
+  assert.equal(api.pages.length, 2, 'each import gets its own page');
+});
+
+test('a plan limited to one mode still imports, with a note', async () => {
+  const { api, result } = await run(golden(), createMockFigma({ maxModes: 1 }));
+  assert.deepEqual(api.collections[0].modes.map((m) => m.name), ['Light']);
+  assert.match(result.notes.join(), /Mode "Dark" not created/);
 });
 
 test('substitutes unavailable fonts', async () => {

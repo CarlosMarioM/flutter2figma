@@ -5,17 +5,21 @@
 library;
 
 const irFormat = 'flutter2figma/ir';
-const irVersion = 1;
+const irVersion = 2;
 
 class IrDocument {
   IrDocument({
     required this.project,
     required this.screens,
+    this.designSystem,
     this.diagnostics = const [],
   });
 
   final String project;
   final List<IrScreen> screens;
+
+  /// Tokens and components the screens reference.
+  final IrDesignSystem? designSystem;
   final List<IrDiagnostic> diagnostics;
 
   Map<String, Object?> toJson() => {
@@ -23,6 +27,7 @@ class IrDocument {
     'version': irVersion,
     'project': project,
     'screens': [for (final s in screens) s.toJson()],
+    if (designSystem != null) 'designSystem': designSystem!.toJson(),
     'diagnostics': [for (final d in diagnostics) d.toJson()],
   };
 
@@ -30,12 +35,22 @@ class IrDocument {
     if (json['format'] != irFormat) {
       throw FormatException('Not a $irFormat document: ${json['format']}');
     }
+    if ((json['version'] as num? ?? 0) > irVersion) {
+      throw FormatException(
+        'IR version ${json['version']} is newer than $irVersion',
+      );
+    }
     return IrDocument(
       project: json['project'] as String,
       screens: [
         for (final s in json['screens'] as List)
           IrScreen.fromJson(s as Map<String, Object?>),
       ],
+      designSystem: json['designSystem'] == null
+          ? null
+          : IrDesignSystem.fromJson(
+              json['designSystem'] as Map<String, Object?>,
+            ),
       diagnostics: [
         for (final d in (json['diagnostics'] as List? ?? const []))
           IrDiagnostic.fromJson(d as Map<String, Object?>),
@@ -243,29 +258,43 @@ class IrPosition {
 
 /// sRGB color with components in 0..1.
 class IrColor {
-  const IrColor(this.r, this.g, this.b, [this.a = 1]);
+  const IrColor(this.r, this.g, this.b, [this.a = 1]) : token = null;
 
-  factory IrColor.fromArgb32(int argb) => IrColor(
+  const IrColor._(this.r, this.g, this.b, this.a, this.token);
+
+  factory IrColor.fromArgb32(int argb, {String? token}) => IrColor._(
     ((argb >> 16) & 0xff) / 255,
     ((argb >> 8) & 0xff) / 255,
     (argb & 0xff) / 255,
     ((argb >> 24) & 0xff) / 255,
+    token,
   );
 
   /// Parses `#RRGGBB` or `#RRGGBBAA`.
-  factory IrColor.fromHex(String hex) {
+  factory IrColor.fromHex(String hex, {String? token}) {
     final h = hex.startsWith('#') ? hex.substring(1) : hex;
     if (h.length != 6 && h.length != 8) {
       throw FormatException('Bad color: $hex');
     }
     int c(int i) => int.parse(h.substring(i, i + 2), radix: 16);
-    return IrColor(
+    return IrColor._(
       c(0) / 255,
       c(2) / 255,
       c(4) / 255,
       h.length == 8 ? c(6) / 255 : 1,
+      token,
     );
   }
+
+  /// A hex string, or `{"value": hex, "token": name}` for token colors.
+  static IrColor fromJson(Object? json) => switch (json) {
+    String hex => IrColor.fromHex(hex),
+    {'value': String hex, 'token': String token} => IrColor.fromHex(
+      hex,
+      token: token,
+    ),
+    _ => throw FormatException('Bad color: $json'),
+  };
 
   static const black = IrColor(0, 0, 0);
   static const white = IrColor(1, 1, 1);
@@ -273,7 +302,14 @@ class IrColor {
 
   final double r, g, b, a;
 
-  IrColor withAlpha(double alpha) => IrColor(r, g, b, alpha);
+  /// The design token this color was taken from, e.g. `ColorScheme/primary`.
+  /// Kept through [withAlpha]: renderers bind the token and apply the alpha
+  /// as paint opacity.
+  final String? token;
+
+  IrColor withAlpha(double alpha) => IrColor._(r, g, b, alpha, token);
+
+  IrColor withToken(String? token) => IrColor._(r, g, b, a, token);
 
   int toArgb32() {
     int c(double v) => (v * 255).round().clamp(0, 255);
@@ -286,15 +322,18 @@ class IrColor {
     return '#${c(r)}${c(g)}${c(b)}${a == 1 ? '' : c(a)}'.toUpperCase();
   }
 
+  Object toJson() =>
+      token == null ? toHex() : {'value': toHex(), 'token': token};
+
   @override
   bool operator ==(Object other) =>
-      other is IrColor && other.toHex() == toHex();
+      other is IrColor && other.toHex() == toHex() && other.token == token;
 
   @override
-  int get hashCode => toHex().hashCode;
+  int get hashCode => Object.hash(toHex(), token);
 
   @override
-  String toString() => toHex();
+  String toString() => token == null ? toHex() : '${toHex()} ($token)';
 }
 
 class IrStroke {
@@ -303,13 +342,13 @@ class IrStroke {
   final IrColor color;
   final double width;
 
-  Map<String, Object?> toJson() => {'color': color.toHex(), 'width': width};
+  Map<String, Object?> toJson() => {'color': color.toJson(), 'width': width};
 
   static IrStroke? fromJson(Object? json) {
     if (json == null) return null;
     final m = json as Map<String, Object?>;
     return IrStroke(
-      color: IrColor.fromHex(m['color'] as String),
+      color: IrColor.fromJson(m['color']),
       width: _d(m['width']) ?? 1,
     );
   }
@@ -328,7 +367,7 @@ class IrShadow {
   final double x, y, blur, spread;
 
   Map<String, Object?> toJson() => {
-    'color': color.toHex(),
+    'color': color.toJson(),
     'x': x,
     'y': y,
     'blur': blur,
@@ -338,7 +377,7 @@ class IrShadow {
   static IrShadow fromJson(Object? json) {
     final m = json as Map<String, Object?>;
     return IrShadow(
-      color: IrColor.fromHex(m['color'] as String),
+      color: IrColor.fromJson(m['color']),
       x: _d(m['x']) ?? 0,
       y: _d(m['y']) ?? 0,
       blur: _d(m['blur']) ?? 0,
@@ -402,11 +441,16 @@ sealed class IrNode {
     this.origin = const [],
     this.source,
     this.position,
+    this.instance,
   });
 
   String name;
   IrSizing width;
   IrSizing height;
+
+  /// Set when this subtree is an occurrence of a component. The subtree is
+  /// still complete, so renderers without components can ignore it.
+  IrInstanceRef? instance;
 
   /// The Flutter widgets (outermost first) that were folded into this node.
   List<String> origin;
@@ -427,6 +471,7 @@ sealed class IrNode {
     if (origin.isNotEmpty) 'origin': origin,
     if (source != null) 'source': source,
     if (position != null) 'position': position!.toJson(),
+    if (instance != null) 'instance': instance!.toJson(),
     ..._props(),
   };
 
@@ -441,7 +486,8 @@ sealed class IrNode {
     node
       ..origin = [...(json['origin'] as List? ?? const []).cast<String>()]
       ..source = json['source'] as String?
-      ..position = IrPosition.fromJson(json['position']);
+      ..position = IrPosition.fromJson(json['position'])
+      ..instance = IrInstanceRef.fromJson(json['instance']);
     return node;
   }
 }
@@ -454,6 +500,7 @@ class IrFrame extends IrNode {
     super.origin,
     super.source,
     super.position,
+    super.instance,
     this.direction = IrLayoutDirection.vertical,
     this.gap = 0,
     this.padding = IrInsets.zero,
@@ -463,6 +510,7 @@ class IrFrame extends IrNode {
     this.corners = IrCorners.zero,
     this.stroke,
     this.shadows = const [],
+    this.shadowToken,
     this.clip = false,
     this.minWidth,
     this.minHeight,
@@ -479,6 +527,9 @@ class IrFrame extends IrNode {
   IrCorners corners;
   IrStroke? stroke;
   List<IrShadow> shadows;
+
+  /// Effect style [shadows] came from, e.g. `Elevation/level1`.
+  String? shadowToken;
   bool clip;
   double? minWidth;
   double? minHeight;
@@ -505,10 +556,11 @@ class IrFrame extends IrNode {
     if (!padding.isZero) 'padding': padding.toJson(),
     if (minWidth != null) 'minWidth': minWidth,
     if (minHeight != null) 'minHeight': minHeight,
-    if (fill != null) 'fill': fill!.toHex(),
+    if (fill != null) 'fill': fill!.toJson(),
     if (!corners.isZero) 'corners': corners.toJson(),
     if (stroke != null) 'stroke': stroke!.toJson(),
     if (shadows.isNotEmpty) 'shadows': [for (final s in shadows) s.toJson()],
+    if (shadowToken != null) 'shadowToken': shadowToken,
     if (clip) 'clip': true,
     'children': [for (final c in children) c.toJson()],
   };
@@ -533,15 +585,14 @@ class IrFrame extends IrNode {
       padding: IrInsets.fromJson(json['padding']),
       minWidth: _d(json['minWidth']),
       minHeight: _d(json['minHeight']),
-      fill: json['fill'] == null
-          ? null
-          : IrColor.fromHex(json['fill'] as String),
+      fill: json['fill'] == null ? null : IrColor.fromJson(json['fill']),
       corners: IrCorners.fromJson(json['corners']),
       stroke: IrStroke.fromJson(json['stroke']),
       shadows: [
         for (final s in (json['shadows'] as List? ?? const []))
           IrShadow.fromJson(s),
       ],
+      shadowToken: json['shadowToken'] as String?,
       clip: json['clip'] as bool? ?? false,
       children: [
         for (final c in (json['children'] as List? ?? const []))
@@ -562,6 +613,7 @@ class IrTextStyle {
     this.italic = false,
     this.lineHeight,
     this.letterSpacing = 0,
+    this.token,
   });
 
   final String fontFamily;
@@ -574,12 +626,37 @@ class IrTextStyle {
   final double? lineHeight;
   final double letterSpacing;
 
+  /// Text style token whose typography this matches exactly, e.g.
+  /// `TextTheme/bodyMedium`. Color is not part of typography.
+  final String? token;
+
+  IrTextStyle withToken(String? token) => IrTextStyle(
+    fontFamily: fontFamily,
+    fontSize: fontSize,
+    fontWeight: fontWeight,
+    italic: italic,
+    color: color,
+    lineHeight: lineHeight,
+    letterSpacing: letterSpacing,
+    token: token,
+  );
+
+  /// Same font, size, weight, slant, line height and letter spacing.
+  bool sameTypography(IrTextStyle o) =>
+      fontFamily == o.fontFamily &&
+      fontSize == o.fontSize &&
+      fontWeight == o.fontWeight &&
+      italic == o.italic &&
+      lineHeight == o.lineHeight &&
+      letterSpacing == o.letterSpacing;
+
   Map<String, Object?> toJson() => {
+    if (token != null) 'token': token,
     'fontFamily': fontFamily,
     'fontSize': fontSize,
     'fontWeight': fontWeight,
     if (italic) 'italic': true,
-    'color': color.toHex(),
+    'color': color.toJson(),
     if (lineHeight != null) 'lineHeight': lineHeight,
     if (letterSpacing != 0) 'letterSpacing': letterSpacing,
   };
@@ -591,9 +668,10 @@ class IrTextStyle {
       fontSize: _d(m['fontSize'])!,
       fontWeight: (m['fontWeight'] as num?)?.toInt() ?? 400,
       italic: m['italic'] as bool? ?? false,
-      color: IrColor.fromHex(m['color'] as String),
+      color: IrColor.fromJson(m['color']),
       lineHeight: _d(m['lineHeight']),
       letterSpacing: _d(m['letterSpacing']) ?? 0,
+      token: m['token'] as String?,
     );
   }
 }
@@ -608,6 +686,7 @@ class IrText extends IrNode {
     super.origin,
     super.source,
     super.position,
+    super.instance,
     this.align = IrTextAlign.left,
     this.maxLines,
   });
@@ -637,6 +716,199 @@ class IrText extends IrNode {
     align: IrTextAlign.values.byName(json['align'] as String? ?? 'left'),
     maxLines: (json['maxLines'] as num?)?.toInt(),
   );
+}
+
+// ---------------------------------------------------------------------------
+// Design system
+// ---------------------------------------------------------------------------
+
+/// Marks a node as an occurrence of [component], in the variant selected by
+/// [props] (empty for components without variants).
+class IrInstanceRef {
+  IrInstanceRef(this.component, [Map<String, String>? props])
+    : props = props ?? {};
+
+  final String component;
+  final Map<String, String> props;
+
+  /// Figma-style variant name: `Type=Filled, State=Enabled`.
+  String get variantName =>
+      [for (final e in props.entries) '${e.key}=${e.value}'].join(', ');
+
+  /// Identifies the variant across the document.
+  String get key => props.isEmpty ? component : '$component[$variantName]';
+
+  Map<String, Object?> toJson() => {
+    'component': component,
+    if (props.isNotEmpty) 'props': props,
+  };
+
+  static IrInstanceRef? fromJson(Object? json) {
+    if (json == null) return null;
+    final m = json as Map<String, Object?>;
+    return IrInstanceRef(
+      m['component'] as String,
+      (m['props'] as Map?)?.cast<String, String>(),
+    );
+  }
+}
+
+class IrDesignSystem {
+  IrDesignSystem({
+    required this.modes,
+    required this.activeMode,
+    this.colors = const [],
+    this.textStyles = const [],
+    this.shadows = const [],
+    this.components = const [],
+  });
+
+  /// Theme modes colors are defined for, e.g. `[Light, Dark]`.
+  final List<String> modes;
+
+  /// The mode the screens were exported in.
+  final String activeMode;
+
+  final List<IrColorToken> colors;
+  final List<IrTextStyleToken> textStyles;
+  final List<IrShadowToken> shadows;
+  final List<IrComponent> components;
+
+  Map<String, Object?> toJson() => {
+    'modes': modes,
+    'activeMode': activeMode,
+    'colors': [for (final c in colors) c.toJson()],
+    'textStyles': [for (final t in textStyles) t.toJson()],
+    'shadows': [for (final s in shadows) s.toJson()],
+    'components': [for (final c in components) c.toJson()],
+  };
+
+  factory IrDesignSystem.fromJson(Map<String, Object?> json) => IrDesignSystem(
+    modes: (json['modes'] as List).cast<String>(),
+    activeMode: json['activeMode'] as String,
+    colors: [
+      for (final c in json['colors'] as List? ?? const [])
+        IrColorToken.fromJson(c as Map<String, Object?>),
+    ],
+    textStyles: [
+      for (final t in json['textStyles'] as List? ?? const [])
+        IrTextStyleToken.fromJson(t as Map<String, Object?>),
+    ],
+    shadows: [
+      for (final s in json['shadows'] as List? ?? const [])
+        IrShadowToken.fromJson(s as Map<String, Object?>),
+    ],
+    components: [
+      for (final c in json['components'] as List? ?? const [])
+        IrComponent.fromJson(c as Map<String, Object?>),
+    ],
+  );
+}
+
+/// A color variable with one value per mode.
+class IrColorToken {
+  IrColorToken(this.name, this.values);
+
+  final String name;
+  final Map<String, IrColor> values;
+
+  Map<String, Object?> toJson() => {
+    'name': name,
+    'values': {for (final e in values.entries) e.key: e.value.toHex()},
+  };
+
+  factory IrColorToken.fromJson(Map<String, Object?> json) =>
+      IrColorToken(json['name'] as String, {
+        for (final e in (json['values'] as Map).entries)
+          e.key as String: IrColor.fromHex(e.value as String),
+      });
+}
+
+/// A named text style. Only typography: text color is a separate token.
+class IrTextStyleToken {
+  IrTextStyleToken(this.name, this.style);
+
+  final String name;
+
+  /// [IrTextStyle.color] is ignored.
+  final IrTextStyle style;
+
+  Map<String, Object?> toJson() => {
+    'name': name,
+    'fontFamily': style.fontFamily,
+    'fontSize': style.fontSize,
+    'fontWeight': style.fontWeight,
+    if (style.italic) 'italic': true,
+    if (style.lineHeight != null) 'lineHeight': style.lineHeight,
+    if (style.letterSpacing != 0) 'letterSpacing': style.letterSpacing,
+  };
+
+  factory IrTextStyleToken.fromJson(Map<String, Object?> json) =>
+      IrTextStyleToken(
+        json['name'] as String,
+        IrTextStyle.fromJson({...json, 'color': '#000000'}),
+      );
+}
+
+class IrShadowToken {
+  IrShadowToken(this.name, this.shadows);
+
+  final String name;
+  final List<IrShadow> shadows;
+
+  Map<String, Object?> toJson() => {
+    'name': name,
+    'shadows': [for (final s in shadows) s.toJson()],
+  };
+
+  factory IrShadowToken.fromJson(Map<String, Object?> json) => IrShadowToken(
+    json['name'] as String,
+    [for (final s in json['shadows'] as List) IrShadow.fromJson(s)],
+  );
+}
+
+/// A reusable UI element. Its variants are defined by their first
+/// occurrence in the screens (see [IrNode.instance]).
+class IrComponent {
+  IrComponent({required this.name, required this.variants, this.source});
+
+  final String name;
+  final List<IrComponentVariant> variants;
+
+  /// Where the widget is declared, for project widgets.
+  final String? source;
+
+  Map<String, Object?> toJson() => {
+    'name': name,
+    if (source != null) 'source': source,
+    'variants': [for (final v in variants) v.toJson()],
+  };
+
+  factory IrComponent.fromJson(Map<String, Object?> json) => IrComponent(
+    name: json['name'] as String,
+    source: json['source'] as String?,
+    variants: [
+      for (final v in json['variants'] as List)
+        IrComponentVariant.fromJson(v as Map<String, Object?>),
+    ],
+  );
+}
+
+class IrComponentVariant {
+  IrComponentVariant(this.props, {this.uses = 1});
+
+  final Map<String, String> props;
+
+  /// How many occurrences the screens contain.
+  final int uses;
+
+  Map<String, Object?> toJson() => {'props': props, 'uses': uses};
+
+  factory IrComponentVariant.fromJson(Map<String, Object?> json) =>
+      IrComponentVariant(
+        (json['props'] as Map).cast<String, String>(),
+        uses: (json['uses'] as num?)?.toInt() ?? 1,
+      );
 }
 
 double? _d(Object? v) => (v as num?)?.toDouble();

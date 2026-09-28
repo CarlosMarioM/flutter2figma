@@ -130,6 +130,18 @@ class ExportCommand extends _ProjectCommand {
         },
         defaultsTo: 'auto',
       )
+      ..addFlag(
+        'design-system',
+        help:
+            'Export color variables (per theme mode), text and effect styles, '
+            'and components.',
+        defaultsTo: true,
+      )
+      ..addOption(
+        'min-component-uses',
+        help: 'Uses before a project widget becomes a component.',
+        defaultsTo: '2',
+      )
       ..addFlag('verbose', abbr: 'v', help: 'Show info diagnostics.');
   }
 
@@ -152,7 +164,13 @@ class ExportCommand extends _ProjectCommand {
 
     final analysis = await analyzeProject();
     stdout.writeln('Building intermediate representation...');
+    final minUses = int.tryParse(argResults!.option('min-component-uses')!);
+    if (minUses == null || minUses < 1) {
+      usageException('--min-component-uses must be a positive integer');
+    }
     final ir = FlutterCompiler(
+      designSystem: argResults!.flag('design-system'),
+      minComponentUses: minUses,
       brightness: switch (argResults!.option('brightness')) {
         'light' => ThemeBrightness.light,
         'dark' => ThemeBrightness.dark,
@@ -192,7 +210,18 @@ class ExportCommand extends _ProjectCommand {
       ..writeln('✓ Export complete')
       ..writeln()
       ..writeln('  ${ir.screens.length} screens')
-      ..writeln('  $nodes nodes')
+      ..writeln('  $nodes nodes');
+    if (ir.designSystem case final ds?) {
+      final variants = ds.components.fold(0, (n, c) => n + c.variants.length);
+      stdout
+        ..writeln(
+          '  ${ds.colors.length} color variables (${ds.modes.join(' / ')})',
+        )
+        ..writeln('  ${ds.textStyles.length} text styles')
+        ..writeln('  ${ds.shadows.length} effect styles')
+        ..writeln('  ${ds.components.length} components ($variants variants)');
+    }
+    stdout
       ..writeln()
       ..writeln(
         '  ${p.relative(designFile.path)}   ← import with the Figma plugin',

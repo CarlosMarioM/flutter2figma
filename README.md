@@ -24,8 +24,29 @@ The app's own theme is read from `MaterialApp`:
 
 A Flutter test checks the result against the theme Flutter itself resolves.
 
-Not built yet: `validate` (screenshot diff), `--runtime` mode, design-system
-extraction, Figma → Flutter generation.
+The export also carries a **design system** that the plugin creates in Figma:
+
+| Flutter | Figma |
+| --- | --- |
+| `ColorScheme` roles, for `theme` and `darkTheme` | Color variables with **Light/Dark modes**; switching the mode recolors the screens |
+| `AppColors.brand`-style project constants that are painted | Color variables (`AppColors/brand`) |
+| `textTheme` entries | Text styles (`TextTheme/bodyMedium`, …) |
+| M3 elevation levels | Effect styles (`Elevation/level1`…`5`) |
+| Material buttons | A `Button` component set with `Type` × `State` (× `Icon`) variants |
+| Project widgets used 2+ times (`StatCard`) | Components, with instances in the screens |
+
+Paints, text and shadows are bound to these only when they came from them.
+For example, `Theme.of(context).colorScheme.primary` binds to
+`ColorScheme/primary`, but a literal `Color(0xFF...)` with the same value does
+not. Instances differ from their master only in text, which is applied as
+overrides. Any other visual difference becomes a separate variant, so every
+instance looks exactly like the widget it replaces.
+
+Not built yet:
+- `validate` (screenshot diff);
+- `--runtime` mode;
+- Figma → Flutter generation;
+- spacing and radius tokens.
 
 ## Quick start
 
@@ -41,6 +62,7 @@ dart pub get
 dart run flutter2figma analyze examples/basic
 dart run flutter2figma export examples/basic -o build/flutter2figma
 dart run flutter2figma export examples/basic --brightness dark -o build/dark
+dart run flutter2figma export examples/basic --no-design-system   # plain frames only
 #   → build/flutter2figma/design.json   (import this in Figma)
 #   → build/flutter2figma/ir.json       (the intermediate representation)
 ```
@@ -99,6 +121,12 @@ Anything else is exported as a magenta `⚠` placeholder, or passed through if i
   - Other component themes are listed as "not applied" diagnostics. These include input decoration, chips and navigation bars.
   - Material 2 themes (`useMaterial3: false`) and `ColorScheme.fromSwatch` are exported with Material 3 defaults, with a warning.
   - Fonts are exported by family name. The Figma plugin substitutes any that aren't installed.
+- **Design system:**
+  - Spacing and radius aren't tokens yet.
+  - Components are recognized for buttons and repeated project widgets only. Built-in widgets like `Card` or `ListTile` are not components.
+  - The component master is the widget's first occurrence.
+  - A Figma plan that allows only one variable mode gets just the Light mode, with a note in the plugin.
+  - Re-importing updates variables and styles by name. Components are recreated on each import's page.
 
 ## Development
 

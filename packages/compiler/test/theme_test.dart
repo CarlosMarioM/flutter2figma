@@ -5,32 +5,6 @@ import 'package:test/test.dart';
 
 import 'builders.dart';
 
-/// Compiles a two-class project: `App` (a MaterialApp) and `Home` (a screen).
-IrDocument compileApp(
-  Map<String, DartValue> app,
-  DartValue body, {
-  ThemeBrightness? brightness,
-}) => FlutterCompiler(brightness: brightness).compile(
-  ProjectAnalysis(
-    name: 'test',
-    root: '.',
-    files: const [],
-    diagnostics: const [],
-    widgets: [
-      WidgetClass(
-        name: 'App',
-        source: 'lib/app.dart:1',
-        tree: w('MaterialApp', named: app),
-      ),
-      WidgetClass(
-        name: 'Home',
-        source: 'lib/home.dart:1',
-        tree: w('Scaffold', named: {'body': body}),
-      ),
-    ],
-  ),
-);
-
 IrFrame screenOf(IrDocument doc) => doc.screens.single.root;
 IrNode bodyOf(IrDocument doc) => screenOf(doc).children.single;
 

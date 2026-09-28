@@ -10,6 +10,7 @@ class TextStyleSpec {
     this.color,
     this.height,
     this.letterSpacing,
+    this.token,
   });
 
   final String? fontFamily;
@@ -22,6 +23,11 @@ class TextStyleSpec {
   final double? height;
   final double? letterSpacing;
 
+  /// The most specific named theme style this was derived from
+  /// (`TextTheme/bodyMedium`). Confirmed against the final typography when a
+  /// text node is built.
+  final String? token;
+
   /// Values set on [other] win, like `TextStyle.merge`.
   TextStyleSpec merge(TextStyleSpec? other) {
     if (other == null) return this;
@@ -33,6 +39,7 @@ class TextStyleSpec {
       color: other.color ?? color,
       height: other.height ?? height,
       letterSpacing: other.letterSpacing ?? letterSpacing,
+      token: other.token ?? token,
     );
   }
 
@@ -46,6 +53,7 @@ class TextStyleSpec {
       color: color ?? IrColor.black,
       lineHeight: height == null ? null : _round(height! * size),
       letterSpacing: letterSpacing ?? 0,
+      token: token,
     );
   }
 }

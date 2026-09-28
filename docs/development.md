@@ -136,6 +136,20 @@ Figma does, or where Figma would silently do something we consider a bug:
 - `minWidth`/`minHeight` on a frame that isn't auto layout
 - setting `fontName` or `characters` before `loadFontAsync`
 - `resize` below 0.01
+- paints with unknown keys (e.g. a leftover `variable`), or RGBA in a solid
+  paint's `color`
+- `createVariable` / `setExplicitVariableModeForCollection` with a string id
+  (`dynamic-page` requires the collection object)
+- variable values for unknown modes; `addMode` beyond `maxModes`
+  (`createMockFigma({ maxModes: 1 })` simulates a Figma plan limit)
+- `createComponentFromNode` on a detached or non-frame node;
+  `combineAsVariants` with non-components or names not shaped like
+  `Prop=Value, …`
+
+The mock also implements reparenting, `insertChild`, instance cloning, and
+text/effect style application. Tests can inspect `variableList`,
+`textStyleList()`, `effectStyleList()`, `collections` and each node's
+`explicitModes`.
 
 When the importer starts using a new API surface, add it to the mock with the
 same strictness. Then check it once in real Figma, because the mock only
@@ -226,7 +240,10 @@ plugin rejects files newer than it knows (`parseDesign`).
 4. Debug output: **Plugins → Development → Open console**. Figma API errors
    usually name the property that was set in the wrong order.
 
-Every import creates a new page, so re-importing is safe. Each layer stores
+Every import creates a new page, so re-importing is safe. Variables, text
+styles and effect styles are shared across imports. They are matched by name
+and updated in place. Components live in a `Components` frame on each
+import's page. Each layer stores
 `{origin, source, role}` under the plugin data key `flutter2figma`. To check
 where a layer came from, select it and run this in the console:
 
@@ -250,6 +267,24 @@ Fonts load before any node is created (`loadFonts`). Missing fonts fall back to
 the nearest weight in the same family, then to Inter. Substitutions are shown
 in the plugin UI.
 
+## Design system recipes
+
+- **A value should bind to a token but doesn't.** Check its `token` in
+  `ir.json`. Tokens come from provenance, so the value has to be reached
+  through the theme (`MaterialTheme.color`, `theme.textStyle`) or through a
+  project constant. For text, the final typography must equal the claimed
+  style. Any font, size, weight, height or spacing override drops the token,
+  by design.
+- **Adding a component.** Set `instance: IrInstanceRef('Name', {...props})` in
+  the widget's handler, and only when the output has a stable structure. For
+  example, buttons are marked only when their content is a label. Add the name
+  to `builtInComponents` if it should be a component even when used once.
+- **Adding a token type** (e.g. spacing):
+  - add it to `IrDesignSystem`, tagged on the nodes that use it;
+  - add it to the renderer's `designSystem` section and to `design.ts`;
+  - upsert it in `design-system.ts` and bind it in `importer.ts`;
+  - add the new API to the mock, with Figma's validation rules.
+
 ## Debugging recipes
 
 | Symptom | Where to look |
@@ -259,6 +294,7 @@ in the plugin UI.
 | Wrong fixed/hug/fill | `build/flutter2figma/ir.json`: follow `width`/`height` down from the screen and apply the sizing checklist. |
 | Layer missing after folding | Look at the node's `origin` in `ir.json`; folded widgets are listed there. Folding rules: `simplify.dart`. |
 | Figma warns or rejects a combination | `design.json` → `diagnostics`; the renderer logs each downgrade. |
+| Two occurrences didn't share a component variant | Compare their `signature()` (in `component_extractor.dart`). Any non-text difference, including an inner sizing mode, makes a separate variant. |
 | Plugin throws in Figma but tests pass | The mock is missing that rule. Add it to `figma-mock.ts` first, reproduce, then fix. |
 | Analyzer errors: `uri_does_not_exist` for `package:flutter` | Run `fvm flutter pub get` in the target app. |
 
