@@ -7,7 +7,8 @@
     "build": "esbuild src/code.ts --bundle --target=es2017 --outfile=dist/code.js",
     "watch": "npm run build -- --watch",
     "typecheck": "tsc --noEmit",
-    "test": "esbuild test/importer.test.ts --bundle --platform=node --format=esm --outfile=dist/test/importer.test.mjs && node --test dist/test/importer.test.mjs"
+    "test": "esbuild test/importer.test.ts --bundle --platform=node --format=esm --outfile=dist/test/importer.test.mjs && node --test dist/test/importer.test.mjs",
+    "package": "scripts/package.sh"
   },
   "devDependencies": {
     "@figma/plugin-typings": "^1.139.0",

@@ -46,7 +46,16 @@ tool/validate_app.sh path/to/app lib/file_with_material_app.dart
    Added / Changed / Fixed entries. The version test checks this too.
 3. Refresh the goldens (they record the generator version), then run
    `dart pub publish --dry-run`.
-4. Commit, tag `v<version>`, and publish with `dart pub publish`.
+4. Commit, push, and push the tag `v<version>`. The *Release Figma plugin*
+   workflow (`.github/workflows/release-plugin.yml`) then:
+   - typechecks and tests the plugin;
+   - builds `flutter2figma-figma-plugin-<version>.zip`;
+   - creates the GitHub Release, with the CHANGELOG section as its notes.
+
+   To release a tag that already exists, run the workflow from the Actions
+   tab with that tag. `cd figma-plugin && npm run package` builds the same
+   zip locally.
+5. Publish the Dart package with `dart pub publish`.
 
 Versioning follows [semver](https://semver.org). While the version is 0.x, a
 minor bump may break the `design.json` / `ir.json` formats or the Dart API;

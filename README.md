@@ -48,10 +48,14 @@ Then, in the Figma desktop app, open the **Flutter2Figma** plugin and drop
 `design.json` on it. Each export creates a new page. The design system is
 reused across imports: variables and styles are updated in place.
 
-> The Figma plugin lives in this repository under
-> [`figma-plugin/`](figma-plugin/). Until it is published on Figma Community,
-> load it with **Plugins → Development → Import plugin from manifest…** after
-> running `npm install && npm run build` in that folder.
+> **Installing the Figma plugin.** Until it is published on Figma Community:
+> 1. Download `flutter2figma-figma-plugin-<version>.zip` from the
+>    [latest release](https://github.com/CarlosMarioM/flutter2figma/releases/latest)
+>    and unzip it.
+> 2. In the Figma desktop app, choose **Plugins → Development → Import plugin
+>    from manifest…** and pick its `manifest.json`. This is only needed once.
+>
+> The source is in [`figma-plugin/`](figma-plugin/).
 
 ## What you get in Figma
 

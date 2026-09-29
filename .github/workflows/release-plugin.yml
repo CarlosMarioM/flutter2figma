@@ -1,0 +1,79 @@
+# Builds the Figma plugin and attaches it to the GitHub Release of a tag.
+#
+# - Pushing a tag `v*` releases that tag.
+# - Actions → "Release Figma plugin" → Run workflow releases an existing
+#   tag (e.g. v0.1.0) without re-tagging.
+name: Release Figma plugin
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to release, e.g. v0.1.0
+        required: true
+
+permissions:
+  contents: write # create the release and upload the zip
+
+jobs:
+  plugin:
+    runs-on: ubuntu-latest
+    env:
+      # Passed through the environment, never interpolated into scripts.
+      TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+    defaults:
+      run:
+        working-directory: figma-plugin
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: figma-plugin/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck and test (imports the golden design.json)
+        run: |
+          npm run typecheck
+          npm test
+
+      - name: Package
+        id: package
+        run: echo "zip=figma-plugin/$(npm run --silent package -- "$TAG")" >>"$GITHUB_OUTPUT"
+
+      - name: Release notes from CHANGELOG.md
+        run: |
+          version="${TAG#v}"
+          awk -v v="$version" '
+            $0 == "## " v { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' ../CHANGELOG.md >"$RUNNER_TEMP/notes.md"
+          cat >>"$RUNNER_TEMP/notes.md" <<'EOF'
+
+          ### Figma plugin
+
+          Download `flutter2figma-figma-plugin-*.zip` below, unzip it, and in
+          the Figma desktop app choose **Plugins → Development → Import plugin
+          from manifest…** with its `manifest.json`. See `INSTALL.txt`.
+          EOF
+
+      - name: Create or update the release
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ZIP: ${{ steps.package.outputs.zip }}
+        run: |
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --verify-tag --title "$TAG" \
+              --notes-file "$RUNNER_TEMP/notes.md"
+          fi
+          gh release upload "$TAG" "$ZIP" --clobber

@@ -12,3 +12,4 @@ build/
 # Figma plugin
 figma-plugin/node_modules/
 figma-plugin/dist/
+figma-plugin/release/
