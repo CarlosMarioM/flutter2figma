@@ -1,15 +1,30 @@
-name: flutter2figma_workspace
-publish_to: none
+name: flutter2figma
+description: >-
+  Convert an existing Flutter UI into an editable Figma design: auto-layout
+  frames, text styles, color variables with light/dark modes, and components.
+version: 0.1.0
+
+topics:
+  - figma
+  - design
+  - design-system
+  - cli
+  - codegen
 
 environment:
   sdk: ^3.11.0
 
-workspace:
-  - packages/ir
-  - packages/analyzer
-  - packages/compiler
-  - packages/figma
-  - packages/cli
+executables:
+  flutter2figma: flutter2figma
+
+dependencies:
+  analyzer: ^14.4.0
+  args: ^2.6.0
+  # Same version as the Flutter SDK pins (packages/flutter/pubspec.yaml), so
+  # ColorScheme.fromSeed produces identical colors.
+  material_color_utilities: ^0.13.0
+  path: ^1.9.0
 
 dev_dependencies:
   lints: ^6.0.0
+  test: ^1.25.0

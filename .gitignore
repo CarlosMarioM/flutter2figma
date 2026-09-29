@@ -4,7 +4,7 @@
 # Dart
 .dart_tool/
 pubspec.lock
-!examples/**/pubspec.lock
+!example/pubspec.lock
 
 # Build output
 build/

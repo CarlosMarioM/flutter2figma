@@ -8,7 +8,7 @@ import { importDesign, PLUGIN_DATA_KEY } from '../src/importer';
 import { createMockFigma, MockFrame, MockInstance, MockNode, MockText } from './figma-mock';
 
 // The same golden the Dart CLI test checks, so both sides share one contract.
-const GOLDEN = path.resolve(process.cwd(), '../packages/cli/test/goldens/basic.design.json');
+const GOLDEN = path.resolve(process.cwd(), '../test/goldens/basic.design.json');
 
 async function run(doc: DesignDocument, api = createMockFigma()) {
   const result = await importDesign(api as unknown as PluginAPI, doc);
@@ -72,7 +72,7 @@ test('creates the design system: variables per mode, text and effect styles', as
 
   assert.equal(api.collections.length, 1);
   const collection = api.collections[0];
-  assert.equal(collection.name, 'basic theme');
+  assert.equal(collection.name, 'flutter2figma_example theme');
   assert.deepEqual(collection.modes.map((m) => m.name), ['Light', 'Dark']);
   assert.equal(result.variables, ds.variables.length);
   assert.equal(result.textStyles, 15);

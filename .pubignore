@@ -1,0 +1,16 @@
+# Replaces .gitignore when publishing: keep both in sync.
+
+# Same as .gitignore
+.dart_tool/
+pubspec.lock
+build/
+.fvm/
+
+# In the repository, not in the pub package
+figma-plugin/
+tool/
+.claude/
+.fvmrc
+example/.dart_tool/
+example/build/
+example/pubspec.lock

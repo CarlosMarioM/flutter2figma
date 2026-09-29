@@ -1,0 +1,42 @@
+## 0.1.0
+
+First release.
+
+### Export
+- `flutter2figma export` turns a Flutter project into `design.json` (for the
+  Figma plugin) and `ir.json` (the intermediate representation).
+- Static analysis only: the app is never run. Screens are found through
+  wrappers such as providers, `BlocBuilder`, `PopScope` and auth gates.
+- Auto layout that follows Flutter's constraints (fixed / hug / fill).
+  Wrappers like `Padding` fold into frame padding, and `SizedBox` spacers into
+  gaps, but only when the result renders the same.
+- Layout, content, Material controls and surfaces, `TextField`, and progress
+  indicators. Widgets from packages and `builder:` widgets render their
+  content. Anything unsupported becomes a flagged placeholder.
+- Runtime-dependent UI exports one state and reports it:
+  - conditionals keep the richer branch;
+  - loops over literal lists are unrolled;
+  - loops over runtime data show sample items.
+
+### Theme
+- Reads the app's `MaterialApp` `theme`, `darkTheme` and `themeMode`, and
+  resolves them the way Flutter does:
+  - color schemes, including `ColorScheme.fromSeed`;
+  - `fontFamily`, `textTheme` and GoogleFonts;
+  - app bar, card and button themes;
+  - nested `Theme` widgets.
+- Checked against Flutter's own resolved theme on real apps (exact match).
+- `flutter2figma theme` prints the resolved theme as JSON.
+
+### Design system
+- `ColorScheme` roles become color variables with Light and Dark modes.
+  Painted project color constants become variables too.
+- Text theme entries become text styles, and elevation levels become effect
+  styles. Values bind to these only when they came from them.
+- Material buttons become a `Button` component set. Project widgets used
+  twice or more become components with instances.
+
+### API
+- `package:flutter2figma/flutter2figma.dart` provides `exportProject()`.
+  The stages are separate libraries: `analyzer.dart`, `compiler.dart`,
+  `ir.dart` and `figma.dart`.

@@ -1,5 +1,5 @@
 // Types for design.json, produced by `flutter2figma export`
-// (packages/figma/lib/src/renderer.dart). Property names and enum values
+// (lib/src/figma/renderer.dart in the Dart package). Property names and enum values
 // mirror the Figma Plugin API.
 
 export const DESIGN_FORMAT = 'flutter2figma/design';

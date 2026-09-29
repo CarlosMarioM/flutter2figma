@@ -1,185 +1,145 @@
-# Flutter2Figma
+# flutter2figma
 
-Turn a Flutter UI that already exists into an **editable** Figma design: real
-frames, auto layout, text layers and styles. It doesn't take screenshots.
+Convert a Flutter UI that already exists into an **editable** Figma design.
+You get real frames with auto layout, text layers, color variables with
+light/dark modes, text styles, and components. It doesn't take screenshots.
 
 ```
-Flutter project ──► Dart analyzer ──► Flutter UI IR ──► Figma renderer ──► design.json ──► Figma plugin
-   (.dart)         (resolved AST)    (framework-free)   (Figma vocabulary)                  (editable frames)
+Flutter project ──► static analysis ──► intermediate representation ──► design.json ──► Figma plugin
 ```
 
-## Status
+flutter2figma reads your code and never runs the app. It resolves your theme
+the way Flutter does, including `ColorScheme.fromSeed`, custom fonts and
+component themes, and maps widgets to Figma auto layout following Flutter's
+own sizing rules.
 
-The first vertical slice from the build plan (§17) works end to end:
-`examples/basic` → `design.json` → Figma frames with auto layout, spacing,
-typography, colors, radii and shadows. The output is checked against a golden
-file that both the Dart CLI and the plugin tests use.
-
-The app's own theme is read from `MaterialApp`:
-- `theme`/`darkTheme` and `themeMode`;
-- the color scheme, including `ColorScheme.fromSeed`;
-- `fontFamily`, `textTheme` and GoogleFonts;
-- the app bar, card and button themes;
-- nested `Theme` widgets.
-
-A Flutter test checks the result against the theme Flutter itself resolves.
-
-The export also carries a **design system** that the plugin creates in Figma:
-
-| Flutter | Figma |
-| --- | --- |
-| `ColorScheme` roles, for `theme` and `darkTheme` | Color variables with **Light/Dark modes**; switching the mode recolors the screens |
-| `AppColors.brand`-style project constants that are painted | Color variables (`AppColors/brand`) |
-| `textTheme` entries | Text styles (`TextTheme/bodyMedium`, …) |
-| M3 elevation levels | Effect styles (`Elevation/level1`…`5`) |
-| Material buttons | A `Button` component set with `Type` × `State` (× `Icon`) variants |
-| Project widgets used 2+ times (`StatCard`) | Components, with instances in the screens |
-
-Paints, text and shadows are bound to these only when they came from them.
-For example, `Theme.of(context).colorScheme.primary` binds to
-`ColorScheme/primary`, but a literal `Color(0xFF...)` with the same value does
-not. Instances differ from their master only in text, which is applied as
-overrides. Any other visual difference becomes a separate variant, so every
-instance looks exactly like the widget it replaces.
-
-**Validated on real apps.** Three production-style Flutter apps (17–102
-files) were run with `tool/validate_app.sh`:
-- a bloc-based app with custom fonts;
-- a seed-themed dark app;
-- a brand-themed retail app.
-
-| Check | Result |
-| --- | --- |
-| Static theme vs. the theme Flutter resolves (144 values each) | exact match on all three |
-| Screens found | 3, 6, 10, including screens behind `BlocBuilder`, providers, auth gates and early-return loading states |
-| Export | no crashes; placeholders only for content that can't be drawn statically (`CustomPaint`, camera/video/QR views) |
-| Import through the strict Figma mock | all three clean |
-
-Not built yet:
-- `validate` (screenshot diff);
-- `--runtime` mode;
-- Figma → Flutter generation;
-- spacing and radius tokens.
-
-## Quick start
-
-Requirements: Dart 3.11+, [FVM](https://fvm.app) (the Flutter version is pinned in `.fvmrc`), Node 18+.
+## Install
 
 ```sh
-# 1. Dependencies
-dart pub get
-(cd examples/basic && fvm flutter pub get)   # the analyzer needs the Flutter SDK resolved
-(cd figma-plugin && npm install && npm run build)
+dart pub global activate flutter2figma
+```
 
-# 2. Analyze / export
-dart run flutter2figma analyze examples/basic
-dart run flutter2figma export examples/basic -o build/flutter2figma
-dart run flutter2figma export examples/basic --brightness dark -o build/dark
-dart run flutter2figma export examples/basic --no-design-system   # plain frames only
-#   → build/flutter2figma/design.json   (import this in Figma)
-#   → build/flutter2figma/ir.json       (the intermediate representation)
+Requires Dart 3.11 or later. The Flutter project you export must be resolved
+(`flutter pub get`).
+
+## Export
+
+```sh
+cd path/to/your_app
+flutter pub get
+flutter2figma export
 ```
 
 ```
-$ dart run flutter2figma export examples/basic
-Analyzing …/examples/basic...
-Building intermediate representation...
-Generating Figma document...
-
 ✓ Export complete
 
-  2 screens
-  32 nodes
+  6 screens
+  165 nodes
+  51 color variables (Light / Dark)
+  15 text styles
+  5 effect styles
+  5 components (12 variants)
+
+  build/flutter2figma/design.json   ← import with the Figma plugin
+  build/flutter2figma/ir.json
 ```
 
-To import into Figma (desktop app): **Plugins → Development → Import plugin from
-manifest…** → `figma-plugin/manifest.json`. Run it, then drop `design.json` on the
-plugin window. Each export creates a new page named after the project.
+Then, in the Figma desktop app, open the **Flutter2Figma** plugin and drop
+`design.json` on it. Each export creates a new page. The design system is
+reused across imports: variables and styles are updated in place.
 
-Any Flutter project works the same way: run `fvm flutter pub get` (or
-`flutter pub get`) in it, then `dart run flutter2figma export path/to/app`.
+> The Figma plugin lives in this repository under
+> [`figma-plugin/`](figma-plugin/). Until it is published on Figma Community,
+> load it with **Plugins → Development → Import plugin from manifest…** after
+> running `npm install && npm run build` in that folder.
 
-## How it works
+## What you get in Figma
 
-| Layer | Package | Input → output |
+| From Flutter | In Figma |
+| --- | --- |
+| Screens (classes whose `build` leads to a `Scaffold`, through providers, bloc builders, auth gates, …) | Frames, one per screen, with auto layout |
+| `Row`, `Column`, `Padding`, `SizedBox`, `Expanded`, `Stack`, … | Auto layout: direction, gap, padding, alignment, fixed / hug / fill |
+| `ColorScheme` roles for `theme` and `darkTheme` | Color variables with **Light/Dark modes**; switching the mode recolors the screens |
+| Painted project constants such as `AppColors.brand` | Color variables |
+| `textTheme` entries | Text styles (`TextTheme/bodyMedium`, …) |
+| Material elevation | Effect styles (`Elevation/level1`–`5`) |
+| Material buttons | A `Button` component set with variants for type and state |
+| Your widgets used two or more times | Components, with instances in the screens |
+
+Every layer records the Flutter widgets it came from and their `file:line`.
+
+Values bind to tokens only when they came from them. `colorScheme.primary`
+becomes the `ColorScheme/primary` variable, but a hard-coded `Color` with the
+same value stays a hard-coded color.
+
+## Commands
+
+| Command | Does |
+| --- | --- |
+| `flutter2figma export [project]` | Writes `design.json` and `ir.json` |
+| `flutter2figma analyze [project]` | Lists screens, widgets and analysis problems (`--json` for the widget trees) |
+| `flutter2figma theme [project]` | Prints the resolved Material theme as JSON |
+| `flutter2figma --version` | Prints the version |
+
+`export` options:
+
+| Option | Default | |
 | --- | --- | --- |
-| Analyzer | `packages/analyzer` | Resolves every library under `lib/` with `package:analyzer` and turns each widget class's `build` into a tree of `DartValue`s (constructor calls, literals, references, calls). It never runs Dart. `const` references are followed into their declarations, including Flutter's own source, so `Colors.blue` arrives as `MaterialColor(0xFF2196F3, …)`. Project widgets are inlined, with constructor arguments substituted for fields. The analyzer also follows the project's own getters, `final`s and functions/methods, so `AppTheme.light` and `_buildHeader()` resolve too. |
-| Compiler | `packages/compiler` | Extracts the app's `ThemeData` the way Flutter resolves it. For `fromSeed` it uses the same `material_color_utilities` version as Flutter. It then interprets the widget tree against that theme, and a small layout model (tight/loose/bounded constraints) that decides fixed, hug or fill per axis. It folds wrappers such as `Padding` → frame padding and `SizedBox` spacers → auto-layout gap, but only when the result renders identically. |
-| IR | `packages/ir` | Framework-independent frames and text with sizing, layout, paint and typography. It also records where each node came from: the Flutter widgets that produced it and their `file:line`. |
-| Renderer | `packages/figma` | Maps IR to Figma Plugin API names and enums (`layoutMode`, `layoutSizingHorizontal`, `primaryAxisAlignItems`, …). Where Figma rejects a combination, it downgrades the node and emits a warning. |
-| Plugin | `figma-plugin` | Loads fonts, falling back to the nearest weight and then to Inter. Builds nodes in the order Figma requires and places absolute and Stack children. Writes the origin and source of each node to plugin data. |
-| CLI | `packages/cli` | `analyze`, `export`, `theme` (prints the statically resolved theme as JSON). |
+| `-o, --output` | `build/flutter2figma` | Output directory |
+| `--brightness` | `auto` | `light`, `dark`, or `auto` (follows `themeMode`) |
+| `--screen-size` | `390x844` | Frame size for screens |
+| `--[no-]design-system` | on | Variables, styles and components |
+| `--min-component-uses` | `2` | Uses before one of your widgets becomes a component |
+| `-v, --verbose` | off | Also show info diagnostics |
 
-More detail: [docs/architecture.md](docs/architecture.md).
+## Dart API
 
-### Widget coverage
+```dart
+import 'dart:convert';
+import 'dart:io';
 
-- **Layout:** Scaffold (appBar, body, FAB), Container, Padding, Center, Align, SizedBox (+ expand/shrink/square), Row, Column, Flex, Stack/Positioned, Expanded, Flexible, Spacer, ListView (+ `.builder`, `.separated`), SingleChildScrollView.
-- **Content:** Text, Text.rich/RichText (plain text), DefaultTextStyle, Icon and Image (both as placeholders).
-- **Controls:** Elevated/Filled/FilledTonal/Outlined/Text buttons (+ `.icon`, full-width `minimumSize`), IconButton, FloatingActionButton, TextField/TextFormField, Circular/LinearProgressIndicator.
-- **Surfaces:** Card (+ filled/outlined), Material, DecoratedBox, ColoredBox, ClipRRect, Divider.
-- **Values:** EdgeInsets, BorderRadius, Border, BoxShadow, shapes, `Colors.*`, shades, `Color(...)`, `withOpacity`/`withValues`, `Theme.of(context).colorScheme.*` and `.textTheme.*`, `copyWith`/`merge`, `ButtonStyle`/`styleFrom`.
-- **Pass-through** (child exported as-is): SafeArea, GestureDetector, InkWell, Semantics, Opacity, the `Animated*`/`*Transition` widgets, and about 50 others. `AnimatedContainer`, `AnimatedPadding` and `AnimatedAlign` render like their static versions.
-- **Packages and builders:**
-  - Widgets from packages (`BlocBuilder`, `BlocProvider`, `Consumer`, …) and unknown `builder:` widgets (`StreamBuilder`, `ValueListenableBuilder`, …) render their builder's result, or pass through to `child`.
-  - Screens are found through these wrappers too. A class that only wraps another screen isn't exported twice.
+import 'package:flutter2figma/flutter2figma.dart';
 
-Anything else is exported as a magenta `⚠` placeholder, or passed through if it has a
-`child`, and reported as a diagnostic. It never fails silently.
-
-### Known limits (static mode)
-
-- **Conditional UI:** exports the **richer** branch, with an info diagnostic. This covers `a ? b : c`, collection `if`, `switch` expressions, and early returns such as `if (loading) return Spinner(); return Content();`. The richer branch is the one with more inline widgets, so the real content wins over a loading or error state. Plan: variants.
-- **Lists:**
-  - Loops over literal lists are unrolled with their real items, as in `for (final x in const [...])` and `[...].map(...)`.
-  - Loops over runtime data render 3 sample items, as does `ListView.builder` when `itemCount` isn't a literal.
-- **Missing values:** values that need runtime state become `{placeholders}` in text. Examples: fields without a call site, parameters of closures, and results of SDK or package methods.
-- **Icons and images:** exported as placeholders. Gradients become their first color.
-- **Theme:**
-  - Other component themes are listed as "not applied" diagnostics. These include input decoration, chips and navigation bars.
-  - Material 2 themes (`useMaterial3: false`) and `ColorScheme.fromSwatch` are exported with Material 3 defaults, with a warning.
-  - Fonts are exported by family name. The Figma plugin substitutes any that aren't installed.
-- **Design system:**
-  - Spacing and radius aren't tokens yet.
-  - Components are recognized for buttons and repeated project widgets only. Built-in widgets like `Card` or `ListTile` are not components.
-  - The component master is the widget's first occurrence.
-  - A Figma plan that allows only one variable mode gets just the Light mode, with a note in the plugin.
-  - Re-importing updates variables and styles by name. Components are recreated on each import's page.
-
-## Development
-
-Full guide: [docs/development.md](docs/development.md). It covers setup, adding widget support, adding IR properties end to end, plugin development in Figma, debugging and known gotchas.
-
-```sh
-# Dart (from each package dir, or loop)
-for p in ir analyzer compiler figma cli; do (cd packages/$p && dart test); done
-dart analyze
-
-# Plugin: typecheck, bundle, and run against a strict mock of the Figma API
-cd figma-plugin && npx tsc --noEmit && npm run build && npm test
-
-# Theme ground truth (Flutter resolves the example's theme)
-cd examples/basic && fvm flutter test
-
-# After an intentional output change, refresh the shared golden:
-cd packages/cli && UPDATE_GOLDENS=1 dart test
+Future<void> main() async {
+  final result = await exportProject('path/to/app');
+  File('design.json').writeAsStringSync(jsonEncode(result.design));
+  for (final d in result.diagnostics) {
+    print(d);
+  }
+}
 ```
 
-The plugin tests use `test/figma-mock.ts`, which throws wherever the real API does.
-For example: FILL outside auto layout, HUG on a non-auto-layout frame, or
-editing text before its font loads. This lets the importer be tested without
-Figma. It's still a mock, so try new node types in real Figma too.
+The stages are also available on their own:
+- `package:flutter2figma/analyzer.dart`: Flutter source → widget trees;
+- `compiler.dart`: widget trees → IR, including theme and design system;
+- `ir.dart`: the intermediate representation;
+- `figma.dart`: IR → `design.json`.
 
-## Repository layout
+## Limitations
 
-```
-packages/
-  ir/         IR model + JSON
-  analyzer/   Dart AST → DartValue trees
-  compiler/   DartValue → IR (Material 3 defaults, layout model, simplification)
-  figma/      IR → design.json
-  cli/        flutter2figma analyze | export   (+ golden: test/goldens/basic.design.json)
-figma-plugin/ TypeScript plugin that imports design.json
-examples/basic/  Flutter app: the §17 screen + a profile screen
-docs/
-```
+flutter2figma exports what can be known **without running the app**. It
+never skips anything silently. Every approximation is reported as a
+diagnostic, and anything it can't draw becomes a magenta `⚠` placeholder.
+
+- **State-dependent UI** exports one state. For `a ? b : c`, `switch`
+  expressions and early returns such as `if (loading) return Spinner();`, that
+  is the branch with more content. Lists built from runtime data show 3 sample
+  items; loops over literal lists show the real items.
+- **Icons and images** are placeholders, and gradients use their first color.
+- **Not supported yet:**
+  - `ListTile`, chips, `Checkbox`/`Switch`/`Radio`, navigation and tab bars,
+    `GridView`, dialogs and sheets;
+  - Cupertino widgets, Material 2 themes, and input/chip/list tile component
+    themes.
+- **Fonts** are exported by family name; the plugin substitutes any font
+  that isn't installed in Figma.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). [doc/architecture.md](doc/architecture.md)
+explains how the pipeline works, and [doc/development.md](doc/development.md)
+covers setup, tests and how to add widget support.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
