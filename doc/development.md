@@ -108,7 +108,10 @@ pattern.
 
 The example app covers what we built on purpose; real apps find what we
 didn't. Run the validator on any resolved Flutter app (`flutter pub get`
-done). It never writes to the app:
+done). It never writes to the app. Unlike `flutter2figma` itself, which only
+reads source, the validator **runs the app's code** in a Flutter test (a
+temporary copy) to get the ground-truth theme. Use it only on apps you
+trust.
 
 ```sh
 tool/validate_app.sh ~/Code/some_app lib/app.dart [out-dir]
