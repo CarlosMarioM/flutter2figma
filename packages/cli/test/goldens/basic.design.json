@@ -1311,8 +1311,13 @@
             "uses": 1
           },
           {
-            "key": "Button[Type=Filled, State=Enabled]",
-            "name": "Type=Filled, State=Enabled",
+            "key": "Button[Type=Filled, State=Enabled, Variant=1]",
+            "name": "Type=Filled, State=Enabled, Variant=1",
+            "uses": 1
+          },
+          {
+            "key": "Button[Type=Filled, State=Enabled, Variant=2]",
+            "name": "Type=Filled, State=Enabled, Variant=2",
             "uses": 1
           }
         ]
@@ -2471,10 +2476,11 @@
                   "layoutSizingVertical": "HUG",
                   "instance": {
                     "component": "Button",
-                    "variant": "Button[Type=Filled, State=Enabled]",
+                    "variant": "Button[Type=Filled, State=Enabled, Variant=1]",
                     "props": {
                       "Type": "Filled",
-                      "State": "Enabled"
+                      "State": "Enabled",
+                      "Variant": "1"
                     }
                   },
                   "pluginData": {
@@ -2521,7 +2527,740 @@
       },
       "x": 510.0,
       "y": 0
+    },
+    {
+      "type": "FRAME",
+      "name": "SettingsScreen",
+      "layoutMode": "VERTICAL",
+      "primaryAxisAlignItems": "MIN",
+      "counterAxisAlignItems": "MIN",
+      "itemSpacing": 0.0,
+      "paddingTop": 0.0,
+      "paddingRight": 0.0,
+      "paddingBottom": 0.0,
+      "paddingLeft": 0.0,
+      "fills": [
+        {
+          "type": "SOLID",
+          "color": {
+            "r": 0.9568627450980393,
+            "g": 0.9803921568627451,
+            "b": 0.9803921568627451
+          },
+          "opacity": 1.0,
+          "variable": "ColorScheme/surface"
+        }
+      ],
+      "clipsContent": true,
+      "children": [
+        {
+          "type": "FRAME",
+          "name": "AppBar",
+          "layoutMode": "HORIZONTAL",
+          "primaryAxisAlignItems": "MIN",
+          "counterAxisAlignItems": "CENTER",
+          "itemSpacing": 0.0,
+          "paddingTop": 0.0,
+          "paddingRight": 16.0,
+          "paddingBottom": 0.0,
+          "paddingLeft": 16.0,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": {
+                "r": 0.9568627450980393,
+                "g": 0.9803921568627451,
+                "b": 0.9803921568627451
+              },
+              "opacity": 1.0,
+              "variable": "ColorScheme/surface"
+            }
+          ],
+          "clipsContent": false,
+          "children": [
+            {
+              "type": "TEXT",
+              "name": "Settings",
+              "characters": "Settings",
+              "fontName": {
+                "family": "Inter",
+                "style": "Regular"
+              },
+              "fontSize": 22.0,
+              "lineHeight": {
+                "unit": "PIXELS",
+                "value": 27.94
+              },
+              "letterSpacing": {
+                "unit": "PIXELS",
+                "value": 0.0
+              },
+              "textStyle": "TextTheme/titleLarge",
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0.08627450980392157,
+                    "g": 0.11372549019607843,
+                    "b": 0.11372549019607843
+                  },
+                  "opacity": 1.0,
+                  "variable": "ColorScheme/onSurface"
+                }
+              ],
+              "textAlignHorizontal": "CENTER",
+              "textAutoResize": "HEIGHT",
+              "layoutSizingHorizontal": "FILL",
+              "layoutSizingVertical": "HUG",
+              "pluginData": {
+                "origin": [
+                  "Text"
+                ],
+                "source": "lib/settings_screen.dart:38"
+              }
+            }
+          ],
+          "layoutSizingHorizontal": "FILL",
+          "layoutSizingVertical": "FIXED",
+          "height": 64.0,
+          "pluginData": {
+            "origin": [
+              "AppBar"
+            ],
+            "source": "lib/settings_screen.dart:38",
+            "role": "app-bar"
+          }
+        },
+        {
+          "type": "FRAME",
+          "name": "ListView",
+          "layoutMode": "VERTICAL",
+          "primaryAxisAlignItems": "MIN",
+          "counterAxisAlignItems": "MIN",
+          "itemSpacing": 0.0,
+          "paddingTop": 16.0,
+          "paddingRight": 16.0,
+          "paddingBottom": 16.0,
+          "paddingLeft": 16.0,
+          "fills": [],
+          "clipsContent": true,
+          "children": [
+            {
+              "type": "FRAME",
+              "name": "TextField",
+              "layoutMode": "HORIZONTAL",
+              "primaryAxisAlignItems": "MIN",
+              "counterAxisAlignItems": "CENTER",
+              "itemSpacing": 12.0,
+              "paddingTop": 0.0,
+              "paddingRight": 12.0,
+              "paddingBottom": 0.0,
+              "paddingLeft": 12.0,
+              "minHeight": 56.0,
+              "fills": [],
+              "strokes": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0.43529411764705883,
+                    "g": 0.4745098039215686,
+                    "b": 0.4745098039215686
+                  },
+                  "opacity": 1.0,
+                  "variable": "ColorScheme/outline"
+                }
+              ],
+              "strokeWeight": 1.0,
+              "strokeAlign": "INSIDE",
+              "cornerRadius": 4.0,
+              "clipsContent": false,
+              "children": [
+                {
+                  "type": "TEXT",
+                  "name": "Display name",
+                  "characters": "Display name",
+                  "fontName": {
+                    "family": "Inter",
+                    "style": "Regular"
+                  },
+                  "fontSize": 16.0,
+                  "lineHeight": {
+                    "unit": "PIXELS",
+                    "value": 24.0
+                  },
+                  "letterSpacing": {
+                    "unit": "PIXELS",
+                    "value": 0.2
+                  },
+                  "textStyle": "TextTheme/bodyLarge",
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": {
+                        "r": 0.24705882352941178,
+                        "g": 0.28627450980392155,
+                        "b": 0.28627450980392155
+                      },
+                      "opacity": 1.0,
+                      "variable": "ColorScheme/onSurfaceVariant"
+                    }
+                  ],
+                  "textAlignHorizontal": "LEFT",
+                  "textAutoResize": "HEIGHT",
+                  "layoutSizingHorizontal": "FILL",
+                  "layoutSizingVertical": "HUG",
+                  "pluginData": {
+                    "origin": [
+                      "InputDecoration"
+                    ]
+                  }
+                }
+              ],
+              "layoutSizingHorizontal": "FILL",
+              "layoutSizingVertical": "HUG",
+              "pluginData": {
+                "origin": [
+                  "TextField"
+                ],
+                "source": "lib/settings_screen.dart:42",
+                "role": "text-field"
+              }
+            },
+            {
+              "type": "FRAME",
+              "name": "SizedBox",
+              "layoutMode": "VERTICAL",
+              "primaryAxisAlignItems": "MIN",
+              "counterAxisAlignItems": "MIN",
+              "itemSpacing": 0.0,
+              "paddingTop": 0.0,
+              "paddingRight": 0.0,
+              "paddingBottom": 0.0,
+              "paddingLeft": 0.0,
+              "fills": [],
+              "clipsContent": false,
+              "children": [],
+              "layoutSizingHorizontal": "FILL",
+              "layoutSizingVertical": "FIXED",
+              "height": 16.0,
+              "pluginData": {
+                "origin": [
+                  "SizedBox"
+                ],
+                "source": "lib/settings_screen.dart:48",
+                "role": "spacer"
+              }
+            },
+            {
+              "type": "FRAME",
+              "name": "Padding",
+              "layoutMode": "VERTICAL",
+              "primaryAxisAlignItems": "MIN",
+              "counterAxisAlignItems": "MIN",
+              "itemSpacing": 0.0,
+              "paddingTop": 4.0,
+              "paddingRight": 0.0,
+              "paddingBottom": 4.0,
+              "paddingLeft": 0.0,
+              "fills": [],
+              "clipsContent": false,
+              "children": [
+                {
+                  "type": "TEXT",
+                  "name": "Notifications",
+                  "characters": "Notifications",
+                  "fontName": {
+                    "family": "Inter",
+                    "style": "Regular"
+                  },
+                  "fontSize": 14.0,
+                  "lineHeight": {
+                    "unit": "PIXELS",
+                    "value": 20.02
+                  },
+                  "letterSpacing": {
+                    "unit": "PIXELS",
+                    "value": 0.25
+                  },
+                  "textStyle": "TextTheme/bodyMedium",
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": {
+                        "r": 0.08627450980392157,
+                        "g": 0.11372549019607843,
+                        "b": 0.11372549019607843
+                      },
+                      "opacity": 1.0,
+                      "variable": "ColorScheme/onSurface"
+                    }
+                  ],
+                  "textAlignHorizontal": "LEFT",
+                  "textAutoResize": "HEIGHT",
+                  "layoutSizingHorizontal": "FILL",
+                  "layoutSizingVertical": "HUG",
+                  "pluginData": {
+                    "origin": [
+                      "Text"
+                    ],
+                    "source": "lib/settings_screen.dart:52"
+                  }
+                }
+              ],
+              "layoutSizingHorizontal": "FILL",
+              "layoutSizingVertical": "HUG",
+              "pluginData": {
+                "origin": [
+                  "Padding"
+                ],
+                "source": "lib/settings_screen.dart:50"
+              }
+            },
+            {
+              "type": "FRAME",
+              "name": "Padding",
+              "layoutMode": "VERTICAL",
+              "primaryAxisAlignItems": "MIN",
+              "counterAxisAlignItems": "MIN",
+              "itemSpacing": 0.0,
+              "paddingTop": 4.0,
+              "paddingRight": 0.0,
+              "paddingBottom": 4.0,
+              "paddingLeft": 0.0,
+              "fills": [],
+              "clipsContent": false,
+              "children": [
+                {
+                  "type": "TEXT",
+                  "name": "Dark mode",
+                  "characters": "Dark mode",
+                  "fontName": {
+                    "family": "Inter",
+                    "style": "Regular"
+                  },
+                  "fontSize": 14.0,
+                  "lineHeight": {
+                    "unit": "PIXELS",
+                    "value": 20.02
+                  },
+                  "letterSpacing": {
+                    "unit": "PIXELS",
+                    "value": 0.25
+                  },
+                  "textStyle": "TextTheme/bodyMedium",
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": {
+                        "r": 0.08627450980392157,
+                        "g": 0.11372549019607843,
+                        "b": 0.11372549019607843
+                      },
+                      "opacity": 1.0,
+                      "variable": "ColorScheme/onSurface"
+                    }
+                  ],
+                  "textAlignHorizontal": "LEFT",
+                  "textAutoResize": "HEIGHT",
+                  "layoutSizingHorizontal": "FILL",
+                  "layoutSizingVertical": "HUG",
+                  "pluginData": {
+                    "origin": [
+                      "Text"
+                    ],
+                    "source": "lib/settings_screen.dart:52"
+                  }
+                }
+              ],
+              "layoutSizingHorizontal": "FILL",
+              "layoutSizingVertical": "HUG",
+              "pluginData": {
+                "origin": [
+                  "Padding"
+                ],
+                "source": "lib/settings_screen.dart:50"
+              }
+            },
+            {
+              "type": "FRAME",
+              "name": "Padding",
+              "layoutMode": "VERTICAL",
+              "primaryAxisAlignItems": "MIN",
+              "counterAxisAlignItems": "MIN",
+              "itemSpacing": 0.0,
+              "paddingTop": 4.0,
+              "paddingRight": 0.0,
+              "paddingBottom": 4.0,
+              "paddingLeft": 0.0,
+              "fills": [],
+              "clipsContent": false,
+              "children": [
+                {
+                  "type": "TEXT",
+                  "name": "Autoplay",
+                  "characters": "Autoplay",
+                  "fontName": {
+                    "family": "Inter",
+                    "style": "Regular"
+                  },
+                  "fontSize": 14.0,
+                  "lineHeight": {
+                    "unit": "PIXELS",
+                    "value": 20.02
+                  },
+                  "letterSpacing": {
+                    "unit": "PIXELS",
+                    "value": 0.25
+                  },
+                  "textStyle": "TextTheme/bodyMedium",
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": {
+                        "r": 0.08627450980392157,
+                        "g": 0.11372549019607843,
+                        "b": 0.11372549019607843
+                      },
+                      "opacity": 1.0,
+                      "variable": "ColorScheme/onSurface"
+                    }
+                  ],
+                  "textAlignHorizontal": "LEFT",
+                  "textAutoResize": "HEIGHT",
+                  "layoutSizingHorizontal": "FILL",
+                  "layoutSizingVertical": "HUG",
+                  "pluginData": {
+                    "origin": [
+                      "Text"
+                    ],
+                    "source": "lib/settings_screen.dart:52"
+                  }
+                }
+              ],
+              "layoutSizingHorizontal": "FILL",
+              "layoutSizingVertical": "HUG",
+              "pluginData": {
+                "origin": [
+                  "Padding"
+                ],
+                "source": "lib/settings_screen.dart:50"
+              }
+            },
+            {
+              "type": "TEXT",
+              "name": "Privacy",
+              "characters": "Privacy",
+              "fontName": {
+                "family": "Inter",
+                "style": "Regular"
+              },
+              "fontSize": 14.0,
+              "lineHeight": {
+                "unit": "PIXELS",
+                "value": 20.02
+              },
+              "letterSpacing": {
+                "unit": "PIXELS",
+                "value": 0.25
+              },
+              "textStyle": "TextTheme/bodyMedium",
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0.08627450980392157,
+                    "g": 0.11372549019607843,
+                    "b": 0.11372549019607843
+                  },
+                  "opacity": 1.0,
+                  "variable": "ColorScheme/onSurface"
+                }
+              ],
+              "textAlignHorizontal": "LEFT",
+              "textAutoResize": "HEIGHT",
+              "layoutSizingHorizontal": "FILL",
+              "layoutSizingVertical": "HUG",
+              "pluginData": {
+                "origin": [
+                  "Text"
+                ],
+                "source": "lib/settings_screen.dart:54"
+              }
+            },
+            {
+              "type": "TEXT",
+              "name": "About",
+              "characters": "About",
+              "fontName": {
+                "family": "Inter",
+                "style": "Regular"
+              },
+              "fontSize": 14.0,
+              "lineHeight": {
+                "unit": "PIXELS",
+                "value": 20.02
+              },
+              "letterSpacing": {
+                "unit": "PIXELS",
+                "value": 0.25
+              },
+              "textStyle": "TextTheme/bodyMedium",
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0.08627450980392157,
+                    "g": 0.11372549019607843,
+                    "b": 0.11372549019607843
+                  },
+                  "opacity": 1.0,
+                  "variable": "ColorScheme/onSurface"
+                }
+              ],
+              "textAlignHorizontal": "LEFT",
+              "textAutoResize": "HEIGHT",
+              "layoutSizingHorizontal": "FILL",
+              "layoutSizingVertical": "HUG",
+              "pluginData": {
+                "origin": [
+                  "Text"
+                ],
+                "source": "lib/settings_screen.dart:54"
+              }
+            },
+            {
+              "type": "FRAME",
+              "name": "LinearProgressIndicator",
+              "layoutMode": "HORIZONTAL",
+              "primaryAxisAlignItems": "MIN",
+              "counterAxisAlignItems": "MIN",
+              "itemSpacing": 0.0,
+              "paddingTop": 0.0,
+              "paddingRight": 0.0,
+              "paddingBottom": 0.0,
+              "paddingLeft": 0.0,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0.8,
+                    "g": 0.9098039215686274,
+                    "b": 0.9137254901960784
+                  },
+                  "opacity": 1.0,
+                  "variable": "ColorScheme/secondaryContainer"
+                }
+              ],
+              "clipsContent": true,
+              "children": [
+                {
+                  "type": "FRAME",
+                  "name": "Indicator",
+                  "layoutMode": "VERTICAL",
+                  "primaryAxisAlignItems": "MIN",
+                  "counterAxisAlignItems": "MIN",
+                  "itemSpacing": 0.0,
+                  "paddingTop": 0.0,
+                  "paddingRight": 0.0,
+                  "paddingBottom": 0.0,
+                  "paddingLeft": 0.0,
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": {
+                        "r": 0.0,
+                        "g": 0.4117647058823529,
+                        "b": 0.43137254901960786
+                      },
+                      "opacity": 1.0,
+                      "variable": "ColorScheme/primary"
+                    }
+                  ],
+                  "clipsContent": false,
+                  "children": [],
+                  "layoutSizingHorizontal": "FIXED",
+                  "layoutSizingVertical": "FILL",
+                  "width": 96.0,
+                  "pluginData": {}
+                }
+              ],
+              "layoutSizingHorizontal": "FILL",
+              "layoutSizingVertical": "FIXED",
+              "height": 4.0,
+              "pluginData": {
+                "origin": [
+                  "ValueListenableBuilder",
+                  "LinearProgressIndicator"
+                ],
+                "source": "lib/settings_screen.dart:58",
+                "role": "progress"
+              }
+            },
+            {
+              "type": "FRAME",
+              "name": "SizedBox",
+              "layoutMode": "VERTICAL",
+              "primaryAxisAlignItems": "MIN",
+              "counterAxisAlignItems": "MIN",
+              "itemSpacing": 0.0,
+              "paddingTop": 0.0,
+              "paddingRight": 0.0,
+              "paddingBottom": 0.0,
+              "paddingLeft": 0.0,
+              "fills": [],
+              "clipsContent": false,
+              "children": [],
+              "layoutSizingHorizontal": "FILL",
+              "layoutSizingVertical": "FIXED",
+              "height": 24.0,
+              "pluginData": {
+                "origin": [
+                  "SizedBox"
+                ],
+                "source": "lib/settings_screen.dart:63",
+                "role": "spacer"
+              }
+            },
+            {
+              "type": "FRAME",
+              "name": "FilledButton",
+              "layoutMode": "HORIZONTAL",
+              "primaryAxisAlignItems": "CENTER",
+              "counterAxisAlignItems": "CENTER",
+              "itemSpacing": 0.0,
+              "paddingTop": 0.0,
+              "paddingRight": 24.0,
+              "paddingBottom": 0.0,
+              "paddingLeft": 24.0,
+              "minWidth": 64.0,
+              "minHeight": 52.0,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0.0,
+                    "g": 0.4117647058823529,
+                    "b": 0.43137254901960786
+                  },
+                  "opacity": 1.0,
+                  "variable": "ColorScheme/primary"
+                }
+              ],
+              "cornerRadius": 8.0,
+              "clipsContent": false,
+              "children": [
+                {
+                  "type": "TEXT",
+                  "name": "Save changes",
+                  "characters": "Save changes",
+                  "fontName": {
+                    "family": "Inter",
+                    "style": "Medium"
+                  },
+                  "fontSize": 14.0,
+                  "lineHeight": {
+                    "unit": "PIXELS",
+                    "value": 20.02
+                  },
+                  "letterSpacing": {
+                    "unit": "PIXELS",
+                    "value": 0.1
+                  },
+                  "textStyle": "TextTheme/labelLarge",
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": {
+                        "r": 1.0,
+                        "g": 1.0,
+                        "b": 1.0
+                      },
+                      "opacity": 1.0,
+                      "variable": "ColorScheme/onPrimary"
+                    }
+                  ],
+                  "textAlignHorizontal": "LEFT",
+                  "textAutoResize": "WIDTH_AND_HEIGHT",
+                  "layoutSizingHorizontal": "HUG",
+                  "layoutSizingVertical": "HUG",
+                  "pluginData": {
+                    "origin": [
+                      "Text"
+                    ],
+                    "source": "lib/settings_screen.dart:69"
+                  }
+                }
+              ],
+              "layoutSizingHorizontal": "FILL",
+              "layoutSizingVertical": "HUG",
+              "instance": {
+                "component": "Button",
+                "variant": "Button[Type=Filled, State=Enabled, Variant=2]",
+                "props": {
+                  "Type": "Filled",
+                  "State": "Enabled",
+                  "Variant": "2"
+                }
+              },
+              "pluginData": {
+                "origin": [
+                  "FilledButton"
+                ],
+                "source": "lib/settings_screen.dart:64",
+                "role": "button"
+              }
+            }
+          ],
+          "layoutSizingHorizontal": "FILL",
+          "layoutSizingVertical": "FILL",
+          "pluginData": {
+            "origin": [
+              "ListView"
+            ],
+            "source": "lib/settings_screen.dart:39"
+          }
+        }
+      ],
+      "layoutSizingHorizontal": "FIXED",
+      "layoutSizingVertical": "FIXED",
+      "width": 390.0,
+      "height": 844.0,
+      "pluginData": {
+        "origin": [
+          "Scaffold"
+        ],
+        "source": "lib/settings_screen.dart:18",
+        "role": "screen"
+      },
+      "x": 1020.0,
+      "y": 0
     }
   ],
-  "diagnostics": []
+  "diagnostics": [
+    {
+      "severity": "info",
+      "message": "Conditional UI `_loading`: exported the `false` branch (the richer one)",
+      "source": "lib/settings_screen.dart:34"
+    },
+    {
+      "severity": "info",
+      "message": "Conditional UI `state is SyncState.failed`: exported the `true` branch (the richer one)",
+      "source": "lib/settings_screen.dart:59"
+    },
+    {
+      "severity": "info",
+      "message": "Conditional UI `state is SyncState.syncing`: exported the `true` branch (the richer one)",
+      "source": "lib/settings_screen.dart:58"
+    },
+    {
+      "severity": "info",
+      "message": "Unsupported widget `ValueListenableBuilder`: rendered its builder (state-dependent UI shows one state)",
+      "source": "lib/settings_screen.dart:55"
+    },
+    {
+      "severity": "info",
+      "message": "Progress indicators are drawn at a fixed value",
+      "source": "lib/settings_screen.dart:58"
+    }
+  ]
 }

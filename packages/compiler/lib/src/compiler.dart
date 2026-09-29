@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter2figma_analyzer/flutter2figma_analyzer.dart';
 import 'package:flutter2figma_ir/flutter2figma_ir.dart';
 
@@ -94,11 +96,32 @@ const _passThrough = {
   'PopScope',
   'Dismissible',
   'Draggable',
-  'AnimatedContainer',
   'AnimatedOpacity',
   'AnimatedSwitcher',
   'AnimatedSize',
-  'AnimatedPadding',
+  'AnimatedScale',
+  'AnimatedRotation',
+  'AnimatedSlide',
+  'AnimatedCrossFade',
+  'AnimatedDefaultTextStyle',
+  'AnimatedPhysicalModel',
+  'FadeTransition',
+  'SlideTransition',
+  'ScaleTransition',
+  'RotationTransition',
+  'SizeTransition',
+  'DecoratedBoxTransition',
+  'AlignTransition',
+  'PositionedTransition',
+  'TweenAnimationBuilder',
+  'Offstage',
+  'PageStorage',
+  'NotificationListener',
+  'ScrollConfiguration',
+  'Shortcuts',
+  'Actions',
+  'CallbackShortcuts',
+  'DefaultTabController',
   'Flexible',
   'Expanded',
 };
@@ -295,8 +318,49 @@ class FlutterCompiler {
       width: screenWidth,
       height: screenHeight,
       source: source,
-      root: simplify(root) as IrFrame,
+      root: _sanitize(simplify(root)) as IrFrame,
     );
+  }
+
+  /// Last line of defense: Figma (and JSON) can't take infinite or NaN
+  /// numbers. Anything that slipped through a handler becomes fill / unset,
+  /// with a warning, instead of failing the export.
+  IrNode _sanitize(IrNode node) {
+    bool bad(double? v) => v != null && !v.isFinite;
+    void fix(String what) =>
+        _warn('Non-finite $what on `${node.name}` replaced', null);
+    IrSizing axis(IrSizing s, String what) {
+      if (s.isFixed && bad(s.value)) {
+        fix(what);
+        return const IrSizing.fill();
+      }
+      return s;
+    }
+
+    node
+      ..width = axis(node.width, 'width')
+      ..height = axis(node.height, 'height');
+    if (node is IrFrame) {
+      if (bad(node.minWidth)) {
+        fix('minWidth');
+        node.minWidth = null;
+      }
+      if (bad(node.minHeight)) {
+        fix('minHeight');
+        node.minHeight = null;
+      }
+      if (bad(node.gap)) {
+        fix('gap');
+        node.gap = 0;
+      }
+      final p = node.padding;
+      if ([p.top, p.right, p.bottom, p.left].any(bad)) {
+        fix('padding');
+        node.padding = IrInsets.zero;
+      }
+      node.children.forEach(_sanitize);
+    }
+    return node;
   }
 
   void _absorb(Iterable<IrDiagnostic> diagnostics) {
@@ -323,13 +387,20 @@ class FlutterCompiler {
     switch (d) {
       case ObjectValue(isWidget: true):
         return d;
-      case ConditionalValue(:final condition, :final then):
+      case ConditionalValue(:final condition, :final then, :final otherwise):
+        // Loading/error branches are small; the screen's real content is
+        // the richest branch. Ties keep the `true` branch.
+        final a = _asWidget(then);
+        final b = _asWidget(otherwise);
+        if (a == null || b == null) return a ?? b;
+        final pickElse = _richness(b) > _richness(a);
         _warn(
-          'Conditional UI `$condition`: exported the `true` branch only',
+          'Conditional UI `$condition`: exported the '
+          '${pickElse ? '`false`' : '`true`'} branch (the richer one)',
           d,
           severity: IrSeverity.info,
         );
-        return _asWidget(then);
+        return pickElse ? b : a;
       case CallValue(target: final target?, method: 'call'):
         return _asWidget(target);
       default:
@@ -348,7 +419,11 @@ class FlutterCompiler {
       _warn('Could not statically resolve widget `$code`', v);
       return _placeholder('Unresolved: $code', v, c);
     }
-    final node = w.isFlutter ? _flutterWidget(w, c) : _projectWidget(w, c);
+    final node = w.isFlutter
+        ? _flutterWidget(w, c)
+        : w.build != null || w.inProject
+        ? _projectWidget(w, c)
+        : _genericWidget(w, c, package: true);
     node.source ??= w.source;
     if (node is IrFrame) {
       _adoptChildFill(node);
@@ -390,9 +465,9 @@ class FlutterCompiler {
         return _scaffold(w, c);
       case 'AppBar':
         return _appBar(w, c);
-      case 'Padding':
+      case 'Padding' || 'AnimatedPadding':
         return _padding(w, c);
-      case 'Center' || 'Align':
+      case 'Center' || 'Align' || 'AnimatedAlign':
         return _align(w, c);
       case 'SizedBox' ||
           'SizedBox.expand' ||
@@ -400,7 +475,7 @@ class FlutterCompiler {
           'SizedBox.square' ||
           'SizedBox.fromSize':
         return _sizedBox(w, c);
-      case 'Container':
+      case 'Container' || 'AnimatedContainer':
         return _container(w, c);
       case 'DecoratedBox':
         return _boxLike(w, c, decoration: w['decoration']);
@@ -487,6 +562,12 @@ class FlutterCompiler {
         return _iconButton(w, c);
       case 'FloatingActionButton' || 'FloatingActionButton.extended':
         return _fab(w, c);
+      case 'TextField' || 'TextFormField':
+        return _textField(w, c);
+      case 'CircularProgressIndicator' || 'CircularProgressIndicator.adaptive':
+        return _circularProgress(w);
+      case 'LinearProgressIndicator':
+        return _linearProgress(w, c);
       case 'Divider' || 'VerticalDivider':
         return _divider(w, c);
       case 'ListView' || 'ListView.builder' || 'ListView.separated':
@@ -512,24 +593,60 @@ class FlutterCompiler {
       return node;
     }
 
-    // Unknown widget: keep the subtree visible and flag it.
-    _warn('Unsupported widget `${w.displayName}`', w);
+    return _genericWidget(w, c, package: false);
+  }
+
+  /// A widget without a dedicated handler: an unknown Flutter widget, or one
+  /// from a package (`BlocBuilder`, `BlocProvider`, `Consumer`, ...).
+  ///
+  /// Keeps the subtree visible: renders the `builder` callback's result, else
+  /// passes through to `child`, else lays out `children`, else a placeholder.
+  /// Flagged as a warning for Flutter widgets (their visuals are missing) and
+  /// as info for package wrappers (usually state management, no visuals).
+  IrNode _genericWidget(ObjectValue w, _Ctx c, {required bool package}) {
+    final severity = package ? IrSeverity.info : IrSeverity.warning;
+    final what = package ? 'Package widget' : 'Unsupported widget';
+
+    final builder = eval.deref(w['builder']);
+    final built = builder is FunctionValue ? _asWidget(builder.returns) : null;
+    if (built != null) {
+      _warn(
+        '$what `${w.displayName}`: rendered its builder '
+        '(state-dependent UI shows one state)',
+        w,
+        severity: IrSeverity.info,
+      );
+      final node = _widget(built, c);
+      node.origin = [w.type, ...node.origin];
+      return node;
+    }
     final child = w['child'];
     if (child != null) {
+      _warn(
+        '$what `${w.displayName}`: exported its child only',
+        w,
+        severity: severity,
+      );
       final node = _widget(child, c);
       node.origin = [w.type, ...node.origin];
       return node;
     }
-    final children = eval.deref(w['children']);
-    if (children is ListValue) {
+    final children = _items(w['children']);
+    if (children != null) {
+      _warn(
+        '$what `${w.displayName}`: exported its children in a column',
+        w,
+        severity: severity,
+      );
       return IrFrame(
         name: w.displayName,
         origin: [w.type],
         children: [
-          for (final i in children.items) _widget(i, c.withBox(c.box.loose)),
+          for (final i in children) _widget(i, c.withBox(c.box.loose)),
         ],
       );
     }
+    _warn('$what `${w.displayName}`', w);
     return _placeholder(w.displayName, w, c);
   }
 
@@ -546,6 +663,74 @@ class FlutterCompiler {
     } finally {
       eval.theme = outer;
     }
+  }
+
+  /// How much UI a value describes: widgets written inline (capped).
+  int _richness(DartValue? v, [int depth = 0]) {
+    if (v == null || depth > 24) return 0;
+    final d = eval.deref(v);
+    final int score = switch (d) {
+      // Another widget class counts as one widget: a branch that shows a
+      // different screen shouldn't outweigh this screen's own UI.
+      ObjectValue() =>
+        (d.isWidget ? 1 : 0) +
+            [
+              ...d.positional,
+              ...d.named.values,
+            ].fold(0, (n, a) => n + _richness(a, depth + 1)),
+      ListValue(:final items) => items.fold(
+        0,
+        (n, i) => n + _richness(i, depth + 1),
+      ),
+      LoopValue(:final body) => _richness(body, depth + 1),
+      FunctionValue(:final returns) => _richness(returns, depth + 1),
+      ConditionalValue(:final then, :final otherwise) => max(
+        _richness(then, depth + 1),
+        _richness(otherwise, depth + 1),
+      ),
+      _ => 0,
+    };
+    return min(score, 1000);
+  }
+
+  /// Children of a list-valued argument, with loops expanded. Loops over
+  /// known items were already unrolled by the analyzer; a collection `for`
+  /// or `items.map((x) => Widget(...))` over runtime data repeats its body
+  /// [listPreviewCount] times.
+  List<DartValue>? _items(DartValue? v) {
+    final d = eval.deref(v);
+    if (d is ListValue) return [for (final i in d.items) ..._expand(i)];
+    final repeated = _expand(d);
+    return identical(repeated.firstOrNull, d) ? null : repeated;
+  }
+
+  List<DartValue> _expand(DartValue? item) {
+    final d = eval.deref(item);
+    if (d is ListValue) return [for (final i in d.items) ..._expand(i)];
+    final (String? loop, DartValue? body) = switch (d) {
+      LoopValue(:final loop, :final body) => ('for ($loop)', body),
+      CallValue(method: 'toList' || 'toSet', target: final t?) => switch (eval
+          .deref(t)) {
+        ListValue() => ('', null),
+        CallValue(method: 'map', positional: [FunctionValue(:final returns)])
+            when returns != null =>
+          ('.map()', returns),
+        _ => (null, null),
+      },
+      CallValue(method: 'map', positional: [FunctionValue(:final returns)])
+          when returns != null =>
+        ('.map()', returns),
+      _ => (null, null),
+    };
+    // `.toList()` on a list the analyzer already unrolled.
+    if (loop == '' && d is CallValue) return _expand(d.target);
+    if (loop == null || body == null) return [?d];
+    _warn(
+      '`$loop`: rendered $listPreviewCount sample items',
+      d,
+      severity: IrSeverity.info,
+    );
+    return List.filled(listPreviewCount, body);
   }
 
   bool _isLiteral(DartValue? v, Object? value) =>
@@ -687,8 +872,8 @@ class FlutterCompiler {
         .withBox(const _Box(forceW: true));
     final leading = w['leading'];
     final title = w['title'];
-    final actions = eval.deref(w['actions']);
-    final hasActions = actions is ListValue && actions.items.isNotEmpty;
+    final actions = _items(w['actions']) ?? const [];
+    final hasActions = actions.isNotEmpty;
     final centerTitle = switch (w['centerTitle']) {
       LiteralValue(value: final bool b) => b,
       _ => appBarTheme.centerTitle ?? false,
@@ -731,8 +916,7 @@ class FlutterCompiler {
             height: const IrSizing.fixed(0),
           ),
         if (hasActions)
-          for (final a in actions.items)
-            _widget(a, titleCtx.withBox(const _Box())),
+          for (final a in actions) _widget(a, titleCtx.withBox(const _Box())),
       ],
     );
   }
@@ -1110,9 +1294,9 @@ class FlutterCompiler {
       boundedW: vertical ? boundedCross || !crossSizing.isHug : false,
       boundedH: vertical ? false : boundedCross || !crossSizing.isHug,
     );
-    final items = eval.deref(w['children']);
-    if (items is ListValue) {
-      for (final item in items.items) {
+    final items = _items(w['children']);
+    if (items != null) {
+      for (final item in items) {
         final child = _flexChild(item, c.withBox(childBox), frame, direction);
         if (child != null) frame.children.add(child);
       }
@@ -1238,9 +1422,9 @@ class FlutterCompiler {
       clip: eval.enumName(w['clipBehavior']) != 'none',
     );
     final alignment = eval.alignment(w['alignment']) ?? (-1.0, -1.0);
-    final items = eval.deref(w['children']);
-    if (items is ListValue) {
-      for (final item in items.items) {
+    final items = _items(w['children']);
+    if (items != null) {
+      for (final item in items) {
         final child = _asWidget(item);
         if (child != null &&
             child.isFlutter &&
@@ -1456,6 +1640,11 @@ class FlutterCompiler {
       }
     }
 
+    // `Size(double.infinity, 52)`: as large as the constraints allow.
+    final fullWidth = minWidth.isInfinite || (fixedWidth?.isInfinite ?? false);
+    final fullHeight =
+        minHeight.isInfinite || (fixedHeight?.isInfinite ?? false);
+
     final childCtx = c
         .withText(
           theme
@@ -1493,14 +1682,14 @@ class FlutterCompiler {
       role: 'button',
       origin: [w.type],
       direction: IrLayoutDirection.horizontal,
-      width: fixedWidth != null
+      width: fixedWidth != null && fixedWidth.isFinite
           ? IrSizing.fixed(fixedWidth)
-          : _hugOrFill(c.box.forceW),
-      height: fixedHeight != null
+          : _hugOrFill(c.box.forceW || (c.box.boundedW && fullWidth)),
+      height: fixedHeight != null && fixedHeight.isFinite
           ? IrSizing.fixed(fixedHeight)
-          : _hugOrFill(c.box.forceH),
-      minWidth: minWidth,
-      minHeight: minHeight,
+          : _hugOrFill(c.box.forceH || (c.box.boundedH && fullHeight)),
+      minWidth: minWidth.isFinite ? minWidth : 64,
+      minHeight: minHeight.isFinite ? minHeight : 40,
       mainAlign: IrMainAlign.center,
       crossAlign: IrCrossAlign.center,
       gap: hasIcon ? 8 : 0,
@@ -1575,6 +1764,174 @@ class FlutterCompiler {
         if (w['icon'] != null) _widget(w['icon'], childCtx),
         if (w['label'] != null) _widget(w['label'], childCtx),
         if (w['child'] != null) _widget(w['child'], childCtx),
+      ],
+    );
+  }
+
+  /// An empty, unfocused M3 text field: label (or hint) in place, with the
+  /// decoration's border. Defaults from `_InputDecoratorDefaultsM3`.
+  IrFrame _textField(ObjectValue w, _Ctx c) {
+    final deco = eval.deref(w['decoration']);
+    final d = deco is ObjectValue && deco.type == 'InputDecoration'
+        ? deco
+        : ObjectValue(type: 'InputDecoration');
+    final borderValue = eval.deref(d['border']);
+    final border = switch (borderValue) {
+      ObjectValue(type: 'OutlineInputBorder') => 'outline',
+      RefValue(dotted: 'InputBorder.none') => 'none',
+      _ => 'underline',
+    };
+    final filled = _isLiteral(d['filled'], true);
+    final value = eval.string(w['initialValue']);
+    final placeholder =
+        eval.string(d['labelText']) ?? eval.string(d['hintText']);
+    final textColor = value != null
+        ? theme.color('onSurface')
+        : theme.color('onSurfaceVariant');
+    final iconCtx = c
+        .withText(null, iconColor: theme.color('onSurfaceVariant'))
+        .withBox(const _Box());
+    final contentPadding =
+        eval.insets(d['contentPadding']) ??
+        IrInsets.symmetric(
+          horizontal: border == 'underline' && !filled ? 0 : 12,
+        );
+
+    final row = IrFrame(
+      name: 'Input',
+      direction: IrLayoutDirection.horizontal,
+      width: const IrSizing.fill(),
+      crossAlign: IrCrossAlign.center,
+      gap: 12,
+      padding: contentPadding,
+      minHeight: border == 'underline' ? 55 : 56,
+      children: [
+        if (d['prefixIcon'] != null) _widget(d['prefixIcon'], iconCtx),
+        IrText(
+          name: value ?? placeholder ?? 'Text field',
+          origin: const ['InputDecoration'],
+          text: value ?? placeholder ?? '',
+          width: const IrSizing.fill(),
+          style: _withTextToken(
+            theme
+                .textStyle('bodyLarge')!
+                .merge(TextStyleSpec(color: textColor))
+                .resolve(theme.fontFamily),
+          ),
+        ),
+        if (d['suffixIcon'] != null) _widget(d['suffixIcon'], iconCtx),
+      ],
+    );
+    final width = c.box.boundedW
+        ? const IrSizing.fill()
+        : const IrSizing.fixed(280);
+    if (!c.box.boundedW) {
+      _warn('${w.type} in unbounded width: shown 280 wide', w);
+    }
+    final fill = filled
+        ? eval.color(d['fillColor']) ?? theme.color('surfaceContainerHighest')
+        : null;
+
+    if (border == 'underline') {
+      return IrFrame(
+        name: w.type,
+        role: 'text-field',
+        origin: [w.type],
+        width: width,
+        fill: fill,
+        corners: filled
+            ? const IrCorners(topLeft: 4, topRight: 4)
+            : IrCorners.zero,
+        children: [
+          row,
+          IrFrame(
+            name: 'Underline',
+            width: const IrSizing.fill(),
+            height: const IrSizing.fixed(1),
+            fill: theme.color('onSurfaceVariant'),
+          ),
+        ],
+      );
+    }
+    final (corners, _) = eval.shape(borderValue);
+    return row
+      ..name = w.type
+      ..role = 'text-field'
+      ..origin = [w.type]
+      ..width = width
+      ..fill = fill
+      ..stroke = border == 'outline'
+          ? IrStroke(
+              color:
+                  eval
+                      .borderSide(
+                        eval.deref(
+                          borderValue is ObjectValue
+                              ? borderValue['borderSide']
+                              : null,
+                        ),
+                      )
+                      ?.color ??
+                  theme.color('outline'),
+            )
+          : null
+      ..corners = border == 'outline'
+          ? (corners == null || corners.isZero
+                ? const IrCorners.all(4)
+                : corners)
+          : IrCorners.zero;
+  }
+
+  /// A full ring: Figma frames can't draw the partial arc.
+  IrFrame _circularProgress(ObjectValue w) {
+    _warn(
+      'Progress indicators are drawn at a fixed value',
+      w,
+      severity: IrSeverity.info,
+    );
+    return IrFrame(
+      name: w.type,
+      role: 'progress',
+      origin: [w.type],
+      width: const IrSizing.fixed(36),
+      height: const IrSizing.fixed(36),
+      stroke: IrStroke(
+        color: eval.color(w['color']) ?? theme.color('primary'),
+        width: eval.number(w['strokeWidth']) ?? 4,
+      ),
+      corners: const IrCorners.all(9999),
+    );
+  }
+
+  /// Track with a 40% indicator (or `value` when given).
+  IrFrame _linearProgress(ObjectValue w, _Ctx c) {
+    _warn(
+      'Progress indicators are drawn at a fixed value',
+      w,
+      severity: IrSeverity.info,
+    );
+    final value = eval.number(w['value'])?.clamp(0.0, 1.0) ?? 0.4;
+    final height = eval.number(w['minHeight']) ?? 4;
+    final trackWidth = c.box.boundedW ? null : 240.0;
+    return IrFrame(
+      name: w.type,
+      role: 'progress',
+      origin: [w.type],
+      direction: IrLayoutDirection.horizontal,
+      width: trackWidth == null
+          ? const IrSizing.fill()
+          : IrSizing.fixed(trackWidth),
+      height: IrSizing.fixed(height),
+      fill:
+          eval.color(w['backgroundColor']) ?? theme.color('secondaryContainer'),
+      clip: true,
+      children: [
+        IrFrame(
+          name: 'Indicator',
+          width: IrSizing.fixed((trackWidth ?? 240) * value),
+          height: const IrSizing.fill(),
+          fill: eval.color(w['color']) ?? theme.color('primary'),
+        ),
       ],
     );
   }
@@ -1659,9 +2016,9 @@ class FlutterCompiler {
     );
 
     if (w.constructor == null) {
-      final items = eval.deref(w['children']);
-      if (items is ListValue) {
-        for (final i in items.items) {
+      final items = _items(w['children']);
+      if (items != null) {
+        for (final i in items) {
           frame.children.add(_widget(i, itemCtx));
         }
       }

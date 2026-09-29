@@ -17,19 +17,31 @@ IR producer next to the static compiler.
 `FlutterProjectAnalyzer` resolves `lib/**.dart` with an
 `AnalysisContextCollection`, so it needs `.dart_tool/package_config.json`
 from `flutter pub get`. For each `StatelessWidget` / `StatefulWidget`
-(via `createState` → `State.build`), it takes the last top-level `return` of
-`build` and converts the expression:
+(via `createState` → `State.build`), it converts what `build` returns:
 
 | Dart | DartValue |
 | --- | --- |
-| `Container(...)`, `EdgeInsets.all(16)` | `ObjectValue` (type, named ctor, library URI, `isWidget` from the static type) |
+| `Container(...)`, `EdgeInsets.all(16)` | `ObjectValue` (type, named ctor, library URI, `isWidget` from the static type, `inProject`) |
 | `16`, `'Hi'`, `null`, string interpolation | `LiteralValue` (non-constant interpolations become `{name}`) |
 | `Colors.blue`, `kPadding`, `AppTheme.light`, `CrossAxisAlignment.start` | `RefValue` + `resolved`: any `const` initializer (SDK included), or a project `final`/getter body |
 | `textTheme.bodyLarge`, `color.shade200` | `AccessValue` |
 | `Theme.of(context)`, `style.copyWith(...)`, `_buildHeader()` | `CallValue` + `result` for project functions and methods (arguments bound to parameters) |
-| `a ? b : c`, collection `if` | `ConditionalValue` |
-| closures | `FunctionValue` (+ single return expression) |
+| `a ? b : c`, collection `if`, `switch` expressions (cases chained in order), early returns (`if (x) { return A; } return B;` → `x ? A : B`) | `ConditionalValue` |
+| collection `for` over runtime data | `LoopValue` (loop header + body) |
+| collection `for` / `.map((x) => …)` over a literal list | unrolled: one value per item, the loop variable bound to it |
+| closures | `FunctionValue` (+ what the body returns, same rules as `build`) |
 | anything else | `UnknownValue` (source text) |
+
+**Screens.** A widget class is a screen when its `build` leads to a
+`Scaffold` along a single-child path. The path can go through `child`,
+`builder:` results, project widgets' `build`, conditionals and project calls.
+This finds screens wrapped in providers, `BlocBuilder`, `PopScope`, or auth
+gates.
+
+`scaffoldPath` records the project widget classes on the way. A class whose
+path goes through another screen class is only a wrapper, so it isn't listed.
+For conditionals, the branch that builds the `Scaffold` most directly wins, so
+`if (done) return OtherScreen(); return Scaffold(...)` is still a screen.
 
 Local variables in `build` are substituted with their initializers. When a widget declared
 in the project is constructed, its `build` is expanded into `ObjectValue.build`,
@@ -179,6 +191,23 @@ in `origin`, e.g. `["Padding", "Column", "SizedBox"]`.
 
 Equal spacers between every pair of children, `[a, SizedBox(16), b, SizedBox(16), c]`,
 become `gap: 16`. `Column(spacing:)` maps to `gap` directly.
+
+### Unknown and runtime-dependent UI
+
+- **Widgets without a handler.** This covers unknown Flutter widgets and all
+  package widgets. `_genericWidget` renders the `builder:` callback's result;
+  failing that it passes through to `child`, lays out `children` in a column,
+  or shows a `⚠` placeholder. Package wrappers are reported as info (usually
+  state management with no visuals); unknown Flutter widgets as warnings.
+- **Conditionals.** The branch with the most inline widgets is exported
+  (`_richness`). Another widget class counts as one widget, so a branch that
+  navigates elsewhere doesn't outweigh this screen's own UI. On a tie, the
+  `true` branch wins.
+- **Loops over runtime data.** Collection `for` and `.map()` / `.toList()` are
+  expanded to `listPreviewCount` copies (`_items`).
+- **Non-finite values.** `double.infinity` and NaN never reach the output.
+  Handlers interpret them (e.g. `Size(double.infinity, 52)` means full width),
+  and `_sanitize` replaces any that slip through, with a warning.
 
 ## Renderer and plugin rules
 

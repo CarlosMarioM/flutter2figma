@@ -92,7 +92,38 @@ npm test
 | Plugin | `figma-plugin/test` | the golden | imports the golden into the strict mock; fonts, stack/absolute placement |
 
 The analyzer and golden tests resolve a real Flutter project. The first run
-takes about 7 seconds.
+takes about 7 seconds. `compiler/test/real_world_test.dart` holds regressions
+found by running against real apps; add to it when validation finds a new
+pattern.
+
+### Validating against real apps
+
+The example app covers what we built on purpose; real apps find what we
+didn't. Run the validator on any resolved Flutter app (`flutter pub get`
+done). It never writes to the app:
+
+```sh
+tool/validate_app.sh ~/Code/some_app lib/app.dart [out-dir]
+#                    app root        file containing its MaterialApp
+```
+
+It reports three things:
+1. **Theme.** It copies the app to a temp dir and runs a generated Flutter test
+   (`tool/validate/`) that pumps `MaterialApp(theme: <the app's theme expression>)`
+   and dumps `Theme.of(context)`. It then diffs the result with
+   `flutter2figma theme`. Expect `0 differences`.
+2. **Export.** Screens, nodes and `⚠` placeholders per screen, and the
+   warnings.
+3. **Figma.** Imports the `design.json` through the strict plugin mock
+   (`F2F_DESIGNS=<paths> npm test` does the same for any exports).
+
+How to read the results:
+- **Placeholders** should only remain for content that can't be drawn
+  statically (`CustomPaint`, platform views).
+- **Missing screens** usually mean an unfamiliar wrapper. Look at the
+  class's tree with `flutter2figma analyze --json`.
+- **A theme difference** means Flutter resolves something we don't model. Fix
+  the extractor, then add the case to `theme_test.dart`.
 
 ### The golden
 

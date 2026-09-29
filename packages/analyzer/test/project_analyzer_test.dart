@@ -19,11 +19,78 @@ void main() {
       analysis.widgets.map((w) => w.name),
       containsAll(['MainApp', 'HomeScreen', 'ProfileScreen', 'StatCard']),
     );
+    // SettingsRoute only wraps SettingsScreen, so it isn't listed.
     expect(
       analysis.screens.map((s) => s.name),
-      unorderedEquals(['HomeScreen', 'ProfileScreen']),
+      unorderedEquals(['HomeScreen', 'ProfileScreen', 'SettingsScreen']),
     );
+    expect(widget('SettingsRoute').scaffoldPath, ['SettingsScreen']);
     expect(widget('HomeScreen').source, 'lib/home_screen.dart:4');
+  });
+
+  group('real-world patterns (SettingsScreen)', () {
+    late ConditionalValue gate;
+    late List<DartValue> items;
+
+    setUp(() {
+      // if (_loading) { return Scaffold(spinner); } return Scaffold(content);
+      gate = widget('SettingsScreen').tree as ConditionalValue;
+      final content = gate.otherwise as ObjectValue;
+      items = ((content['body'] as ObjectValue)['children'] as ListValue).items;
+    });
+
+    test('early returns become a conditional chain', () {
+      expect(gate.condition, '_loading');
+      expect((gate.then as ObjectValue).type, 'Scaffold');
+      expect((gate.otherwise as ObjectValue).type, 'Scaffold');
+    });
+
+    String? label(DartValue v) {
+      final o = v is ObjectValue && v.type == 'Padding'
+          ? v['child'] as ObjectValue
+          : v as ObjectValue;
+      return (o.arg(0) as LiteralValue).asString;
+    }
+
+    test('loops over literal lists are unrolled with the item bound', () {
+      // for (final toggle in _toggles) ...  (a const field)
+      expect(items.skip(2).take(3).map(label), [
+        'Notifications',
+        'Dark mode',
+        'Autoplay',
+      ]);
+      // ...['Privacy', 'About'].map((label) => Text(label))
+      final mapped = items[5] as CallValue;
+      expect((mapped.result as ListValue).items.map(label), [
+        'Privacy',
+        'About',
+      ]);
+    });
+
+    test('switch expressions become conditionals, first case first', () {
+      final builder = items[6] as ObjectValue;
+      expect(builder.type, 'ValueListenableBuilder');
+      final result = (builder['builder'] as FunctionValue).returns;
+      expect(result, isA<ConditionalValue>());
+      final chain = result as ConditionalValue;
+      expect((chain.then as ObjectValue).type, 'LinearProgressIndicator');
+      expect(chain.otherwise, isA<ConditionalValue>());
+    });
+
+    test('marks which widget classes are declared in the project', () {
+      final button = items.last as ObjectValue;
+      expect(button.type, 'FilledButton');
+      expect(button.inProject, isFalse);
+
+      final profile = widget('ProfileScreen').tree as ObjectValue;
+      final column = (profile['body'] as ObjectValue)['child'] as ObjectValue;
+      final row = (column['children'] as ListValue).items[2] as ObjectValue;
+      final expanded =
+          (row['children'] as ListValue).items.first as ObjectValue;
+      final statCard = expanded['child'] as ObjectValue;
+      expect(statCard.type, 'StatCard');
+      expect(statCard.inProject, isTrue);
+    });
   });
 
   test('builds a structured widget tree', () {

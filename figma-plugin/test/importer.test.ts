@@ -41,7 +41,7 @@ function boundTo(api: ReturnType<typeof createMockFigma>, paint: Paint): string 
 test('imports the basic example exported by the CLI', async () => {
   const { api, result } = await run(golden());
 
-  assert.equal(result.screens.length, 2);
+  assert.equal(result.screens.length, 3);
   assert.deepEqual(Object.keys(result.fontSubstitutions), []);
   assert.equal(api.pages.length, 1);
 
@@ -98,16 +98,18 @@ test('creates the design system: variables per mode, text and effect styles', as
 
 test('turns buttons and repeated widgets into components with instances', async () => {
   const { result } = await run(golden());
-  assert.equal(result.components, 4); // 3 Button variants + StatCard
-  assert.equal(result.instances, 5); // 3 buttons + 2 stat cards
+  assert.equal(result.components, 5); // 4 Button variants + StatCard
+  assert.equal(result.instances, 6); // 4 buttons + 2 stat cards
 
   const page = result.page as unknown as MockFrame;
   const library = find(page, 'Components') as MockFrame;
   const buttonSet = find(library, 'Button') as MockFrame;
   assert.equal(buttonSet.type, 'COMPONENT_SET');
+  // The full-width Settings button (minimum height 52) is its own variant.
   assert.deepEqual(buttonSet.children.map((c) => c.name).sort(), [
     'Type=Elevated, State=Enabled',
-    'Type=Filled, State=Enabled',
+    'Type=Filled, State=Enabled, Variant=1',
+    'Type=Filled, State=Enabled, Variant=2',
     'Type=Text, State=Enabled',
   ]);
 
@@ -244,4 +246,14 @@ function frame(name: string, layoutMode: FrameSpec['layoutMode'], overrides: Par
     pluginData: {},
     ...overrides,
   };
+}
+
+// Opt-in: import real exports through the strict mock, e.g.
+//   F2F_DESIGNS=/path/a/design.json:/path/b/design.json npm test
+for (const file of (process.env.F2F_DESIGNS ?? '').split(':').filter(Boolean)) {
+  test(`imports ${file}`, async () => {
+    const doc = parseDesign(readFileSync(file, 'utf8'));
+    const { result } = await run(doc);
+    assert.equal(result.screens.length, doc.screens.length);
+  });
 }

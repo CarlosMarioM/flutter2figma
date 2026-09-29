@@ -42,6 +42,19 @@ not. Instances differ from their master only in text, which is applied as
 overrides. Any other visual difference becomes a separate variant, so every
 instance looks exactly like the widget it replaces.
 
+**Validated on real apps.** Three production-style Flutter apps (17–102
+files) were run with `tool/validate_app.sh`:
+- a bloc-based app with custom fonts;
+- a seed-themed dark app;
+- a brand-themed retail app.
+
+| Check | Result |
+| --- | --- |
+| Static theme vs. the theme Flutter resolves (144 values each) | exact match on all three |
+| Screens found | 3, 6, 10, including screens behind `BlocBuilder`, providers, auth gates and early-return loading states |
+| Export | no crashes; placeholders only for content that can't be drawn statically (`CustomPaint`, camera/video/QR views) |
+| Import through the strict Figma mock | all three clean |
+
 Not built yet:
 - `validate` (screenshot diff);
 - `--runtime` mode;
@@ -95,7 +108,7 @@ Any Flutter project works the same way: run `fvm flutter pub get` (or
 | IR | `packages/ir` | Framework-independent frames and text with sizing, layout, paint and typography. It also records where each node came from: the Flutter widgets that produced it and their `file:line`. |
 | Renderer | `packages/figma` | Maps IR to Figma Plugin API names and enums (`layoutMode`, `layoutSizingHorizontal`, `primaryAxisAlignItems`, …). Where Figma rejects a combination, it downgrades the node and emits a warning. |
 | Plugin | `figma-plugin` | Loads fonts, falling back to the nearest weight and then to Inter. Builds nodes in the order Figma requires and places absolute and Stack children. Writes the origin and source of each node to plugin data. |
-| CLI | `packages/cli` | `analyze`, `export`. |
+| CLI | `packages/cli` | `analyze`, `export`, `theme` (prints the statically resolved theme as JSON). |
 
 More detail: [docs/architecture.md](docs/architecture.md).
 
@@ -103,18 +116,23 @@ More detail: [docs/architecture.md](docs/architecture.md).
 
 - **Layout:** Scaffold (appBar, body, FAB), Container, Padding, Center, Align, SizedBox (+ expand/shrink/square), Row, Column, Flex, Stack/Positioned, Expanded, Flexible, Spacer, ListView (+ `.builder`, `.separated`), SingleChildScrollView.
 - **Content:** Text, Text.rich/RichText (plain text), DefaultTextStyle, Icon and Image (both as placeholders).
-- **Controls:** Elevated/Filled/FilledTonal/Outlined/Text buttons (+ `.icon`), IconButton, FloatingActionButton.
+- **Controls:** Elevated/Filled/FilledTonal/Outlined/Text buttons (+ `.icon`, full-width `minimumSize`), IconButton, FloatingActionButton, TextField/TextFormField, Circular/LinearProgressIndicator.
 - **Surfaces:** Card (+ filled/outlined), Material, DecoratedBox, ColoredBox, ClipRRect, Divider.
 - **Values:** EdgeInsets, BorderRadius, Border, BoxShadow, shapes, `Colors.*`, shades, `Color(...)`, `withOpacity`/`withValues`, `Theme.of(context).colorScheme.*` and `.textTheme.*`, `copyWith`/`merge`, `ButtonStyle`/`styleFrom`.
-- **Pass-through** (child exported as-is): SafeArea, GestureDetector, InkWell, Semantics, Opacity, and about 30 others.
+- **Pass-through** (child exported as-is): SafeArea, GestureDetector, InkWell, Semantics, Opacity, the `Animated*`/`*Transition` widgets, and about 50 others. `AnimatedContainer`, `AnimatedPadding` and `AnimatedAlign` render like their static versions.
+- **Packages and builders:**
+  - Widgets from packages (`BlocBuilder`, `BlocProvider`, `Consumer`, …) and unknown `builder:` widgets (`StreamBuilder`, `ValueListenableBuilder`, …) render their builder's result, or pass through to `child`.
+  - Screens are found through these wrappers too. A class that only wraps another screen isn't exported twice.
 
 Anything else is exported as a magenta `⚠` placeholder, or passed through if it has a
 `child`, and reported as a diagnostic. It never fails silently.
 
 ### Known limits (static mode)
 
-- **Conditional UI:** `a ? b : c` and collection `if` export the `true` branch, with an info diagnostic. Plan: variants.
-- **Lists:** `ListView.builder` renders 3 sample items when `itemCount` isn't a literal.
+- **Conditional UI:** exports the **richer** branch, with an info diagnostic. This covers `a ? b : c`, collection `if`, `switch` expressions, and early returns such as `if (loading) return Spinner(); return Content();`. The richer branch is the one with more inline widgets, so the real content wins over a loading or error state. Plan: variants.
+- **Lists:**
+  - Loops over literal lists are unrolled with their real items, as in `for (final x in const [...])` and `[...].map(...)`.
+  - Loops over runtime data render 3 sample items, as does `ListView.builder` when `itemCount` isn't a literal.
 - **Missing values:** values that need runtime state become `{placeholders}` in text. Examples: fields without a call site, parameters of closures, and results of SDK or package methods.
 - **Icons and images:** exported as placeholders. Gradients become their first color.
 - **Theme:**

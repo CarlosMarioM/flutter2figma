@@ -14,7 +14,8 @@ CommandRunner<int> buildRunner() =>
         'Convert Flutter UIs into editable Figma designs.',
       )
       ..addCommand(AnalyzeCommand())
-      ..addCommand(ExportCommand());
+      ..addCommand(ExportCommand())
+      ..addCommand(ThemeCommand());
 
 abstract class _ProjectCommand extends Command<int> {
   String get projectPath {
@@ -227,6 +228,46 @@ class ExportCommand extends _ProjectCommand {
         '  ${p.relative(designFile.path)}   ← import with the Figma plugin',
       )
       ..writeln('  ${p.relative(irFile.path)}');
+    return 0;
+  }
+}
+
+class ThemeCommand extends _ProjectCommand {
+  ThemeCommand() {
+    argParser.addOption(
+      'brightness',
+      allowed: ['light', 'dark'],
+      defaultsTo: 'light',
+      help: 'Which app theme to resolve.',
+    );
+  }
+
+  @override
+  String get name => 'theme';
+
+  @override
+  String get description =>
+      'Print the app theme as resolved statically (Theme.of(context) as JSON).';
+
+  @override
+  String get invocation => '${runner!.executableName} theme [project]';
+
+  @override
+  Future<int> run() async {
+    final analysis = await FlutterProjectAnalyzer(projectPath).analyze();
+    final extractor = ThemeExtractor(ValueEvaluator(const MaterialTheme()));
+    final theme = extractor.fromProject(
+      analysis,
+      brightness: argResults!.option('brightness') == 'dark'
+          ? ThemeBrightness.dark
+          : ThemeBrightness.light,
+    );
+    for (final d in extractor.diagnostics) {
+      stderr.writeln('${d.severity.name}: ${d.message}');
+    }
+    stdout.writeln(
+      const JsonEncoder.withIndent('  ').convert(describeTheme(theme)),
+    );
     return 0;
   }
 }

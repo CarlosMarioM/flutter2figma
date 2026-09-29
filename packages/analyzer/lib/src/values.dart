@@ -37,6 +37,7 @@ class ObjectValue extends DartValue {
     this.constructor,
     this.library,
     this.isWidget = false,
+    this.inProject = false,
     this.positional = const [],
     this.named = const {},
     this.build,
@@ -53,6 +54,10 @@ class ObjectValue extends DartValue {
   final String? library;
 
   final bool isWidget;
+
+  /// The class is declared in the analyzed project (not Flutter, not a
+  /// package such as `flutter_bloc`).
+  final bool inProject;
   final List<DartValue> positional;
   final Map<String, DartValue> named;
 
@@ -73,6 +78,7 @@ class ObjectValue extends DartValue {
   Map<String, Object?> toJson() => {
     'new': displayName,
     if (isWidget) 'widget': true,
+    if (inProject) 'inProject': true,
     if (positional.isNotEmpty)
       'positional': [for (final p in positional) p.toJson()],
     if (named.isNotEmpty)
@@ -210,6 +216,19 @@ class ConditionalValue extends DartValue {
     'then': then.toJson(),
     if (otherwise != null) 'else': otherwise!.toJson(),
   };
+}
+
+/// A collection `for`: [body] is produced once per element of a collection
+/// only known at runtime.
+class LoopValue extends DartValue {
+  const LoopValue(this.loop, this.body, {super.source});
+
+  /// The loop header, e.g. `final song in state.songs`.
+  final String loop;
+  final DartValue body;
+
+  @override
+  Map<String, Object?> toJson() => {'for': loop, 'body': body.toJson()};
 }
 
 /// A closure. [returns] is its result expression when it has a single one

@@ -362,3 +362,39 @@ const m3TextTheme = <String, TextStyleSpec>{
 
 String jsonEncodeShadows(List<IrShadow> shadows) =>
     jsonEncode([for (final s in shadows) s.toJson()]);
+
+/// The theme in the same shape as the Flutter ground-truth dump
+/// (`examples/basic/test/theme_ground_truth_test.dart`), for comparing the
+/// static extraction with what Flutter resolves.
+Map<String, Object?> describeTheme(MaterialTheme t) {
+  String hex(IrColor? c) => c?.toHex() ?? 'null';
+  const deprecated = {'background', 'onBackground', 'surfaceVariant'};
+  return {
+    'colorScheme': {
+      'brightness': t.brightness.name,
+      for (final role in t.colorScheme.keys)
+        if (!deprecated.contains(role)) role: hex(t.color(role)),
+    },
+    'textTheme': {
+      for (final name in m3TextTheme.keys)
+        name: switch (t.textStyle(name)!) {
+          final s => {
+            'fontFamily': s.fontFamily,
+            'fontSize': s.fontSize,
+            'fontWeight': s.fontWeight,
+            'height': s.height,
+            'letterSpacing': s.letterSpacing,
+            'color': hex(s.color),
+          },
+        },
+    },
+    'scaffoldBackgroundColor': hex(t.scaffoldBackground ?? t.color('surface')),
+    'appBar': {
+      'backgroundColor': hex(t.appBar.backgroundColor),
+      'foregroundColor': hex(t.appBar.foregroundColor),
+      'elevation': t.appBar.elevation,
+      'centerTitle': t.appBar.centerTitle,
+    },
+    'card': {'color': hex(t.card.color), 'elevation': t.card.elevation},
+  };
+}

@@ -35,10 +35,19 @@ class ProjectAnalysis {
   final List<String> diagnostics;
 
   /// Widget classes whose `build` produces a `Scaffold`.
-  List<WidgetClass> get screens => [
-    for (final w in widgets)
-      if (w.isScreen) w,
-  ];
+  ///
+  /// A class that only wraps another screen class (e.g. `MenuScreen`
+  /// providing blocs to `MenuPage`) is not listed separately.
+  List<WidgetClass> get screens {
+    final names = {
+      for (final w in widgets)
+        if (w.isScreen) w.name,
+    };
+    return [
+      for (final w in widgets)
+        if (w.isScreen && !w.scaffoldPath!.any(names.contains)) w,
+    ];
+  }
 }
 
 /// A `StatelessWidget` / `StatefulWidget` subclass declared in the project.
@@ -51,9 +60,47 @@ class WidgetClass {
   /// What `build` returns, analyzed with no constructor arguments bound.
   final DartValue? tree;
 
-  bool get isScreen {
-    final t = tree;
-    return t is ObjectValue && t.isFlutter && t.type == 'Scaffold';
+  /// Whether `build` leads to a `Scaffold` through single-child wrappers
+  /// (providers, builders, `PopScope`, project widgets, ...). Real apps
+  /// rarely return the `Scaffold` directly.
+  bool get isScreen => scaffoldPath != null;
+
+  /// Project widget classes passed through on the way to the `Scaffold`;
+  /// empty when this class builds it itself. Null when there is none.
+  late final List<String>? scaffoldPath = _findScaffold(tree, const [], 0);
+}
+
+/// App-level roots are not screens even though they lead to one.
+const _appWidgets = {'MaterialApp', 'CupertinoApp', 'WidgetsApp'};
+
+List<String>? _findScaffold(DartValue? v, List<String> via, int depth) {
+  if (v == null || depth > 16) return null;
+  switch (v) {
+    case ObjectValue(isWidget: true):
+      if (v.isFlutter && v.type == 'Scaffold') return via;
+      if (v.isFlutter && _appWidgets.contains(v.type)) return null;
+      if (v.build != null) {
+        return _findScaffold(v.build, [...via, v.type], depth + 1);
+      }
+      final builder = v.named['builder'];
+      return _findScaffold(v.named['child'], via, depth + 1) ??
+          (builder is FunctionValue
+              ? _findScaffold(builder.returns, via, depth + 1)
+              : null);
+    case ConditionalValue(:final then, :final otherwise):
+      // Prefer the branch that builds the Scaffold most directly:
+      // `if (done) return OtherScreen(); return Scaffold(...)` is a screen
+      // of its own, not a wrapper of OtherScreen.
+      final a = _findScaffold(then, via, depth + 1);
+      final b = _findScaffold(otherwise, via, depth + 1);
+      if (a == null || b == null) return a ?? b;
+      return b.length < a.length ? b : a;
+    case CallValue(:final result):
+      return _findScaffold(result, via, depth + 1);
+    case RefValue(:final resolved):
+      return _findScaffold(resolved, via, depth + 1);
+    default:
+      return null;
   }
 }
 
@@ -324,14 +371,12 @@ class _Expander {
     }
 
     final build = _method(buildOwner, 'build');
-    final result = _returnExpression(build);
-    if (result == null) return null;
-
-    return value(
-      result,
+    if (build == null) return null;
+    return _returns(
+      build.body,
       _Scope(
         bindings: bindings,
-        locals: _locals(build!),
+        locals: _locals(build),
         owners: owners,
         expanding: {...expanding, key},
         depth: depth,
@@ -349,8 +394,65 @@ class _Expander {
   Expression? _returnExpression(MethodDeclaration? method) =>
       _bodyReturn(method?.body);
 
+  /// What a function body returns. Early returns become a conditional
+  /// chain, so every branch is kept:
+  ///
+  ///     if (state is Loaded) { return Content(); }   →   state is Loaded
+  ///     return Spinner();                                 ? Content() : Spinner()
+  DartValue? _returns(FunctionBody? body, _Scope s) => switch (body) {
+    ExpressionFunctionBody(:final expression) => value(expression, s),
+    BlockFunctionBody(:final block) => _statements(block.statements, s),
+    _ => null,
+  };
+
+  DartValue? _statements(List<Statement> statements, _Scope s) {
+    for (var i = 0; i < statements.length; i++) {
+      final st = statements[i];
+      if (st is ReturnStatement) {
+        final e = st.expression;
+        return e == null ? null : value(e, s);
+      }
+      if (st is IfStatement) {
+        final then = _branch(st.thenStatement, s);
+        final otherwise = st.elseStatement == null
+            ? null
+            : _branch(st.elseStatement!, s);
+        if (then == null && otherwise == null) continue;
+        DartValue? rest() => _statements(statements.sublist(i + 1), s);
+        final condition = st.expression.toSource();
+        if (then != null) {
+          final alternative = otherwise ?? rest();
+          return alternative == null
+              ? then
+              : ConditionalValue(
+                  condition,
+                  then,
+                  alternative,
+                  source: location(st),
+                );
+        }
+        final alternative = rest();
+        return alternative == null
+            ? otherwise
+            : ConditionalValue(
+                '!($condition)',
+                otherwise!,
+                alternative,
+                source: location(st),
+              );
+      }
+    }
+    return null;
+  }
+
+  DartValue? _branch(Statement st, _Scope s) => switch (st) {
+    Block(:final statements) => _statements(statements, s),
+    _ => _statements([st], s),
+  };
+
   /// The expression a function body returns: its `=>` expression, or the
-  /// last top-level `return`.
+  /// last top-level `return`. Used where an expression, not a value, is
+  /// needed (e.g. `createState`).
   Expression? _bodyReturn(FunctionBody? body) {
     if (body is ExpressionFunctionBody) return body.expression;
     if (body is BlockFunctionBody) {
@@ -408,6 +510,34 @@ class _Expander {
         return value(e.operand, s);
       case InstanceCreationExpression():
         return _object(e, s, loc);
+      case MethodInvocation(
+            methodName: SimpleIdentifier(name: 'map'),
+            target: final target?,
+          )
+          when e.argumentList.arguments.length == 1 &&
+              e.argumentList.arguments.single.argumentExpression
+                  is FunctionExpression:
+        // `<literal list>.map((x) => ...)`: one result per known item.
+        final fn =
+            e.argumentList.arguments.single.argumentExpression
+                as FunctionExpression;
+        final items = _literalItems(target, s);
+        final param = fn.parameters?.parameters.singleOrNull?.name?.lexeme;
+        return CallValue(
+          value(target, s),
+          'map',
+          positional: [value(fn, s)],
+          result: items == null || param == null
+              ? null
+              : ListValue([
+                  for (final item in items)
+                    ?_returns(
+                      fn.body,
+                      s.copyWith(params: {...s.params, param: item}),
+                    ),
+                ], source: loc),
+          source: loc,
+        );
       case MethodInvocation():
         final target = e.target;
         final positional = _positional(e.argumentList, s);
@@ -434,6 +564,21 @@ class _Expander {
         return AccessValue(value(target, s), name, source: loc);
       case SimpleIdentifier():
         return _identifier(e, s, loc);
+      case SwitchExpression():
+        // Chain the cases like `?:`: the first case is the `then` branch.
+        DartValue? chain;
+        for (final c in e.cases.reversed) {
+          final result = value(c.expression, s);
+          chain = chain == null
+              ? result
+              : ConditionalValue(
+                  '${e.expression.toSource()} is ${c.guardedPattern.toSource()}',
+                  result,
+                  chain,
+                  source: location(c),
+                );
+        }
+        return chain ?? UnknownValue(e.toSource(), source: loc);
       case ConditionalExpression():
         return ConditionalValue(
           e.condition.toSource(),
@@ -442,20 +587,7 @@ class _Expander {
           source: loc,
         );
       case FunctionExpression():
-        final body = e.body;
-        Expression? returned;
-        if (body is ExpressionFunctionBody) {
-          returned = body.expression;
-        } else if (body is BlockFunctionBody) {
-          final returns = body.block.statements
-              .whereType<ReturnStatement>()
-              .toList();
-          if (returns.length == 1) returned = returns.single.expression;
-        }
-        return FunctionValue(
-          returns: returned == null ? null : value(returned, s),
-          source: loc,
-        );
+        return FunctionValue(returns: _returns(e.body, s), source: loc);
       case ListLiteral():
         return ListValue(_collection(e.elements, s), source: loc);
       case SetOrMapLiteral():
@@ -496,6 +628,33 @@ class _Expander {
                 element.expression.toSource(),
                 then.single,
                 otherwise?.singleOrNull,
+                source: location(element),
+              ),
+            );
+          }
+        case ForElement():
+          // `for (final x in <literal list>)`: one body per known item.
+          final parts = element.forLoopParts;
+          if (parts is ForEachPartsWithDeclaration) {
+            final items = _literalItems(parts.iterable, s);
+            if (items != null) {
+              final name = parts.loopVariable.name.lexeme;
+              for (final item in items) {
+                out.addAll(
+                  _collection([
+                    element.body,
+                  ], s.copyWith(params: {...s.params, name: item})),
+                );
+              }
+              continue;
+            }
+          }
+          final body = _collection([element.body], s);
+          if (body.length == 1) {
+            out.add(
+              LoopValue(
+                element.forLoopParts.toSource(),
+                body.single,
                 source: location(element),
               ),
             );
@@ -554,6 +713,7 @@ class _Expander {
       constructor: e.constructorName.name?.name,
       library: classElement?.library?.uri.toString(),
       isWidget: isWidget,
+      inProject: _inProject(classElement),
       positional: positional,
       named: named,
       build: build,
@@ -591,6 +751,9 @@ class _Expander {
     final name = e.name;
     final element = e.element;
 
+    if (element is LocalVariableElement && s.params.containsKey(name)) {
+      return s.params[name]!; // A loop variable bound to a known item.
+    }
     if (element is LocalVariableElement) {
       final init = s.locals[name];
       if (init != null) {
@@ -634,6 +797,24 @@ class _Expander {
         UnknownValue(name, source: loc);
   }
 
+  /// Items of an iterable whose elements are statically known (a list
+  /// literal, possibly behind a field, getter or const), else null.
+  List<DartValue>? _literalItems(Expression iterable, _Scope s) {
+    var v = value(iterable, s);
+    for (var i = 0; i < 8; i++) {
+      v = switch (v) {
+        RefValue(:final resolved?) => resolved,
+        CallValue(:final result?) => result,
+        _ => v,
+      };
+    }
+    if (v is! ListValue) return null;
+    final items = v.items;
+    // Loops over unknown or nested-loop contents stay symbolic.
+    if (items.any((i) => i is LoopValue || i is UnknownValue)) return null;
+    return items.length <= 50 ? items : null;
+  }
+
   bool _inProject(Element? element) {
     final path = element?.library?.firstFragment.source.fullName;
     return path != null && p.isWithin(root, path);
@@ -661,36 +842,34 @@ class _Expander {
     }
     if (!instance && _staticCache.containsKey(key)) return _staticCache[key];
 
-    final (Expression? expr, AstNode? body) = switch (decl) {
+    final (Expression? init, FunctionBody? body) = switch (decl) {
       VariableDeclaration(:final initializer) => (initializer, null),
       FunctionDeclaration(:final functionExpression, :final isGetter)
           when isGetter =>
-        (_bodyReturn(functionExpression.body), functionExpression.body),
+        (null, functionExpression.body),
       MethodDeclaration(:final body, :final isGetter) when isGetter => (
-        _bodyReturn(body),
+        null,
         body,
       ),
       _ => (null, null),
     };
-    if (expr == null) return null;
+    if (init == null && body == null) return null;
 
     final locals = body == null ? const <String, Expression>{} : _locals(body);
     final expanding = {...s.expanding, key!};
-    final result = value(
-      expr,
-      instance
-          ? s.copyWith(
-              locals: locals,
-              params: const {},
-              expanding: expanding,
-              depth: s.depth + 1,
-            )
-          : _Scope.detached(
-              locals: locals,
-              expanding: expanding,
-              depth: s.depth + 1,
-            ),
-    );
+    final scope = instance
+        ? s.copyWith(
+            locals: locals,
+            params: const {},
+            expanding: expanding,
+            depth: s.depth + 1,
+          )
+        : _Scope.detached(
+            locals: locals,
+            expanding: expanding,
+            depth: s.depth + 1,
+          );
+    final result = init != null ? value(init, scope) : _returns(body, scope);
     if (!instance) _staticCache[key] = result;
     return result;
   }
@@ -718,9 +897,6 @@ class _Expander {
       default:
         return null;
     }
-    final expr = _bodyReturn(body);
-    if (expr == null) return null;
-
     final params = <String, DartValue>{};
     final positionalParams = element.formalParameters
         .where((p) => p.isPositional)
@@ -735,8 +911,8 @@ class _Expander {
       return null;
     }
     final expanding = {...s.expanding, key!};
-    return value(
-      expr,
+    return _returns(
+      body,
       instance
           ? s.copyWith(
               locals: _locals(body),

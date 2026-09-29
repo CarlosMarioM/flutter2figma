@@ -29,7 +29,7 @@ void main() {
       expect(extractor.diagnostics, isEmpty);
 
       final expected = groundTruth[brightness.name] as Map<String, Object?>;
-      final actual = dump(theme);
+      final actual = describeTheme(theme);
       for (final section in expected.keys) {
         expect(actual[section], expected[section], reason: section);
       }
@@ -50,42 +50,4 @@ void main() {
     expect(theme.color('primary').toHex(), '#6750A4');
     expect(extractor.diagnostics.single.severity, IrSeverity.info);
   });
-}
-
-/// Same shape as the Flutter-side dump.
-Map<String, Object?> dump(MaterialTheme t) {
-  String hex(IrColor? c) => c?.toHex() ?? 'null';
-  final expectedRoles =
-      ((jsonDecode(File('test/goldens/basic_theme.json').readAsStringSync())
-                  as Map)['light']
-              as Map)['colorScheme']
-          as Map;
-  return {
-    'colorScheme': {
-      'brightness': t.brightness.name,
-      for (final role in expectedRoles.keys.where((k) => k != 'brightness'))
-        role: hex(t.color(role as String)),
-    },
-    'textTheme': {
-      for (final name in m3TextTheme.keys)
-        name: switch (t.textStyle(name)!) {
-          final s => {
-            'fontFamily': s.fontFamily,
-            'fontSize': s.fontSize,
-            'fontWeight': s.fontWeight,
-            'height': s.height,
-            'letterSpacing': s.letterSpacing,
-            'color': hex(s.color),
-          },
-        },
-    },
-    'scaffoldBackgroundColor': hex(t.scaffoldBackground ?? t.color('surface')),
-    'appBar': {
-      'backgroundColor': hex(t.appBar.backgroundColor),
-      'foregroundColor': hex(t.appBar.foregroundColor),
-      'elevation': t.appBar.elevation,
-      'centerTitle': t.appBar.centerTitle,
-    },
-    'card': {'color': hex(t.card.color), 'elevation': t.card.elevation},
-  };
 }
