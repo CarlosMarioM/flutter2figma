@@ -117,9 +117,19 @@ tool/validate_app.sh ~/Code/some_app lib/app.dart [out-dir]
 
 It reports three things:
 1. **Theme.** It copies the app to a temp dir and runs a generated Flutter test
-   (`tool/validate/`) that pumps `MaterialApp(theme: <the app's theme expression>)`
-   and dumps `Theme.of(context)`. It then diffs the result with
-   `flutter2figma theme`. Expect `0 differences`.
+   (`tool/validate/`) that dumps `Theme.of(context)` below the app's
+   `MaterialApp`, then diffs the result with `flutter2figma theme`. Expect
+   `0 differences`. The test tries two modes:
+   - `root`: pumps the app's real root (the argument of `runApp(...)`), so
+     themes built from runtime state, such as a cubit's initial state,
+     resolve exactly as in the app;
+   - `expression`: if the root can't boot in a test (async setup, dependency
+     injection, plugins), it falls back to
+     `MaterialApp(theme: <the app's theme expression>)`.
+
+   Flutter is imported with a prefix, so app classes named like Flutter's
+   (e.g. `RootWidget`) don't clash. The Flutter command is the app's
+   `.fvmrc`, else `flutter`, else `fvm spawn stable`.
 2. **Export.** Screens, nodes and `⚠` placeholders per screen, and the
    warnings.
 3. **Figma.** Imports the `design.json` through the strict plugin mock

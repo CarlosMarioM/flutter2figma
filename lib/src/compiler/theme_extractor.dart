@@ -189,6 +189,14 @@ class ThemeExtractor {
         ),
       );
       scheme = seed;
+      if (seed == null) {
+        _note(
+          'Could not evaluate ThemeData.colorSchemeSeed (runtime state?); '
+          'using the baseline scheme',
+          args['colorSchemeSeed'],
+          IrSeverity.warning,
+        );
+      }
     }
     final brightness =
         explicitBrightness ?? scheme?.brightness ?? ThemeBrightness.light;

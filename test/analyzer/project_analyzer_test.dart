@@ -22,27 +22,30 @@ void main() {
     // SettingsRoute only wraps SettingsScreen, so it isn't listed.
     expect(
       analysis.screens.map((s) => s.name),
-      unorderedEquals(['HomeScreen', 'ProfileScreen', 'SettingsScreen']),
+      unorderedEquals([
+        'HomeScreen',
+        'ProfileScreen',
+        'SettingsScreen',
+        'ScoreboardScreen',
+      ]),
     );
     expect(widget('SettingsRoute').scaffoldPath, ['SettingsScreen']);
     expect(widget('HomeScreen').source, 'lib/home_screen.dart:4');
   });
 
   group('real-world patterns (SettingsScreen)', () {
-    late ConditionalValue gate;
+    late ObjectValue content;
     late List<DartValue> items;
 
     setUp(() {
       // if (_loading) { return Scaffold(spinner); } return Scaffold(content);
-      gate = widget('SettingsScreen').tree as ConditionalValue;
-      final content = gate.otherwise as ObjectValue;
+      content = widget('SettingsScreen').tree as ObjectValue;
       items = ((content['body'] as ObjectValue)['children'] as ListValue).items;
     });
 
-    test('early returns become a conditional chain', () {
-      expect(gate.condition, '_loading');
-      expect((gate.then as ObjectValue).type, 'Scaffold');
-      expect((gate.otherwise as ObjectValue).type, 'Scaffold');
+    test('known conditions fold: `_loading` starts false', () {
+      expect(content.type, 'Scaffold');
+      expect(content['appBar'], isA<ObjectValue>());
     });
 
     String? label(DartValue v) {
@@ -202,5 +205,36 @@ void main() {
     final save = (row['children'] as ListValue).items.last as ObjectValue;
     final label = save['child'] as ObjectValue;
     expect((label.arg(0) as LiteralValue).value, 'Save');
+  });
+
+  group('bloc state (ScoreboardScreen)', () {
+    late ObjectValue scaffold;
+
+    setUp(() {
+      final provider = widget('ScoreboardScreen').tree as ObjectValue;
+      final builder = provider['child'] as ObjectValue;
+      expect(builder.type, 'BlocBuilder');
+      // builder: (context, state) { if (state.error != null) ...; return ...; }
+      scaffold = (builder['builder'] as FunctionValue).returns as ObjectValue;
+    });
+
+    test('builders see the initial state, with constructor defaults', () {
+      // ScoreCubit() : super(const ScoreState(player: 'Ada')); round = 1.
+      final title = (scaffold['appBar'] as ObjectValue)['title'] as ObjectValue;
+      expect((title.arg(0) as LiteralValue).value, 'Round 1');
+      final row =
+          ((scaffold['body'] as ObjectValue)['children'] as ListValue)
+                  .items
+                  .first
+              as ObjectValue;
+      final score = (row['children'] as ListValue).items.first as ObjectValue;
+      expect((score.arg(0) as LiteralValue).value, 'Ada: 0');
+    });
+
+    test('conditions on the known state are folded', () {
+      // `state.error != null` is false: no conditional, just the content.
+      expect(scaffold.type, 'Scaffold');
+      expect(scaffold['appBar'], isNotNull);
+    });
   });
 }

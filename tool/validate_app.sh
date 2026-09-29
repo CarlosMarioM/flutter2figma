@@ -9,7 +9,7 @@
 #    placeholders and diagnostics.
 # 3. Figma: imports the design.json through the plugin's strict Figma mock.
 #
-# Requires the app to be resolved already (`flutter pub get`) and FVM.
+# Requires the app to be resolved already (`flutter pub get`), and FVM or flutter.
 set -euo pipefail
 
 app=$(cd "$1" && pwd)
@@ -20,14 +20,32 @@ copy=$(mktemp -d)
 trap 'rm -rf "${copy:?}"' EXIT
 mkdir -p "$out"
 
+# The app's own FVM pin, else a global flutter, else FVM's stable.
+if [ -f "$app/.fvmrc" ]; then
+  flutter=(fvm flutter)
+elif command -v flutter >/dev/null; then
+  flutter=(flutter)
+else
+  flutter=(fvm spawn stable)
+fi
+
 echo "== Theme ground truth"
 rsync -a --exclude /.git --exclude /build --exclude /ios --exclude /android \
   --exclude /macos --exclude /web --exclude /windows --exclude /linux \
   --exclude /test "$app/" "$copy/"
-python3 "$root/tool/validate/gen_theme_test.py" "$app" "$copy" "$app_file"
-(cd "$copy" && F2F_OUT="$out/theme.flutter.json" \
-  fvm flutter test test/f2f_theme_dump_test.dart >"$out/theme.flutter.log" 2>&1) ||
-  { echo "Flutter theme dump failed; see $out/theme.flutter.log"; exit 1; }
+# Pump the real app root first (runtime-state themes resolve for real);
+# fall back to the theme expression when the root can't run in a test.
+dumped=
+for mode in root expression; do
+  python3 "$root/tool/validate/gen_theme_test.py" "$app" "$copy" "$app_file" "$mode"
+  if (cd "$copy" && F2F_OUT="$out/theme.flutter.json" \
+    "${flutter[@]}" test test/f2f_theme_dump_test.dart >"$out/theme.flutter.$mode.log" 2>&1); then
+    dumped=$mode
+    break
+  fi
+  echo "  $mode mode failed; see $out/theme.flutter.$mode.log"
+done
+[ -n "$dumped" ] || { echo "Could not dump the theme with Flutter"; exit 1; }
 (cd "$root" && dart run flutter2figma theme "$app" >"$out/theme.ours.json" 2>/dev/null)
 python3 - "$out/theme.flutter.json" "$out/theme.ours.json" <<'EOF'
 import json, sys

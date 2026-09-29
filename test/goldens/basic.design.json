@@ -2534,6 +2534,1049 @@
     },
     {
       "type": "FRAME",
+      "name": "ScoreboardScreen",
+      "layoutMode": "VERTICAL",
+      "primaryAxisAlignItems": "MIN",
+      "counterAxisAlignItems": "MIN",
+      "itemSpacing": 0.0,
+      "paddingTop": 0.0,
+      "paddingRight": 0.0,
+      "paddingBottom": 0.0,
+      "paddingLeft": 0.0,
+      "fills": [
+        {
+          "type": "SOLID",
+          "color": {
+            "r": 0.9568627450980393,
+            "g": 0.9803921568627451,
+            "b": 0.9803921568627451
+          },
+          "opacity": 1.0,
+          "variable": "ColorScheme/surface"
+        }
+      ],
+      "clipsContent": true,
+      "children": [
+        {
+          "type": "FRAME",
+          "name": "AppBar",
+          "layoutMode": "HORIZONTAL",
+          "primaryAxisAlignItems": "MIN",
+          "counterAxisAlignItems": "CENTER",
+          "itemSpacing": 0.0,
+          "paddingTop": 0.0,
+          "paddingRight": 16.0,
+          "paddingBottom": 0.0,
+          "paddingLeft": 16.0,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": {
+                "r": 0.9568627450980393,
+                "g": 0.9803921568627451,
+                "b": 0.9803921568627451
+              },
+              "opacity": 1.0,
+              "variable": "ColorScheme/surface"
+            }
+          ],
+          "clipsContent": false,
+          "children": [
+            {
+              "type": "TEXT",
+              "name": "Round 1",
+              "characters": "Round 1",
+              "fontName": {
+                "family": "Inter",
+                "style": "Regular"
+              },
+              "fontSize": 22.0,
+              "lineHeight": {
+                "unit": "PIXELS",
+                "value": 27.94
+              },
+              "letterSpacing": {
+                "unit": "PIXELS",
+                "value": 0.0
+              },
+              "textStyle": "TextTheme/titleLarge",
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0.08627450980392157,
+                    "g": 0.11372549019607843,
+                    "b": 0.11372549019607843
+                  },
+                  "opacity": 1.0,
+                  "variable": "ColorScheme/onSurface"
+                }
+              ],
+              "textAlignHorizontal": "CENTER",
+              "textAutoResize": "HEIGHT",
+              "layoutSizingHorizontal": "FILL",
+              "layoutSizingVertical": "HUG",
+              "pluginData": {
+                "origin": [
+                  "Text"
+                ],
+                "source": "lib/scoreboard_screen.dart:19"
+              }
+            }
+          ],
+          "layoutSizingHorizontal": "FILL",
+          "layoutSizingVertical": "FIXED",
+          "height": 64.0,
+          "pluginData": {
+            "origin": [
+              "AppBar"
+            ],
+            "source": "lib/scoreboard_screen.dart:19",
+            "role": "app-bar"
+          }
+        },
+        {
+          "type": "FRAME",
+          "name": "Column",
+          "layoutMode": "VERTICAL",
+          "primaryAxisAlignItems": "MIN",
+          "counterAxisAlignItems": "CENTER",
+          "itemSpacing": 0.0,
+          "paddingTop": 0.0,
+          "paddingRight": 0.0,
+          "paddingBottom": 0.0,
+          "paddingLeft": 0.0,
+          "fills": [],
+          "clipsContent": false,
+          "children": [
+            {
+              "type": "FRAME",
+              "name": "Row",
+              "layoutMode": "HORIZONTAL",
+              "primaryAxisAlignItems": "SPACE_BETWEEN",
+              "counterAxisAlignItems": "CENTER",
+              "itemSpacing": 0.0,
+              "paddingTop": 0.0,
+              "paddingRight": 0.0,
+              "paddingBottom": 0.0,
+              "paddingLeft": 0.0,
+              "fills": [],
+              "clipsContent": false,
+              "children": [
+                {
+                  "type": "TEXT",
+                  "name": "Ada: 0",
+                  "characters": "Ada: 0",
+                  "fontName": {
+                    "family": "Inter",
+                    "style": "Regular"
+                  },
+                  "fontSize": 14.0,
+                  "lineHeight": {
+                    "unit": "PIXELS",
+                    "value": 20.02
+                  },
+                  "letterSpacing": {
+                    "unit": "PIXELS",
+                    "value": 0.25
+                  },
+                  "textStyle": "TextTheme/bodyMedium",
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": {
+                        "r": 0.08627450980392157,
+                        "g": 0.11372549019607843,
+                        "b": 0.11372549019607843
+                      },
+                      "opacity": 1.0,
+                      "variable": "ColorScheme/onSurface"
+                    }
+                  ],
+                  "textAlignHorizontal": "LEFT",
+                  "textAutoResize": "WIDTH_AND_HEIGHT",
+                  "layoutSizingHorizontal": "HUG",
+                  "layoutSizingVertical": "HUG",
+                  "pluginData": {
+                    "origin": [
+                      "Text"
+                    ],
+                    "source": "lib/scoreboard_screen.dart:25"
+                  }
+                },
+                {
+                  "type": "FRAME",
+                  "name": "Switch",
+                  "layoutMode": "HORIZONTAL",
+                  "primaryAxisAlignItems": "MIN",
+                  "counterAxisAlignItems": "CENTER",
+                  "itemSpacing": 0.0,
+                  "paddingTop": 0.0,
+                  "paddingRight": 8.0,
+                  "paddingBottom": 0.0,
+                  "paddingLeft": 8.0,
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": {
+                        "r": 0.8666666666666667,
+                        "g": 0.8941176470588236,
+                        "b": 0.8941176470588236
+                      },
+                      "opacity": 1.0,
+                      "variable": "ColorScheme/surfaceContainerHighest"
+                    }
+                  ],
+                  "strokes": [
+                    {
+                      "type": "SOLID",
+                      "color": {
+                        "r": 0.43529411764705883,
+                        "g": 0.4745098039215686,
+                        "b": 0.4745098039215686
+                      },
+                      "opacity": 1.0,
+                      "variable": "ColorScheme/outline"
+                    }
+                  ],
+                  "strokeWeight": 2.0,
+                  "strokeAlign": "INSIDE",
+                  "cornerRadius": 16.0,
+                  "clipsContent": false,
+                  "children": [
+                    {
+                      "type": "FRAME",
+                      "name": "Thumb",
+                      "layoutMode": "VERTICAL",
+                      "primaryAxisAlignItems": "MIN",
+                      "counterAxisAlignItems": "MIN",
+                      "itemSpacing": 0.0,
+                      "paddingTop": 0.0,
+                      "paddingRight": 0.0,
+                      "paddingBottom": 0.0,
+                      "paddingLeft": 0.0,
+                      "fills": [
+                        {
+                          "type": "SOLID",
+                          "color": {
+                            "r": 0.43529411764705883,
+                            "g": 0.4745098039215686,
+                            "b": 0.4745098039215686
+                          },
+                          "opacity": 1.0,
+                          "variable": "ColorScheme/outline"
+                        }
+                      ],
+                      "cornerRadius": 8.0,
+                      "clipsContent": false,
+                      "children": [],
+                      "layoutSizingHorizontal": "FIXED",
+                      "layoutSizingVertical": "FIXED",
+                      "width": 16.0,
+                      "height": 16.0,
+                      "pluginData": {}
+                    }
+                  ],
+                  "layoutSizingHorizontal": "FIXED",
+                  "layoutSizingVertical": "FIXED",
+                  "width": 52.0,
+                  "height": 32.0,
+                  "pluginData": {
+                    "origin": [
+                      "Switch"
+                    ],
+                    "source": "lib/scoreboard_screen.dart:26",
+                    "role": "switch"
+                  }
+                }
+              ],
+              "layoutSizingHorizontal": "FILL",
+              "layoutSizingVertical": "HUG",
+              "pluginData": {
+                "origin": [
+                  "Row"
+                ],
+                "source": "lib/scoreboard_screen.dart:22"
+              }
+            },
+            {
+              "type": "FRAME",
+              "name": "_Board",
+              "layoutMode": "VERTICAL",
+              "primaryAxisAlignItems": "MIN",
+              "counterAxisAlignItems": "MIN",
+              "itemSpacing": 0.0,
+              "paddingTop": 0.0,
+              "paddingRight": 0.0,
+              "paddingBottom": 0.0,
+              "paddingLeft": 0.0,
+              "fills": [],
+              "clipsContent": true,
+              "children": [
+                {
+                  "type": "FRAME",
+                  "name": "Row 1",
+                  "layoutMode": "HORIZONTAL",
+                  "primaryAxisAlignItems": "MIN",
+                  "counterAxisAlignItems": "MIN",
+                  "itemSpacing": 0.0,
+                  "paddingTop": 0.0,
+                  "paddingRight": 0.0,
+                  "paddingBottom": 0.0,
+                  "paddingLeft": 0.0,
+                  "fills": [],
+                  "clipsContent": false,
+                  "children": [
+                    {
+                      "type": "FRAME",
+                      "name": "Cell 1",
+                      "layoutMode": "VERTICAL",
+                      "primaryAxisAlignItems": "MIN",
+                      "counterAxisAlignItems": "MIN",
+                      "itemSpacing": 0.0,
+                      "paddingTop": 0.0,
+                      "paddingRight": 0.0,
+                      "paddingBottom": 0.0,
+                      "paddingLeft": 0.0,
+                      "fills": [],
+                      "clipsContent": false,
+                      "children": [
+                        {
+                          "type": "FRAME",
+                          "name": "Card",
+                          "layoutMode": "VERTICAL",
+                          "primaryAxisAlignItems": "MIN",
+                          "counterAxisAlignItems": "MIN",
+                          "itemSpacing": 0.0,
+                          "paddingTop": 4.0,
+                          "paddingRight": 4.0,
+                          "paddingBottom": 4.0,
+                          "paddingLeft": 4.0,
+                          "fills": [],
+                          "clipsContent": false,
+                          "children": [
+                            {
+                              "type": "FRAME",
+                              "name": "Card · surface",
+                              "layoutMode": "VERTICAL",
+                              "primaryAxisAlignItems": "MIN",
+                              "counterAxisAlignItems": "MIN",
+                              "itemSpacing": 0.0,
+                              "paddingTop": 0.0,
+                              "paddingRight": 0.0,
+                              "paddingBottom": 0.0,
+                              "paddingLeft": 0.0,
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.8901960784313725,
+                                    "g": 0.9137254901960784,
+                                    "b": 0.9137254901960784
+                                  },
+                                  "opacity": 1.0,
+                                  "variable": "ColorScheme/surfaceContainerHigh"
+                                }
+                              ],
+                              "cornerRadius": 12.0,
+                              "clipsContent": false,
+                              "children": [
+                                {
+                                  "type": "FRAME",
+                                  "name": "SizedBox",
+                                  "layoutMode": "VERTICAL",
+                                  "primaryAxisAlignItems": "MIN",
+                                  "counterAxisAlignItems": "MIN",
+                                  "itemSpacing": 0.0,
+                                  "paddingTop": 0.0,
+                                  "paddingRight": 0.0,
+                                  "paddingBottom": 0.0,
+                                  "paddingLeft": 0.0,
+                                  "fills": [],
+                                  "clipsContent": false,
+                                  "children": [],
+                                  "layoutSizingHorizontal": "FILL",
+                                  "layoutSizingVertical": "FILL",
+                                  "pluginData": {
+                                    "origin": [
+                                      "SizedBox"
+                                    ],
+                                    "source": "lib/scoreboard_screen.dart:53",
+                                    "role": "spacer"
+                                  }
+                                }
+                              ],
+                              "layoutSizingHorizontal": "FILL",
+                              "layoutSizingVertical": "FILL",
+                              "pluginData": {
+                                "origin": [
+                                  "Card"
+                                ],
+                                "role": "card"
+                              }
+                            }
+                          ],
+                          "layoutSizingHorizontal": "FILL",
+                          "layoutSizingVertical": "FILL",
+                          "pluginData": {
+                            "origin": [
+                              "margin"
+                            ],
+                            "source": "lib/scoreboard_screen.dart:53"
+                          }
+                        }
+                      ],
+                      "layoutSizingHorizontal": "FILL",
+                      "layoutSizingVertical": "FIXED",
+                      "height": 130.0,
+                      "pluginData": {}
+                    },
+                    {
+                      "type": "FRAME",
+                      "name": "Cell 2",
+                      "layoutMode": "VERTICAL",
+                      "primaryAxisAlignItems": "MIN",
+                      "counterAxisAlignItems": "MIN",
+                      "itemSpacing": 0.0,
+                      "paddingTop": 0.0,
+                      "paddingRight": 0.0,
+                      "paddingBottom": 0.0,
+                      "paddingLeft": 0.0,
+                      "fills": [],
+                      "clipsContent": false,
+                      "children": [
+                        {
+                          "type": "FRAME",
+                          "name": "Card",
+                          "layoutMode": "VERTICAL",
+                          "primaryAxisAlignItems": "MIN",
+                          "counterAxisAlignItems": "MIN",
+                          "itemSpacing": 0.0,
+                          "paddingTop": 4.0,
+                          "paddingRight": 4.0,
+                          "paddingBottom": 4.0,
+                          "paddingLeft": 4.0,
+                          "fills": [],
+                          "clipsContent": false,
+                          "children": [
+                            {
+                              "type": "FRAME",
+                              "name": "Card · surface",
+                              "layoutMode": "VERTICAL",
+                              "primaryAxisAlignItems": "MIN",
+                              "counterAxisAlignItems": "MIN",
+                              "itemSpacing": 0.0,
+                              "paddingTop": 0.0,
+                              "paddingRight": 0.0,
+                              "paddingBottom": 0.0,
+                              "paddingLeft": 0.0,
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.8901960784313725,
+                                    "g": 0.9137254901960784,
+                                    "b": 0.9137254901960784
+                                  },
+                                  "opacity": 1.0,
+                                  "variable": "ColorScheme/surfaceContainerHigh"
+                                }
+                              ],
+                              "cornerRadius": 12.0,
+                              "clipsContent": false,
+                              "children": [
+                                {
+                                  "type": "FRAME",
+                                  "name": "SizedBox",
+                                  "layoutMode": "VERTICAL",
+                                  "primaryAxisAlignItems": "MIN",
+                                  "counterAxisAlignItems": "MIN",
+                                  "itemSpacing": 0.0,
+                                  "paddingTop": 0.0,
+                                  "paddingRight": 0.0,
+                                  "paddingBottom": 0.0,
+                                  "paddingLeft": 0.0,
+                                  "fills": [],
+                                  "clipsContent": false,
+                                  "children": [],
+                                  "layoutSizingHorizontal": "FILL",
+                                  "layoutSizingVertical": "FILL",
+                                  "pluginData": {
+                                    "origin": [
+                                      "SizedBox"
+                                    ],
+                                    "source": "lib/scoreboard_screen.dart:53",
+                                    "role": "spacer"
+                                  }
+                                }
+                              ],
+                              "layoutSizingHorizontal": "FILL",
+                              "layoutSizingVertical": "FILL",
+                              "pluginData": {
+                                "origin": [
+                                  "Card"
+                                ],
+                                "role": "card"
+                              }
+                            }
+                          ],
+                          "layoutSizingHorizontal": "FILL",
+                          "layoutSizingVertical": "FILL",
+                          "pluginData": {
+                            "origin": [
+                              "margin"
+                            ],
+                            "source": "lib/scoreboard_screen.dart:53"
+                          }
+                        }
+                      ],
+                      "layoutSizingHorizontal": "FILL",
+                      "layoutSizingVertical": "FIXED",
+                      "height": 130.0,
+                      "pluginData": {}
+                    },
+                    {
+                      "type": "FRAME",
+                      "name": "Cell 3",
+                      "layoutMode": "VERTICAL",
+                      "primaryAxisAlignItems": "MIN",
+                      "counterAxisAlignItems": "MIN",
+                      "itemSpacing": 0.0,
+                      "paddingTop": 0.0,
+                      "paddingRight": 0.0,
+                      "paddingBottom": 0.0,
+                      "paddingLeft": 0.0,
+                      "fills": [],
+                      "clipsContent": false,
+                      "children": [
+                        {
+                          "type": "FRAME",
+                          "name": "Card",
+                          "layoutMode": "VERTICAL",
+                          "primaryAxisAlignItems": "MIN",
+                          "counterAxisAlignItems": "MIN",
+                          "itemSpacing": 0.0,
+                          "paddingTop": 4.0,
+                          "paddingRight": 4.0,
+                          "paddingBottom": 4.0,
+                          "paddingLeft": 4.0,
+                          "fills": [],
+                          "clipsContent": false,
+                          "children": [
+                            {
+                              "type": "FRAME",
+                              "name": "Card · surface",
+                              "layoutMode": "VERTICAL",
+                              "primaryAxisAlignItems": "MIN",
+                              "counterAxisAlignItems": "MIN",
+                              "itemSpacing": 0.0,
+                              "paddingTop": 0.0,
+                              "paddingRight": 0.0,
+                              "paddingBottom": 0.0,
+                              "paddingLeft": 0.0,
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.8901960784313725,
+                                    "g": 0.9137254901960784,
+                                    "b": 0.9137254901960784
+                                  },
+                                  "opacity": 1.0,
+                                  "variable": "ColorScheme/surfaceContainerHigh"
+                                }
+                              ],
+                              "cornerRadius": 12.0,
+                              "clipsContent": false,
+                              "children": [
+                                {
+                                  "type": "FRAME",
+                                  "name": "SizedBox",
+                                  "layoutMode": "VERTICAL",
+                                  "primaryAxisAlignItems": "MIN",
+                                  "counterAxisAlignItems": "MIN",
+                                  "itemSpacing": 0.0,
+                                  "paddingTop": 0.0,
+                                  "paddingRight": 0.0,
+                                  "paddingBottom": 0.0,
+                                  "paddingLeft": 0.0,
+                                  "fills": [],
+                                  "clipsContent": false,
+                                  "children": [],
+                                  "layoutSizingHorizontal": "FILL",
+                                  "layoutSizingVertical": "FILL",
+                                  "pluginData": {
+                                    "origin": [
+                                      "SizedBox"
+                                    ],
+                                    "source": "lib/scoreboard_screen.dart:53",
+                                    "role": "spacer"
+                                  }
+                                }
+                              ],
+                              "layoutSizingHorizontal": "FILL",
+                              "layoutSizingVertical": "FILL",
+                              "pluginData": {
+                                "origin": [
+                                  "Card"
+                                ],
+                                "role": "card"
+                              }
+                            }
+                          ],
+                          "layoutSizingHorizontal": "FILL",
+                          "layoutSizingVertical": "FILL",
+                          "pluginData": {
+                            "origin": [
+                              "margin"
+                            ],
+                            "source": "lib/scoreboard_screen.dart:53"
+                          }
+                        }
+                      ],
+                      "layoutSizingHorizontal": "FILL",
+                      "layoutSizingVertical": "FIXED",
+                      "height": 130.0,
+                      "pluginData": {}
+                    }
+                  ],
+                  "layoutSizingHorizontal": "FILL",
+                  "layoutSizingVertical": "HUG",
+                  "pluginData": {}
+                },
+                {
+                  "type": "FRAME",
+                  "name": "Row 2",
+                  "layoutMode": "HORIZONTAL",
+                  "primaryAxisAlignItems": "MIN",
+                  "counterAxisAlignItems": "MIN",
+                  "itemSpacing": 0.0,
+                  "paddingTop": 0.0,
+                  "paddingRight": 0.0,
+                  "paddingBottom": 0.0,
+                  "paddingLeft": 0.0,
+                  "fills": [],
+                  "clipsContent": false,
+                  "children": [
+                    {
+                      "type": "FRAME",
+                      "name": "Cell 4",
+                      "layoutMode": "VERTICAL",
+                      "primaryAxisAlignItems": "MIN",
+                      "counterAxisAlignItems": "MIN",
+                      "itemSpacing": 0.0,
+                      "paddingTop": 0.0,
+                      "paddingRight": 0.0,
+                      "paddingBottom": 0.0,
+                      "paddingLeft": 0.0,
+                      "fills": [],
+                      "clipsContent": false,
+                      "children": [
+                        {
+                          "type": "FRAME",
+                          "name": "Card",
+                          "layoutMode": "VERTICAL",
+                          "primaryAxisAlignItems": "MIN",
+                          "counterAxisAlignItems": "MIN",
+                          "itemSpacing": 0.0,
+                          "paddingTop": 4.0,
+                          "paddingRight": 4.0,
+                          "paddingBottom": 4.0,
+                          "paddingLeft": 4.0,
+                          "fills": [],
+                          "clipsContent": false,
+                          "children": [
+                            {
+                              "type": "FRAME",
+                              "name": "Card · surface",
+                              "layoutMode": "VERTICAL",
+                              "primaryAxisAlignItems": "MIN",
+                              "counterAxisAlignItems": "MIN",
+                              "itemSpacing": 0.0,
+                              "paddingTop": 0.0,
+                              "paddingRight": 0.0,
+                              "paddingBottom": 0.0,
+                              "paddingLeft": 0.0,
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.8901960784313725,
+                                    "g": 0.9137254901960784,
+                                    "b": 0.9137254901960784
+                                  },
+                                  "opacity": 1.0,
+                                  "variable": "ColorScheme/surfaceContainerHigh"
+                                }
+                              ],
+                              "cornerRadius": 12.0,
+                              "clipsContent": false,
+                              "children": [
+                                {
+                                  "type": "FRAME",
+                                  "name": "SizedBox",
+                                  "layoutMode": "VERTICAL",
+                                  "primaryAxisAlignItems": "MIN",
+                                  "counterAxisAlignItems": "MIN",
+                                  "itemSpacing": 0.0,
+                                  "paddingTop": 0.0,
+                                  "paddingRight": 0.0,
+                                  "paddingBottom": 0.0,
+                                  "paddingLeft": 0.0,
+                                  "fills": [],
+                                  "clipsContent": false,
+                                  "children": [],
+                                  "layoutSizingHorizontal": "FILL",
+                                  "layoutSizingVertical": "FILL",
+                                  "pluginData": {
+                                    "origin": [
+                                      "SizedBox"
+                                    ],
+                                    "source": "lib/scoreboard_screen.dart:53",
+                                    "role": "spacer"
+                                  }
+                                }
+                              ],
+                              "layoutSizingHorizontal": "FILL",
+                              "layoutSizingVertical": "FILL",
+                              "pluginData": {
+                                "origin": [
+                                  "Card"
+                                ],
+                                "role": "card"
+                              }
+                            }
+                          ],
+                          "layoutSizingHorizontal": "FILL",
+                          "layoutSizingVertical": "FILL",
+                          "pluginData": {
+                            "origin": [
+                              "margin"
+                            ],
+                            "source": "lib/scoreboard_screen.dart:53"
+                          }
+                        }
+                      ],
+                      "layoutSizingHorizontal": "FILL",
+                      "layoutSizingVertical": "FIXED",
+                      "height": 130.0,
+                      "pluginData": {}
+                    },
+                    {
+                      "type": "FRAME",
+                      "name": "Cell 5",
+                      "layoutMode": "VERTICAL",
+                      "primaryAxisAlignItems": "MIN",
+                      "counterAxisAlignItems": "MIN",
+                      "itemSpacing": 0.0,
+                      "paddingTop": 0.0,
+                      "paddingRight": 0.0,
+                      "paddingBottom": 0.0,
+                      "paddingLeft": 0.0,
+                      "fills": [],
+                      "clipsContent": false,
+                      "children": [
+                        {
+                          "type": "FRAME",
+                          "name": "Card",
+                          "layoutMode": "VERTICAL",
+                          "primaryAxisAlignItems": "MIN",
+                          "counterAxisAlignItems": "MIN",
+                          "itemSpacing": 0.0,
+                          "paddingTop": 4.0,
+                          "paddingRight": 4.0,
+                          "paddingBottom": 4.0,
+                          "paddingLeft": 4.0,
+                          "fills": [],
+                          "clipsContent": false,
+                          "children": [
+                            {
+                              "type": "FRAME",
+                              "name": "Card · surface",
+                              "layoutMode": "VERTICAL",
+                              "primaryAxisAlignItems": "MIN",
+                              "counterAxisAlignItems": "MIN",
+                              "itemSpacing": 0.0,
+                              "paddingTop": 0.0,
+                              "paddingRight": 0.0,
+                              "paddingBottom": 0.0,
+                              "paddingLeft": 0.0,
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.8901960784313725,
+                                    "g": 0.9137254901960784,
+                                    "b": 0.9137254901960784
+                                  },
+                                  "opacity": 1.0,
+                                  "variable": "ColorScheme/surfaceContainerHigh"
+                                }
+                              ],
+                              "cornerRadius": 12.0,
+                              "clipsContent": false,
+                              "children": [
+                                {
+                                  "type": "FRAME",
+                                  "name": "SizedBox",
+                                  "layoutMode": "VERTICAL",
+                                  "primaryAxisAlignItems": "MIN",
+                                  "counterAxisAlignItems": "MIN",
+                                  "itemSpacing": 0.0,
+                                  "paddingTop": 0.0,
+                                  "paddingRight": 0.0,
+                                  "paddingBottom": 0.0,
+                                  "paddingLeft": 0.0,
+                                  "fills": [],
+                                  "clipsContent": false,
+                                  "children": [],
+                                  "layoutSizingHorizontal": "FILL",
+                                  "layoutSizingVertical": "FILL",
+                                  "pluginData": {
+                                    "origin": [
+                                      "SizedBox"
+                                    ],
+                                    "source": "lib/scoreboard_screen.dart:53",
+                                    "role": "spacer"
+                                  }
+                                }
+                              ],
+                              "layoutSizingHorizontal": "FILL",
+                              "layoutSizingVertical": "FILL",
+                              "pluginData": {
+                                "origin": [
+                                  "Card"
+                                ],
+                                "role": "card"
+                              }
+                            }
+                          ],
+                          "layoutSizingHorizontal": "FILL",
+                          "layoutSizingVertical": "FILL",
+                          "pluginData": {
+                            "origin": [
+                              "margin"
+                            ],
+                            "source": "lib/scoreboard_screen.dart:53"
+                          }
+                        }
+                      ],
+                      "layoutSizingHorizontal": "FILL",
+                      "layoutSizingVertical": "FIXED",
+                      "height": 130.0,
+                      "pluginData": {}
+                    },
+                    {
+                      "type": "FRAME",
+                      "name": "Cell 6",
+                      "layoutMode": "VERTICAL",
+                      "primaryAxisAlignItems": "MIN",
+                      "counterAxisAlignItems": "MIN",
+                      "itemSpacing": 0.0,
+                      "paddingTop": 0.0,
+                      "paddingRight": 0.0,
+                      "paddingBottom": 0.0,
+                      "paddingLeft": 0.0,
+                      "fills": [],
+                      "clipsContent": false,
+                      "children": [
+                        {
+                          "type": "FRAME",
+                          "name": "Card",
+                          "layoutMode": "VERTICAL",
+                          "primaryAxisAlignItems": "MIN",
+                          "counterAxisAlignItems": "MIN",
+                          "itemSpacing": 0.0,
+                          "paddingTop": 4.0,
+                          "paddingRight": 4.0,
+                          "paddingBottom": 4.0,
+                          "paddingLeft": 4.0,
+                          "fills": [],
+                          "clipsContent": false,
+                          "children": [
+                            {
+                              "type": "FRAME",
+                              "name": "Card · surface",
+                              "layoutMode": "VERTICAL",
+                              "primaryAxisAlignItems": "MIN",
+                              "counterAxisAlignItems": "MIN",
+                              "itemSpacing": 0.0,
+                              "paddingTop": 0.0,
+                              "paddingRight": 0.0,
+                              "paddingBottom": 0.0,
+                              "paddingLeft": 0.0,
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.8901960784313725,
+                                    "g": 0.9137254901960784,
+                                    "b": 0.9137254901960784
+                                  },
+                                  "opacity": 1.0,
+                                  "variable": "ColorScheme/surfaceContainerHigh"
+                                }
+                              ],
+                              "cornerRadius": 12.0,
+                              "clipsContent": false,
+                              "children": [
+                                {
+                                  "type": "FRAME",
+                                  "name": "SizedBox",
+                                  "layoutMode": "VERTICAL",
+                                  "primaryAxisAlignItems": "MIN",
+                                  "counterAxisAlignItems": "MIN",
+                                  "itemSpacing": 0.0,
+                                  "paddingTop": 0.0,
+                                  "paddingRight": 0.0,
+                                  "paddingBottom": 0.0,
+                                  "paddingLeft": 0.0,
+                                  "fills": [],
+                                  "clipsContent": false,
+                                  "children": [],
+                                  "layoutSizingHorizontal": "FILL",
+                                  "layoutSizingVertical": "FILL",
+                                  "pluginData": {
+                                    "origin": [
+                                      "SizedBox"
+                                    ],
+                                    "source": "lib/scoreboard_screen.dart:53",
+                                    "role": "spacer"
+                                  }
+                                }
+                              ],
+                              "layoutSizingHorizontal": "FILL",
+                              "layoutSizingVertical": "FILL",
+                              "pluginData": {
+                                "origin": [
+                                  "Card"
+                                ],
+                                "role": "card"
+                              }
+                            }
+                          ],
+                          "layoutSizingHorizontal": "FILL",
+                          "layoutSizingVertical": "FILL",
+                          "pluginData": {
+                            "origin": [
+                              "margin"
+                            ],
+                            "source": "lib/scoreboard_screen.dart:53"
+                          }
+                        }
+                      ],
+                      "layoutSizingHorizontal": "FILL",
+                      "layoutSizingVertical": "FIXED",
+                      "height": 130.0,
+                      "pluginData": {}
+                    }
+                  ],
+                  "layoutSizingHorizontal": "FILL",
+                  "layoutSizingVertical": "HUG",
+                  "pluginData": {}
+                }
+              ],
+              "layoutSizingHorizontal": "FILL",
+              "layoutSizingVertical": "FILL",
+              "pluginData": {
+                "origin": [
+                  "_Board",
+                  "BlocBuilder",
+                  "Expanded",
+                  "GridView"
+                ],
+                "source": "lib/scoreboard_screen.dart:48",
+                "role": "grid"
+              }
+            },
+            {
+              "type": "FRAME",
+              "name": "Checkbox",
+              "layoutMode": "VERTICAL",
+              "primaryAxisAlignItems": "CENTER",
+              "counterAxisAlignItems": "CENTER",
+              "itemSpacing": 0.0,
+              "paddingTop": 0.0,
+              "paddingRight": 0.0,
+              "paddingBottom": 0.0,
+              "paddingLeft": 0.0,
+              "fills": [],
+              "clipsContent": false,
+              "children": [
+                {
+                  "type": "FRAME",
+                  "name": "Box",
+                  "layoutMode": "VERTICAL",
+                  "primaryAxisAlignItems": "MIN",
+                  "counterAxisAlignItems": "MIN",
+                  "itemSpacing": 0.0,
+                  "paddingTop": 0.0,
+                  "paddingRight": 0.0,
+                  "paddingBottom": 0.0,
+                  "paddingLeft": 0.0,
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": {
+                        "r": 0.0,
+                        "g": 0.4117647058823529,
+                        "b": 0.43137254901960786
+                      },
+                      "opacity": 1.0,
+                      "variable": "ColorScheme/primary"
+                    }
+                  ],
+                  "cornerRadius": 2.0,
+                  "clipsContent": false,
+                  "children": [],
+                  "layoutSizingHorizontal": "FIXED",
+                  "layoutSizingVertical": "FIXED",
+                  "width": 18.0,
+                  "height": 18.0,
+                  "pluginData": {}
+                }
+              ],
+              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingVertical": "FIXED",
+              "width": 40.0,
+              "height": 40.0,
+              "pluginData": {
+                "origin": [
+                  "Checkbox"
+                ],
+                "source": "lib/scoreboard_screen.dart:30",
+                "role": "checkbox"
+              }
+            }
+          ],
+          "layoutSizingHorizontal": "FILL",
+          "layoutSizingVertical": "FILL",
+          "pluginData": {
+            "origin": [
+              "Column"
+            ],
+            "source": "lib/scoreboard_screen.dart:20"
+          }
+        }
+      ],
+      "layoutSizingHorizontal": "FIXED",
+      "layoutSizingVertical": "FIXED",
+      "width": 390.0,
+      "height": 844.0,
+      "pluginData": {
+        "origin": [
+          "BlocProvider",
+          "BlocBuilder",
+          "Scaffold"
+        ],
+        "source": "lib/scoreboard_screen.dart:6",
+        "role": "screen"
+      },
+      "x": 1020.0,
+      "y": 0
+    },
+    {
+      "type": "FRAME",
       "name": "SettingsScreen",
       "layoutMode": "VERTICAL",
       "primaryAxisAlignItems": "MIN",
@@ -3236,15 +4279,30 @@
         "source": "lib/settings_screen.dart:18",
         "role": "screen"
       },
-      "x": 1020.0,
+      "x": 1530.0,
       "y": 0
     }
   ],
   "diagnostics": [
     {
       "severity": "info",
-      "message": "Conditional UI `_loading`: exported the `false` branch (the richer one)",
-      "source": "lib/settings_screen.dart:34"
+      "message": "Package widget `BlocProvider`: exported its child only",
+      "source": "lib/scoreboard_screen.dart:11"
+    },
+    {
+      "severity": "info",
+      "message": "Package widget `BlocBuilder`: rendered its builder (state-dependent UI shows one state)",
+      "source": "lib/scoreboard_screen.dart:13"
+    },
+    {
+      "severity": "info",
+      "message": "Package widget `BlocBuilder`: rendered its builder (state-dependent UI shows one state)",
+      "source": "lib/scoreboard_screen.dart:45"
+    },
+    {
+      "severity": "info",
+      "message": "GridView.builder: cell height estimated from the screen width",
+      "source": "lib/scoreboard_screen.dart:48"
     },
     {
       "severity": "info",

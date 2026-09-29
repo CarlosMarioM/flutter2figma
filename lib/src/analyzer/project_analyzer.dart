@@ -153,6 +153,7 @@ class FlutterProjectAnalyzer {
 
     final index = <String, ClassDeclaration>{};
     final declarations = <String, AstNode>{};
+    final constructors = <String, ConstructorDeclaration>{};
     void declare(Element? element, AstNode node) {
       final key = _declKey(element);
       if (key != null) declarations[key] = node;
@@ -172,6 +173,9 @@ class FlutterProjectAnalyzer {
                   }
                 case MethodDeclaration():
                   declare(member.declaredFragment?.element, member);
+                case ConstructorDeclaration():
+                  final ctor = member.declaredFragment?.element;
+                  if (ctor != null) constructors[_ctorKey(ctor)] = member;
                 default:
                   break;
               }
@@ -188,7 +192,7 @@ class FlutterProjectAnalyzer {
       }
     }
 
-    final expander = _Expander(root, index, declarations);
+    final expander = _Expander(root, index, declarations, constructors);
     final widgets = <WidgetClass>[];
     for (final decl in index.values) {
       final element = decl.declaredFragment!.element;
@@ -228,6 +232,15 @@ class FlutterProjectAnalyzer {
 const _frameworkUri = 'package:flutter/src/widgets/framework.dart';
 
 String _key(InterfaceElement e) => '${e.library.uri}#${e.name}';
+
+/// `Foo()` and `Foo.named()` constructors of a class, by class and name.
+String _ctorKey(ConstructorElement c) {
+  final name = c.name;
+  return '${_key(c.enclosingElement)}:${name == null || name == 'new' ? '' : name}';
+}
+
+/// Widgets whose `builder: (context, state)` receives the bloc's state.
+const _blocBuilders = {'BlocBuilder', 'BlocConsumer'};
 
 /// Identity for top-level and member declarations. Implicit getters of
 /// fields/variables map to the variable itself.
@@ -320,7 +333,7 @@ class _Scope {
 }
 
 class _Expander {
-  _Expander(this.root, this.index, this.declarations);
+  _Expander(this.root, this.index, this.declarations, this.constructors);
 
   static const _maxDepth = 16;
   static const _maxConstDepth = 8;
@@ -330,6 +343,11 @@ class _Expander {
 
   /// Project variables, getters, functions and methods by [_declKey].
   final Map<String, AstNode> declarations;
+
+  /// Project constructors by [_ctorKey], for parameter defaults and blocs'
+  /// initial states.
+  final Map<String, ConstructorDeclaration> constructors;
+  final _initialStates = <String, DartValue?>{};
   final _constCache = <Element, DartValue?>{};
   final _staticCache = <String, DartValue?>{};
 
@@ -413,6 +431,13 @@ class _Expander {
         return e == null ? null : value(e, s);
       }
       if (st is IfStatement) {
+        final known = _condition(st.expression, s);
+        if (known != null) {
+          final taken = known ? st.thenStatement : st.elseStatement;
+          final result = taken == null ? null : _branch(taken, s);
+          if (result != null) return result;
+          continue;
+        }
         final then = _branch(st.thenStatement, s);
         final otherwise = st.elseStatement == null
             ? null
@@ -441,6 +466,94 @@ class _Expander {
                 source: location(st),
               );
       }
+    }
+    return null;
+  }
+
+  /// Evaluates a condition when its values are statically known (literals,
+  /// constants, a bloc's initial state), else null.
+  bool? _condition(Expression e, _Scope s) {
+    switch (e) {
+      case BooleanLiteral(:final value):
+        return value;
+      case ParenthesizedExpression(:final expression):
+        return _condition(expression, s);
+      case PrefixExpression(operator: Token(lexeme: '!'), :final operand):
+        final inner = _condition(operand, s);
+        return inner == null ? null : !inner;
+      case BinaryExpression(operator: Token(lexeme: '&&')):
+        final a = _condition(e.leftOperand, s);
+        final b = _condition(e.rightOperand, s);
+        if (a == false || b == false) return false;
+        return a == true && b == true ? true : null;
+      case BinaryExpression(operator: Token(lexeme: '||')):
+        final a = _condition(e.leftOperand, s);
+        final b = _condition(e.rightOperand, s);
+        if (a == true || b == true) return true;
+        return a == false && b == false ? false : null;
+      case BinaryExpression(operator: Token(lexeme: '==' || '!=')):
+        final equal = _equal(
+          _known(value(e.leftOperand, s)),
+          _known(value(e.rightOperand, s)),
+        );
+        if (equal == null) return null;
+        return e.operator.lexeme == '==' ? equal : !equal;
+      default:
+        final known = _known(value(e, s));
+        return known is LiteralValue && known.value is bool
+            ? known.value as bool
+            : null;
+    }
+  }
+
+  /// A value with references, project calls and field reads of known
+  /// objects followed, or null when it depends on runtime state.
+  DartValue? _known(DartValue v, [int depth = 0]) {
+    if (depth > 16) return null;
+    return switch (v) {
+      LiteralValue() || ObjectValue() || ListValue() || MapValue() => v,
+      RefValue(:final resolved?) => _known(resolved, depth + 1),
+      // Enum values and other constants without a known initializer.
+      RefValue() => v,
+      CallValue(:final result?) => _known(result, depth + 1),
+      AccessValue(:final target, :final name) => switch (_known(
+        target,
+        depth + 1,
+      )) {
+        ObjectValue(:final named) when named.containsKey(name) => _known(
+          named[name]!,
+          depth + 1,
+        ),
+        ListValue(:final items) when name == 'length' => LiteralValue(
+          items.length,
+        ),
+        MapValue(:final entries) when name == 'length' => LiteralValue(
+          entries.length,
+        ),
+        ListValue(:final items) when name == 'isEmpty' => LiteralValue(
+          items.isEmpty,
+        ),
+        ListValue(:final items) when name == 'isNotEmpty' => LiteralValue(
+          items.isNotEmpty,
+        ),
+        _ => null,
+      },
+      _ => null,
+    };
+  }
+
+  /// Whether two known values are equal, or null if that can't be decided.
+  bool? _equal(DartValue? a, DartValue? b) {
+    if (a == null || b == null) return null;
+    if (a is LiteralValue && b is LiteralValue) return a.value == b.value;
+    // A known object is never `null`.
+    final aNull = a is LiteralValue && a.value == null;
+    final bNull = b is LiteralValue && b.value == null;
+    if (aNull && b is! LiteralValue) return false;
+    if (bNull && a is! LiteralValue) return false;
+    // Enum-like constants: same reference, same value.
+    if (a is RefValue && b is RefValue) {
+      return a.dotted == b.dotted ? true : null;
     }
     return null;
   }
@@ -492,7 +605,9 @@ class _Expander {
             case InterpolationString():
               buffer.write(element.value);
             case InterpolationExpression():
-              buffer.write(_stringOf(value(element.expression, s)));
+              final part = value(element.expression, s);
+              // `'${state.crossWins}'` with a known state reads `0`.
+              buffer.write(_stringOf(_known(part) ?? part));
           }
         }
         return LiteralValue(buffer.toString(), source: loc);
@@ -561,6 +676,15 @@ class _Expander {
           return _member(e.propertyName, s, loc);
         }
         if (target == null) return UnknownValue(e.toSource(), source: loc);
+        // context.read<MyBloc>().state, context.watch<...>(),
+        // BlocProvider.of<...>(context): the bloc's initial state.
+        if (name == 'state' &&
+            target is MethodInvocation &&
+            const {'read', 'watch', 'of'}.contains(target.methodName.name)) {
+          final bloc = target.typeArguments?.arguments.firstOrNull;
+          final state = bloc is NamedType ? _initialState(bloc.element) : null;
+          if (state != null) return state;
+        }
         return AccessValue(value(target, s), name, source: loc);
       case SimpleIdentifier():
         return _identifier(e, s, loc);
@@ -580,6 +704,14 @@ class _Expander {
         }
         return chain ?? UnknownValue(e.toSource(), source: loc);
       case ConditionalExpression():
+        switch (_condition(e.condition, s)) {
+          case true:
+            return value(e.thenExpression, s);
+          case false:
+            return value(e.elseExpression, s);
+          case null:
+            break;
+        }
         return ConditionalValue(
           e.condition.toSource(),
           value(e.thenExpression, s),
@@ -605,6 +737,7 @@ class _Expander {
 
   String _stringOf(DartValue v) => switch (v) {
     LiteralValue(value: final Object value) => '$value',
+    LiteralValue(value: null) => 'null',
     UnknownValue(:final code) => '{$code}',
     AccessValue(:final name) => '{$name}',
     RefValue(:final last) => '{$last}',
@@ -617,6 +750,11 @@ class _Expander {
       switch (element) {
         case Expression():
           out.add(value(element, s));
+        case IfElement() when _condition(element.expression, s) != null:
+          final taken = _condition(element.expression, s)!
+              ? element.thenElement
+              : element.elseElement;
+          if (taken != null) out.addAll(_collection([taken], s));
         case IfElement():
           final then = _collection([element.thenElement], s);
           final otherwise = element.elseElement == null
@@ -683,11 +821,105 @@ class _Expander {
       a.name.lexeme: value(a.argumentExpression, s),
   };
 
+  /// Default values of the named parameters a project constructor call
+  /// leaves out: `{this.color = Colors.blue}` and freezed's
+  /// `@Default(Colors.blue) Color color`.
+  Map<String, DartValue> _defaults(InstanceCreationExpression e, _Scope s) {
+    final ctor = e.constructorName.element;
+    final decl = ctor == null ? null : constructors[_ctorKey(ctor.baseElement)];
+    if (decl == null) return const {};
+    final passed = {
+      for (final a in e.argumentList.arguments.whereType<NamedArgument>())
+        a.name.lexeme,
+    };
+    final defaults = <String, DartValue>{};
+    for (final param in decl.parameters.parameters) {
+      final name = param.name?.lexeme;
+      if (name == null || !param.isNamed || passed.contains(name)) continue;
+      Expression? value = param.defaultClause?.value;
+      if (value == null) {
+        for (final annotation in param.metadata) {
+          if (annotation.name.name == 'Default') {
+            value =
+                annotation.arguments?.arguments.firstOrNull?.argumentExpression;
+          }
+        }
+      }
+      if (value == null && param.isOptionalNamed) {
+        defaults[name] = const LiteralValue(null); // Nullable, not passed.
+      } else if (value != null) {
+        defaults[name] = this.value(
+          value,
+          _Scope.detached(
+            locals: const {},
+            expanding: s.expanding,
+            depth: s.depth + 1,
+          ),
+        );
+      }
+    }
+    return defaults;
+  }
+
+  /// The state a bloc or cubit starts with: the argument of `super(...)` in
+  /// its constructor, e.g. `ThemeCubit() : super(ThemeState.amber())`.
+  DartValue? _initialState(Element? bloc) {
+    if (bloc is! InterfaceElement) return null;
+    final key = _key(bloc);
+    if (_initialStates.containsKey(key)) return _initialStates[key];
+    _initialStates[key] = null; // Cycle guard.
+    final ctor = constructors['$key:'];
+    final superCall = ctor?.initializers
+        .whereType<SuperConstructorInvocation>()
+        .firstOrNull;
+    final arg = superCall?.argumentList.arguments.firstOrNull;
+    final state = arg == null
+        ? null
+        : value(
+            arg.argumentExpression,
+            _Scope.detached(locals: const {}, expanding: const {}, depth: 1),
+          );
+    return _initialStates[key] = state;
+  }
+
   DartValue _object(InstanceCreationExpression e, _Scope s, String? loc) {
     final classElement = e.constructorName.type.element;
     final positional = _positional(e.argumentList, s);
-    final named = _named(e.argumentList, s);
+    final named = {
+      ..._named(e.argumentList, s),
+      // Arguments not passed take the constructor's defaults.
+      ..._defaults(e, s),
+    };
     final isWidget = _isWidgetType(e.staticType);
+
+    // BlocBuilder<MyBloc, MyState>(builder: (context, state) => ...): the
+    // builder sees the bloc's initial state.
+    final typeName = e.constructorName.type.name.lexeme;
+    final libraryUri = classElement?.library?.uri.toString() ?? '';
+    if (_blocBuilders.contains(typeName) && libraryUri.contains('bloc')) {
+      final bloc = e.constructorName.type.typeArguments?.arguments.firstOrNull;
+      final state = bloc is NamedType ? _initialState(bloc.element) : null;
+      final builderArg = e.argumentList.arguments
+          .whereType<NamedArgument>()
+          .where((a) => a.name.lexeme == 'builder')
+          .firstOrNull
+          ?.argumentExpression;
+      final params = builderArg is FunctionExpression
+          ? builderArg.parameters?.parameters
+          : null;
+      final stateParam = params != null && params.length >= 2
+          ? params[1].name?.lexeme
+          : null;
+      if (state != null && stateParam != null) {
+        named['builder'] = FunctionValue(
+          returns: _returns(
+            (builderArg as FunctionExpression).body,
+            s.copyWith(params: {...s.params, stateParam: state}),
+          ),
+          source: location(builderArg),
+        );
+      }
+    }
 
     DartValue? build;
     if (isWidget && classElement is InterfaceElement) {

@@ -212,6 +212,138 @@ void main() {
       expect(bar.height, const IrSizing.fixed(4));
     });
   });
+
+  group('from tic_tac_toe', () {
+    test('selection controls follow their known value', () {
+      final doc = compileApp(
+        {},
+        column([
+          w('Switch', ctor: 'adaptive', named: {'value': lit(false)}),
+          w('Switch', named: {'value': lit(true)}),
+          w('Checkbox', named: {'value': lit(true)}),
+          w('Radio', named: {'value': lit(1), 'groupValue': lit(1)}),
+        ]),
+      );
+      final [off, on, checkbox, radio] = (bodyOf(doc) as IrFrame).children
+          .cast<IrFrame>();
+      expect(off.mainAlign, IrMainAlign.start);
+      expect(off.fill!.token, 'ColorScheme/surfaceContainerHighest');
+      expect(on.mainAlign, IrMainAlign.end);
+      expect(on.fill!.token, 'ColorScheme/primary');
+      expect(
+        (checkbox.children.single as IrFrame).fill!.token,
+        'ColorScheme/primary',
+      );
+      expect((radio.children.single as IrFrame).children, hasLength(1));
+    });
+
+    test('unknown switch state is drawn off, with a note', () {
+      final doc = compileApp(
+        {},
+        w('Switch', named: {'value': const UnknownValue('state.on')}),
+      );
+      expect((bodyOf(doc) as IrFrame).mainAlign, IrMainAlign.start);
+      expect(messages(doc), contains(contains('is runtime state')));
+    });
+
+    test('grids become rows of equal cells', () {
+      final doc = compileApp(
+        {},
+        w(
+          'GridView',
+          ctor: 'count',
+          named: {
+            'crossAxisCount': lit(3),
+            'mainAxisSpacing': lit(8),
+            'children': list([for (var i = 0; i < 7; i++) text('$i')]),
+          },
+        ),
+      );
+      final grid = bodyOf(doc) as IrFrame;
+      expect(grid.role, 'grid');
+      expect(grid.gap, 8);
+      expect(grid.children, hasLength(3)); // 3 + 3 + 1
+      final lastRow = grid.children.last as IrFrame;
+      expect(lastRow.children, hasLength(3), reason: 'padded with empty cells');
+      expect((lastRow.children[1] as IrFrame).children, isEmpty);
+      expect(
+        (lastRow.children.first as IrFrame).height,
+        const IrSizing.fixed(130),
+        reason: '390 / 3',
+      );
+    });
+
+    test('GridView.builder renders itemCount cells', () {
+      final doc = compileApp(
+        {},
+        w(
+          'GridView',
+          ctor: 'builder',
+          named: {
+            'gridDelegate': v(
+              'SliverGridDelegateWithFixedCrossAxisCount',
+              named: {'crossAxisCount': lit(3)},
+            ),
+            'itemCount': lit(9),
+            'itemBuilder': FunctionValue(returns: text('cell')),
+          },
+        ),
+      );
+      expect((bodyOf(doc) as IrFrame).children, hasLength(3));
+    });
+
+    test('Expanded behind a package widget still fills its Column', () {
+      final doc = compileApp(
+        {},
+        column([
+          text('header'),
+          pkg(
+            'BlocBuilder',
+            named: {
+              'builder': FunctionValue(
+                returns: w('Expanded', named: {'child': text('grid')}),
+              ),
+            },
+          ),
+        ]),
+      );
+      final grid = (bodyOf(doc) as IrFrame).children.last;
+      expect(grid.height, const IrSizing.fill());
+      expect(messages(doc), isNot(contains(contains('outside of a Row'))));
+    });
+
+    test('field reads on known project objects resolve', () {
+      final state = ObjectValue(
+        type: 'GameState',
+        library: 'package:app/state.dart',
+        inProject: true,
+        named: {'title': lit('Round 1')},
+      );
+      final doc = compileApp(
+        {},
+        w('Text', positional: [AccessValue(state, 'title')]),
+      );
+      expect((bodyOf(doc) as IrText).text, 'Round 1');
+    });
+
+    test('an unevaluable theme seed is reported, not silently replaced', () {
+      final doc = compileApp({
+        'theme': v(
+          'ThemeData',
+          named: {
+            'colorSchemeSeed': AccessValue(
+              const UnknownValue('state'),
+              'color',
+            ),
+          },
+        ),
+      }, text('x'));
+      expect(
+        messages(doc),
+        contains(startsWith('Could not evaluate ThemeData.colorSchemeSeed')),
+      );
+    });
+  });
 }
 
 ObjectValue column(List<DartValue> children) =>

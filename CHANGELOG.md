@@ -13,10 +13,16 @@ First release.
 - Layout, content, Material controls and surfaces, `TextField`, and progress
   indicators. Widgets from packages and `builder:` widgets render their
   content. Anything unsupported becomes a flagged placeholder.
-- Runtime-dependent UI exports one state and reports it:
-  - conditionals keep the richer branch;
-  - loops over literal lists are unrolled;
-  - loops over runtime data show sample items.
+- Runtime-dependent UI exports the initial state where it can be known, and
+  reports what it assumed:
+  - bloc/cubit builders see the bloc's initial state;
+  - constructor defaults are filled in, including freezed `@Default`;
+  - conditions on known values are folded;
+  - other conditionals keep the richer branch;
+  - loops over literal lists are unrolled, and loops over runtime data show
+    sample items.
+- `GridView`, `Switch`, `Checkbox` and `Radio`, drawn with Material 3
+  defaults.
 
 ### Theme
 - Reads the app's `MaterialApp` `theme`, `darkTheme` and `themeMode`, and

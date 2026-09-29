@@ -41,7 +41,7 @@ function boundTo(api: ReturnType<typeof createMockFigma>, paint: Paint): string 
 test('imports the basic example exported by the CLI', async () => {
   const { api, result } = await run(golden());
 
-  assert.equal(result.screens.length, 3);
+  assert.equal(result.screens.length, 4);
   assert.deepEqual(Object.keys(result.fontSubstitutions), []);
   assert.equal(api.pages.length, 1);
 

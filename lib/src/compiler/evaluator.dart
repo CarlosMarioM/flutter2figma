@@ -31,6 +31,7 @@ class ValueEvaluator {
       final next = switch (current) {
         RefValue(:final resolved?) => resolved,
         CallValue(:final result?) => result,
+        AccessValue(:final target, :final name) => _field(deref(target), name),
         _ => null,
       };
       if (next == null) return current;
@@ -38,6 +39,18 @@ class ValueEvaluator {
     }
     return current;
   }
+
+  /// A field read on a known value: `state.crossWins` on the project's own
+  /// (e.g. bloc state) objects, and `length` of known collections. Flutter
+  /// value types are left alone so theme lookups keep their tokens.
+  DartValue? _field(DartValue? target, String name) => switch (target) {
+    ObjectValue(inProject: true, :final named) => named[name],
+    ListValue(:final items) when name == 'length' => LiteralValue(items.length),
+    MapValue(:final entries) when name == 'length' => LiteralValue(
+      entries.length,
+    ),
+    _ => null,
+  };
 
   /// Unwraps `WidgetStatePropertyAll(x)` / `MaterialStatePropertyAll(x)`.
   DartValue? unwrapStateProperty(DartValue? v) {

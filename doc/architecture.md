@@ -199,8 +199,24 @@ become `gap: 16`. `Column(spacing:)` maps to `gap` directly.
   failing that it passes through to `child`, lays out `children` in a column,
   or shows a `⚠` placeholder. Package wrappers are reported as info (usually
   state management with no visuals); unknown Flutter widgets as warnings.
-- **Conditionals.** The branch with the most inline widgets is exported
-  (`_richness`). Another widget class counts as one widget, so a branch that
+- **Initial state (analyzer).**
+  - **Constructor defaults.** Calls to project constructors get the defaults
+    of the named parameters they leave out (`_defaults`). This covers
+    `{this.x = 1}` and freezed `@Default(1)`, and optional nullables default
+    to `null`.
+  - **Bloc state.** `BlocBuilder<B, S>` / `BlocConsumer` builders, and
+    `context.read/watch<B>().state` / `BlocProvider.of<B>(context).state`,
+    see `B`'s initial state: the argument of `super(...)` in `B`'s unnamed
+    constructor (`_initialState`).
+  - **Folding.** Conditions over known values are folded (`_condition`):
+    literals, `!`, `&&`, `||`, `==`/`!=`, `x != null`, field reads on known
+    objects, and `.length`/`.isEmpty` of known lists. Folding applies to
+    `?:`, collection `if` and `if` statements, and only the branch taken is
+    kept.
+  - **Result.** Screens render their first frame, not an impossible mix of
+    states.
+- **Conditionals that stay unknown.** The branch with the most inline
+  widgets is exported (`_richness`). Another widget class counts as one widget, so a branch that
   navigates elsewhere doesn't outweigh this screen's own UI. On a tie, the
   `true` branch wins.
 - **Loops over runtime data.** Collection `for` and `.map()` / `.toList()` are

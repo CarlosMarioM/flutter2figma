@@ -121,14 +121,22 @@ flutter2figma exports what can be known **without running the app**. It
 never skips anything silently. Every approximation is reported as a
 diagnostic, and anything it can't draw becomes a magenta `⚠` placeholder.
 
-- **State-dependent UI** exports one state. For `a ? b : c`, `switch`
-  expressions and early returns such as `if (loading) return Spinner();`, that
-  is the branch with more content. Lists built from runtime data show 3 sample
-  items; loops over literal lists show the real items.
+- **State-dependent UI** exports one state, usually the screen's **initial**
+  state:
+  - Values that are statically known are used: constants, field
+    initializers, constructor defaults (including freezed `@Default`), and a
+    bloc/cubit's initial `super(...)` state, as seen by `BlocBuilder`,
+    `BlocConsumer` and `context.read/watch`. So
+    `if (state.error != null) …` or `Text('${state.score}')` render as they
+    would on the first frame.
+  - Otherwise, for `a ? b : c`, `switch` expressions and early returns, the
+    branch with more content is used.
+  - Lists built from runtime data show 3 sample items; loops over literal
+    lists show the real items.
 - **Icons and images** are placeholders, and gradients use their first color.
+  `GridView` cell heights are estimated from the screen width.
 - **Not supported yet:**
-  - `ListTile`, chips, `Checkbox`/`Switch`/`Radio`, navigation and tab bars,
-    `GridView`, dialogs and sheets;
+  - `ListTile`, chips, navigation and tab bars, dialogs and sheets;
   - Cupertino widgets, Material 2 themes, and input/chip/list tile component
     themes.
 - **Fonts** are exported by family name; the plugin substitutes any font

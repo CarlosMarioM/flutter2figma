@@ -37,10 +37,28 @@ class _Box {
   _Box get loose => copyWith(forceW: false, forceH: false);
 }
 
+/// The Row/Column a widget sits in directly or through wrappers that don't
+/// lay anything out (project widgets, `BlocBuilder`, providers, ...).
+class _FlexSlot {
+  const _FlexSlot(this.parent, this.direction);
+
+  final IrFrame parent;
+  final IrLayoutDirection direction;
+}
+
 class _Ctx {
-  const _Ctx({required this.box, required this.text, required this.iconColor});
+  const _Ctx({
+    required this.box,
+    required this.text,
+    required this.iconColor,
+    this.flex,
+  });
 
   final _Box box;
+
+  /// Set for flex children; cleared as soon as a widget lays out children
+  /// ([withBox]), so `Expanded` only applies to the nearest Row/Column.
+  final _FlexSlot? flex;
 
   /// Inherited `DefaultTextStyle`.
   final TextStyleSpec text;
@@ -54,6 +72,14 @@ class _Ctx {
     box: box,
     text: text.merge(style),
     iconColor: iconColor ?? this.iconColor,
+    flex: flex,
+  );
+
+  _Ctx inFlex(IrFrame parent, IrLayoutDirection direction) => _Ctx(
+    box: box,
+    text: text,
+    iconColor: iconColor,
+    flex: _FlexSlot(parent, direction),
   );
 }
 
@@ -514,7 +540,7 @@ class FlutterCompiler {
       case 'Stack':
         return _stack(w, c);
       case 'Spacer':
-        return _spacer(w, c, IrLayoutDirection.vertical);
+        return _spacer(w, c, c.flex?.direction ?? IrLayoutDirection.vertical);
       case 'Text':
         return _text(w, c, eval.text(w.arg(0)));
       case 'Text.rich' || 'RichText' || 'SelectableText.rich':
@@ -562,6 +588,17 @@ class FlutterCompiler {
         return _iconButton(w, c);
       case 'FloatingActionButton' || 'FloatingActionButton.extended':
         return _fab(w, c);
+      case 'Switch' || 'Switch.adaptive':
+        return _switch(w);
+      case 'Checkbox' || 'Checkbox.adaptive':
+        return _checkbox(w);
+      case 'Radio' || 'Radio.adaptive':
+        return _radio(w);
+      case 'GridView' ||
+          'GridView.count' ||
+          'GridView.extent' ||
+          'GridView.builder':
+        return _grid(w, c);
       case 'TextField' || 'TextFormField':
         return _textField(w, c);
       case 'CircularProgressIndicator' || 'CircularProgressIndicator.adaptive':
@@ -584,6 +621,9 @@ class FlutterCompiler {
         return _widget(w['child'], c);
     }
 
+    if ((w.type == 'Expanded' || w.type == 'Flexible') && c.flex != null) {
+      return _expanded(w, c, c.flex!);
+    }
     if (_passThrough.contains(w.type) && w['child'] != null) {
       if (w.type == 'Expanded' || w.type == 'Flexible') {
         _warn('${w.type} outside of a Row/Column', w);
@@ -1310,36 +1350,31 @@ class FlutterCompiler {
     _Ctx c,
     IrFrame parent,
     IrLayoutDirection direction,
-  ) {
-    final vertical = direction == IrLayoutDirection.vertical;
-    final w = _asWidget(item);
-    if (w != null && w.isFlutter && w.type == 'Spacer') {
-      return _spacer(w, c, direction);
+  ) => _widget(item, c.inFlex(parent, direction));
+
+  /// `Expanded` / `Flexible` in a Row or Column: fill (or share) the main axis.
+  IrNode _expanded(ObjectValue w, _Ctx c, _FlexSlot slot) {
+    final vertical = slot.direction == IrLayoutDirection.vertical;
+    final parent = slot.parent;
+    final tight = w.type == 'Expanded' || eval.enumName(w['fit']) == 'tight';
+    final mainFill = !(vertical ? parent.height : parent.width).isHug;
+    if (!mainFill) {
+      _warn('${w.type} inside a ${parent.name} with unbounded main axis', w);
     }
-    if (w != null &&
-        w.isFlutter &&
-        (w.type == 'Expanded' || w.type == 'Flexible')) {
-      final tight = w.type == 'Expanded' || eval.enumName(w['fit']) == 'tight';
-      final mainFill = !(vertical ? parent.height : parent.width).isHug;
-      if (!mainFill) {
-        _warn('${w.type} inside a ${parent.name} with unbounded main axis', w);
+    final box = vertical
+        ? c.box.copyWith(forceH: tight && mainFill, boundedH: mainFill)
+        : c.box.copyWith(forceW: tight && mainFill, boundedW: mainFill);
+    final node = _widget(w['child'], c.withBox(box));
+    node.origin = [w.type, ...node.origin];
+    node.source ??= w.source;
+    if (tight && mainFill) {
+      if (vertical) {
+        node.height = const IrSizing.fill();
+      } else {
+        node.width = const IrSizing.fill();
       }
-      final box = vertical
-          ? c.box.copyWith(forceH: tight && mainFill, boundedH: mainFill)
-          : c.box.copyWith(forceW: tight && mainFill, boundedW: mainFill);
-      final node = _widget(w['child'], c.withBox(box));
-      node.origin = [w.type, ...node.origin];
-      node.source ??= w.source;
-      if (tight && mainFill) {
-        if (vertical) {
-          node.height = const IrSizing.fill();
-        } else {
-          node.width = const IrSizing.fill();
-        }
-      }
-      return node;
     }
-    return _widget(item, c);
+    return node;
   }
 
   IrFrame _spacer(ObjectValue w, _Ctx c, IrLayoutDirection direction) {
@@ -1880,6 +1915,209 @@ class FlutterCompiler {
                 ? const IrCorners.all(4)
                 : corners)
           : IrCorners.zero;
+  }
+
+  /// `value:` as a known bool, else [fallback] with a note.
+  bool _state(ObjectValue w, String arg, bool fallback) {
+    final v = eval.deref(w[arg]);
+    if (v is LiteralValue && v.value is bool) return v.value as bool;
+    _warn(
+      '${w.displayName}: `$arg` is runtime state; drawn '
+      '${fallback ? 'on' : 'off'}',
+      w,
+      severity: IrSeverity.info,
+    );
+    return fallback;
+  }
+
+  /// M3 switch (`_SwitchDefaultsM3`): 52×32 track, 24/16 px thumb.
+  IrFrame _switch(ObjectValue w) {
+    final on = _state(w, 'value', false);
+    final thumb = on ? 24.0 : 16.0;
+    return IrFrame(
+      name: w.displayName,
+      role: 'switch',
+      origin: [w.type],
+      direction: IrLayoutDirection.horizontal,
+      width: const IrSizing.fixed(52),
+      height: const IrSizing.fixed(32),
+      mainAlign: on ? IrMainAlign.end : IrMainAlign.start,
+      crossAlign: IrCrossAlign.center,
+      padding: IrInsets.symmetric(horizontal: (32 - thumb) / 2),
+      fill:
+          eval.color(w[on ? 'activeTrackColor' : 'inactiveTrackColor']) ??
+          theme.color(on ? 'primary' : 'surfaceContainerHighest'),
+      stroke: on ? null : IrStroke(color: theme.color('outline'), width: 2),
+      corners: const IrCorners.all(16),
+      children: [
+        IrFrame(
+          name: 'Thumb',
+          width: IrSizing.fixed(thumb),
+          height: IrSizing.fixed(thumb),
+          fill:
+              eval.color(w[on ? 'activeColor' : 'inactiveThumbColor']) ??
+              theme.color(on ? 'onPrimary' : 'outline'),
+          corners: IrCorners.all(thumb / 2),
+        ),
+      ],
+    );
+  }
+
+  /// M3 checkbox: an 18 px box in a 40 px target.
+  IrFrame _checkbox(ObjectValue w) {
+    final checked = _state(w, 'value', false);
+    return _selectionTarget(
+      w,
+      IrFrame(
+        name: 'Box',
+        width: const IrSizing.fixed(18),
+        height: const IrSizing.fixed(18),
+        fill: checked
+            ? eval.color(w['activeColor']) ?? theme.color('primary')
+            : null,
+        stroke: checked
+            ? null
+            : IrStroke(color: theme.color('onSurfaceVariant'), width: 2),
+        corners: const IrCorners.all(2),
+      ),
+    );
+  }
+
+  /// M3 radio: a 20 px ring (with a 10 px dot when selected) in a 40 px
+  /// target. Selected when `value == groupValue` is statically known.
+  IrFrame _radio(ObjectValue w) {
+    final value = eval.deref(w['value']);
+    final group = eval.deref(w['groupValue']);
+    final selected =
+        (value is LiteralValue &&
+            group is LiteralValue &&
+            value.value == group.value) ||
+        (value is RefValue &&
+            group is RefValue &&
+            value.dotted == group.dotted);
+    final color = selected
+        ? eval.color(w['activeColor']) ?? theme.color('primary')
+        : theme.color('onSurfaceVariant');
+    return _selectionTarget(
+      w,
+      IrFrame(
+        name: 'Ring',
+        width: const IrSizing.fixed(20),
+        height: const IrSizing.fixed(20),
+        mainAlign: IrMainAlign.center,
+        crossAlign: IrCrossAlign.center,
+        stroke: IrStroke(color: color, width: 2),
+        corners: const IrCorners.all(10),
+        children: [
+          if (selected)
+            IrFrame(
+              name: 'Dot',
+              width: const IrSizing.fixed(10),
+              height: const IrSizing.fixed(10),
+              fill: color,
+              corners: const IrCorners.all(5),
+            ),
+        ],
+      ),
+    );
+  }
+
+  IrFrame _selectionTarget(ObjectValue w, IrFrame mark) => IrFrame(
+    name: w.displayName,
+    role: w.type.toLowerCase(),
+    origin: [w.type],
+    width: const IrSizing.fixed(40),
+    height: const IrSizing.fixed(40),
+    mainAlign: IrMainAlign.center,
+    crossAlign: IrCrossAlign.center,
+    children: [mark],
+  );
+
+  /// Grids become rows of equal cells. Cell height comes from the delegate's
+  /// aspect ratio and an estimated width (the screen's, minus padding),
+  /// since Figma can't tie height to width.
+  IrFrame _grid(ObjectValue w, _Ctx c) {
+    final delegate = eval.deref(w['gridDelegate']);
+    ObjectValue? d = delegate is ObjectValue ? delegate : null;
+    if (w.constructor == 'count' || w.constructor == 'extent') d = w;
+    DartValue? arg(String name) => d?[name];
+    final padding = eval.insets(w['padding']) ?? IrInsets.zero;
+    final mainSpacing = eval.number(arg('mainAxisSpacing')) ?? 0;
+    final crossSpacing = eval.number(arg('crossAxisSpacing')) ?? 0;
+    final aspect = eval.number(arg('childAspectRatio')) ?? 1;
+    final available = screenWidth - padding.horizontal;
+    final maxExtent = eval.number(arg('maxCrossAxisExtent'));
+    final columns = max(
+      1,
+      eval.integer(arg('crossAxisCount')) ??
+          (maxExtent == null
+              ? 2
+              : ((available + crossSpacing) / (maxExtent + crossSpacing))
+                    .ceil()),
+    );
+    final cellWidth = (available - crossSpacing * (columns - 1)) / columns;
+    final cellHeight = (cellWidth / aspect * 100).roundToDouble() / 100;
+
+    // Items: a children list, or itemBuilder × itemCount.
+    List<DartValue> items;
+    if (w.constructor == 'builder') {
+      final builder = eval.deref(w['itemBuilder']);
+      final count = eval.integer(w['itemCount']);
+      if (count == null) {
+        _warn(
+          'GridView.builder: item count is dynamic, rendered '
+          '${listPreviewCount * columns} sample items',
+          w,
+          severity: IrSeverity.info,
+        );
+      }
+      final n = (count ?? listPreviewCount * columns).clamp(0, 60);
+      items = builder is FunctionValue && builder.returns != null
+          ? List.filled(n, builder.returns!)
+          : const [];
+    } else {
+      items = _items(w['children']) ?? const [];
+    }
+    _warn(
+      '${w.displayName}: cell height estimated from the screen width',
+      w,
+      severity: IrSeverity.info,
+    );
+
+    final shrinkWrap = _isLiteral(w['shrinkWrap'], true);
+    final grid = IrFrame(
+      name: w.displayName,
+      role: 'grid',
+      origin: ['GridView'],
+      width: _hugOrFill(c.box.boundedW),
+      height: shrinkWrap || !c.box.boundedH
+          ? const IrSizing.hug()
+          : const IrSizing.fill(),
+      padding: padding,
+      gap: mainSpacing,
+      clip: true,
+    );
+    final cellCtx = c.withBox(const _Box(forceW: true, forceH: true));
+    for (var start = 0; start < items.length; start += columns) {
+      final row = IrFrame(
+        name: 'Row ${start ~/ columns + 1}',
+        direction: IrLayoutDirection.horizontal,
+        width: const IrSizing.fill(),
+        gap: crossSpacing,
+      );
+      for (var i = start; i < start + columns; i++) {
+        row.children.add(
+          IrFrame(
+            name: 'Cell ${i + 1}',
+            width: const IrSizing.fill(),
+            height: IrSizing.fixed(cellHeight),
+            children: [if (i < items.length) _widget(items[i], cellCtx)],
+          ),
+        );
+      }
+      grid.children.add(row);
+    }
+    return grid;
   }
 
   /// A full ring: Figma frames can't draw the partial arc.
