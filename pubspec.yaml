@@ -3,6 +3,8 @@ description: >-
   Convert an existing Flutter UI into an editable Figma design: auto-layout
   frames, text styles, color variables with light/dark modes, and components.
 version: 0.1.0
+repository: https://github.com/CarlosMarioM/flutter2figma
+issue_tracker: https://github.com/CarlosMarioM/flutter2figma/issues
 
 topics:
   - figma
