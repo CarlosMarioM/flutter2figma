@@ -4281,6 +4281,379 @@
       },
       "x": 1530.0,
       "y": 0
+    },
+    {
+      "type": "FRAME",
+      "name": "StackLayoutScreen",
+      "layoutMode": "VERTICAL",
+      "primaryAxisAlignItems": "MIN",
+      "counterAxisAlignItems": "MIN",
+      "itemSpacing": 0.0,
+      "paddingTop": 0.0,
+      "paddingRight": 0.0,
+      "paddingBottom": 0.0,
+      "paddingLeft": 0.0,
+      "fills": [
+        {
+          "type": "SOLID",
+          "color": {
+            "r": 0.9568627450980393,
+            "g": 0.9803921568627451,
+            "b": 0.9803921568627451
+          },
+          "opacity": 1.0,
+          "variable": "ColorScheme/surface"
+        }
+      ],
+      "clipsContent": true,
+      "children": [
+        {
+          "type": "FRAME",
+          "name": "Stack",
+          "layoutMode": "NONE",
+          "fills": [],
+          "clipsContent": true,
+          "children": [
+            {
+              "type": "FRAME",
+              "name": "Column",
+              "layoutMode": "VERTICAL",
+              "primaryAxisAlignItems": "MIN",
+              "counterAxisAlignItems": "CENTER",
+              "itemSpacing": 0.0,
+              "paddingTop": 0.0,
+              "paddingRight": 0.0,
+              "paddingBottom": 0.0,
+              "paddingLeft": 0.0,
+              "fills": [],
+              "clipsContent": false,
+              "children": [
+                {
+                  "type": "FRAME",
+                  "name": "Container",
+                  "layoutMode": "VERTICAL",
+                  "primaryAxisAlignItems": "MIN",
+                  "counterAxisAlignItems": "MIN",
+                  "itemSpacing": 0.0,
+                  "paddingTop": 32.0,
+                  "paddingRight": 32.0,
+                  "paddingBottom": 32.0,
+                  "paddingLeft": 32.0,
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": {
+                        "r": 0.25882352941176473,
+                        "g": 0.24705882352941178,
+                        "b": 0.6039215686274509
+                      },
+                      "opacity": 1.0
+                    }
+                  ],
+                  "clipsContent": false,
+                  "children": [
+                    {
+                      "type": "FRAME",
+                      "name": "Row",
+                      "layoutMode": "HORIZONTAL",
+                      "primaryAxisAlignItems": "MIN",
+                      "counterAxisAlignItems": "CENTER",
+                      "itemSpacing": 0.0,
+                      "paddingTop": 0.0,
+                      "paddingRight": 0.0,
+                      "paddingBottom": 0.0,
+                      "paddingLeft": 0.0,
+                      "fills": [],
+                      "clipsContent": false,
+                      "children": [
+                        {
+                          "type": "FRAME",
+                          "name": "IconButton",
+                          "layoutMode": "VERTICAL",
+                          "primaryAxisAlignItems": "CENTER",
+                          "counterAxisAlignItems": "CENTER",
+                          "itemSpacing": 0.0,
+                          "paddingTop": 0.0,
+                          "paddingRight": 0.0,
+                          "paddingBottom": 0.0,
+                          "paddingLeft": 0.0,
+                          "fills": [],
+                          "cornerRadius": 20.0,
+                          "clipsContent": false,
+                          "children": [
+                            {
+                              "type": "FRAME",
+                              "name": "Icon/arrow_back_ios",
+                              "layoutMode": "VERTICAL",
+                              "primaryAxisAlignItems": "MIN",
+                              "counterAxisAlignItems": "MIN",
+                              "itemSpacing": 0.0,
+                              "paddingTop": 0.0,
+                              "paddingRight": 0.0,
+                              "paddingBottom": 0.0,
+                              "paddingLeft": 0.0,
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.24705882352941178,
+                                    "g": 0.28627450980392155,
+                                    "b": 0.28627450980392155
+                                  },
+                                  "opacity": 0.24,
+                                  "variable": "ColorScheme/onSurfaceVariant"
+                                }
+                              ],
+                              "cornerRadius": 5.333333333333333,
+                              "clipsContent": false,
+                              "children": [],
+                              "layoutSizingHorizontal": "FIXED",
+                              "layoutSizingVertical": "FIXED",
+                              "width": 32.0,
+                              "height": 32.0,
+                              "pluginData": {
+                                "origin": [
+                                  "Icon"
+                                ],
+                                "source": "lib/stack_layout_screen.dart:23",
+                                "role": "icon"
+                              }
+                            }
+                          ],
+                          "layoutSizingHorizontal": "FIXED",
+                          "layoutSizingVertical": "FIXED",
+                          "width": 40.0,
+                          "height": 40.0,
+                          "pluginData": {
+                            "origin": [
+                              "IconButton"
+                            ],
+                            "source": "lib/stack_layout_screen.dart:22",
+                            "role": "button"
+                          }
+                        }
+                      ],
+                      "layoutSizingHorizontal": "FILL",
+                      "layoutSizingVertical": "HUG",
+                      "pluginData": {
+                        "origin": [
+                          "Row"
+                        ],
+                        "source": "lib/stack_layout_screen.dart:20"
+                      }
+                    }
+                  ],
+                  "layoutSizingHorizontal": "FILL",
+                  "layoutSizingVertical": "HUG",
+                  "pluginData": {
+                    "origin": [
+                      "Container"
+                    ],
+                    "source": "lib/stack_layout_screen.dart:17"
+                  }
+                },
+                {
+                  "type": "FRAME",
+                  "name": "Stack",
+                  "layoutMode": "NONE",
+                  "fills": [],
+                  "clipsContent": true,
+                  "children": [
+                    {
+                      "type": "FRAME",
+                      "name": "DecoratedBox",
+                      "layoutMode": "VERTICAL",
+                      "primaryAxisAlignItems": "MIN",
+                      "counterAxisAlignItems": "MIN",
+                      "itemSpacing": 0.0,
+                      "paddingTop": 0.0,
+                      "paddingRight": 0.0,
+                      "paddingBottom": 0.0,
+                      "paddingLeft": 0.0,
+                      "fills": [
+                        {
+                          "type": "SOLID",
+                          "color": {
+                            "r": 1.0,
+                            "g": 1.0,
+                            "b": 1.0
+                          },
+                          "opacity": 1.0
+                        }
+                      ],
+                      "clipsContent": false,
+                      "children": [
+                        {
+                          "type": "FRAME",
+                          "name": "Column",
+                          "layoutMode": "VERTICAL",
+                          "primaryAxisAlignItems": "MIN",
+                          "counterAxisAlignItems": "CENTER",
+                          "itemSpacing": 0.0,
+                          "paddingTop": 0.0,
+                          "paddingRight": 0.0,
+                          "paddingBottom": 0.0,
+                          "paddingLeft": 0.0,
+                          "fills": [],
+                          "clipsContent": false,
+                          "children": [
+                            {
+                              "type": "TEXT",
+                              "name": "Body title",
+                              "characters": "Body title",
+                              "fontName": {
+                                "family": "Inter",
+                                "style": "Regular"
+                              },
+                              "fontSize": 14.0,
+                              "lineHeight": {
+                                "unit": "PIXELS",
+                                "value": 20.02
+                              },
+                              "letterSpacing": {
+                                "unit": "PIXELS",
+                                "value": 0.25
+                              },
+                              "textStyle": "TextTheme/bodyMedium",
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.08627450980392157,
+                                    "g": 0.11372549019607843,
+                                    "b": 0.11372549019607843
+                                  },
+                                  "opacity": 1.0,
+                                  "variable": "ColorScheme/onSurface"
+                                }
+                              ],
+                              "textAlignHorizontal": "LEFT",
+                              "textAutoResize": "WIDTH_AND_HEIGHT",
+                              "layoutSizingHorizontal": "HUG",
+                              "layoutSizingVertical": "HUG",
+                              "pluginData": {
+                                "origin": [
+                                  "Text"
+                                ],
+                                "source": "lib/stack_layout_screen.dart:37"
+                              }
+                            },
+                            {
+                              "type": "TEXT",
+                              "name": "Body content",
+                              "characters": "Body content",
+                              "fontName": {
+                                "family": "Inter",
+                                "style": "Regular"
+                              },
+                              "fontSize": 14.0,
+                              "lineHeight": {
+                                "unit": "PIXELS",
+                                "value": 20.02
+                              },
+                              "letterSpacing": {
+                                "unit": "PIXELS",
+                                "value": 0.25
+                              },
+                              "textStyle": "TextTheme/bodyMedium",
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.08627450980392157,
+                                    "g": 0.11372549019607843,
+                                    "b": 0.11372549019607843
+                                  },
+                                  "opacity": 1.0,
+                                  "variable": "ColorScheme/onSurface"
+                                }
+                              ],
+                              "textAlignHorizontal": "LEFT",
+                              "textAutoResize": "WIDTH_AND_HEIGHT",
+                              "layoutSizingHorizontal": "HUG",
+                              "layoutSizingVertical": "HUG",
+                              "pluginData": {
+                                "origin": [
+                                  "Text"
+                                ],
+                                "source": "lib/stack_layout_screen.dart:38"
+                              }
+                            }
+                          ],
+                          "layoutSizingHorizontal": "FILL",
+                          "layoutSizingVertical": "FILL",
+                          "pluginData": {
+                            "origin": [
+                              "Column"
+                            ],
+                            "source": "lib/stack_layout_screen.dart:35"
+                          }
+                        }
+                      ],
+                      "position": {
+                        "left": 0.0,
+                        "top": 0.0,
+                        "right": 0.0,
+                        "bottom": 0.0
+                      },
+                      "layoutSizingHorizontal": "FILL",
+                      "layoutSizingVertical": "FILL",
+                      "pluginData": {
+                        "origin": [
+                          "DecoratedBox"
+                        ],
+                        "source": "lib/stack_layout_screen.dart:33"
+                      }
+                    }
+                  ],
+                  "layoutSizingHorizontal": "FILL",
+                  "layoutSizingVertical": "FILL",
+                  "pluginData": {
+                    "origin": [
+                      "Expanded",
+                      "Stack"
+                    ],
+                    "source": "lib/stack_layout_screen.dart:30"
+                  }
+                }
+              ],
+              "position": {
+                "left": 0.0,
+                "top": 0.0
+              },
+              "layoutSizingHorizontal": "FILL",
+              "layoutSizingVertical": "FILL",
+              "pluginData": {
+                "origin": [
+                  "Column"
+                ],
+                "source": "lib/stack_layout_screen.dart:15"
+              }
+            }
+          ],
+          "layoutSizingHorizontal": "FILL",
+          "layoutSizingVertical": "FILL",
+          "pluginData": {
+            "origin": [
+              "Stack"
+            ],
+            "source": "lib/stack_layout_screen.dart:13"
+          }
+        }
+      ],
+      "layoutSizingHorizontal": "FIXED",
+      "layoutSizingVertical": "FIXED",
+      "width": 390.0,
+      "height": 844.0,
+      "pluginData": {
+        "origin": [
+          "Scaffold"
+        ],
+        "source": "lib/stack_layout_screen.dart:7",
+        "role": "screen"
+      },
+      "x": 2040.0,
+      "y": 0
     }
   ],
   "diagnostics": [
@@ -4323,6 +4696,11 @@
       "severity": "info",
       "message": "Progress indicators are drawn at a fixed value",
       "source": "lib/settings_screen.dart:58"
+    },
+    {
+      "severity": "info",
+      "message": "Icons are exported as placeholders",
+      "source": "lib/stack_layout_screen.dart:23"
     }
   ]
 }

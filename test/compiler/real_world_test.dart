@@ -213,6 +213,43 @@ void main() {
     });
   });
 
+  // https://github.com/CarlosMarioM/flutter2figma/issues/1
+  test('StackFit.expand children are pinned on all sides (#1)', () {
+    final doc = compileApp(
+      {},
+      w(
+        'Stack',
+        named: {
+          'fit': ref('StackFit.expand'),
+          'children': list([
+            w(
+              'DecoratedBox',
+              named: {
+                'decoration': v(
+                  'BoxDecoration',
+                  named: {
+                    'color': v('Color', positional: [lit(0xFFFFFFFF)]),
+                  },
+                ),
+                'child': column([text('Body title'), text('Body content')]),
+              },
+            ),
+          ]),
+        },
+      ),
+    );
+    final stack = bodyOf(doc) as IrFrame;
+    final box = stack.children.single;
+    expect(box.width, const IrSizing.fill());
+    expect(box.height, const IrSizing.fill());
+    expect(box.position!.toJson(), {
+      'left': 0,
+      'top': 0,
+      'right': 0,
+      'bottom': 0,
+    });
+  });
+
   group('from tic_tac_toe', () {
     test('selection controls follow their known value', () {
       final doc = compileApp(

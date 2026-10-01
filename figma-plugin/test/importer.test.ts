@@ -41,7 +41,7 @@ function boundTo(api: ReturnType<typeof createMockFigma>, paint: Paint): string 
 test('imports the basic example exported by the CLI', async () => {
   const { api, result } = await run(golden());
 
-  assert.equal(result.screens.length, 4);
+  assert.equal(result.screens.length, 5);
   assert.deepEqual(Object.keys(result.fontSubstitutions), []);
   assert.equal(api.pages.length, 1);
 
@@ -58,6 +58,11 @@ test('imports the basic example exported by the CLI', async () => {
   assert.equal(column.layoutSizingHorizontal, 'FILL');
   assert.equal(column.layoutSizingVertical, 'FILL');
   assert.deepEqual(JSON.parse(column.pluginData.get(PLUGIN_DATA_KEY)!).origin, ['Padding', 'Column', 'SizedBox']);
+
+  // #1: the body of a Stack-based template fills the screen below the header.
+  const stackScreen = result.screens.find((s) => s.name === 'StackLayoutScreen') as unknown as MockFrame;
+  const body = find(stackScreen, 'DecoratedBox')!;
+  assert.deepEqual([body.width, body.height], [390, 844 - 104]);
 
   const welcome = find(home, 'Welcome') as MockText;
   assert.deepEqual(welcome.fontName, { family: 'Inter', style: 'Bold' }); // from the app's ThemeData
@@ -229,6 +234,73 @@ test('rejects files that are not design.json', () => {
   assert.throws(() => parseDesign('{"format":"flutter2figma/ir"}'), /Not a Flutter2Figma design.json/);
   assert.throws(() => parseDesign('nope'), /Not valid JSON/);
   assert.throws(() => parseDesign('{"format":"flutter2figma/design","version":99}'), /newer than this plugin/);
+});
+
+// https://github.com/CarlosMarioM/flutter2figma/issues/1
+// Stack > Column(header, Expanded(Stack(fit: expand, DecoratedBox(...)))):
+// the body collapsed to 0.01 px because FILL children of NONE frames were
+// sized after their subtree, against Figma's default 100×100.
+test('FILL children of a Stack are sized before their subtree (#1)', async () => {
+  const FILL = 'FILL' as const;
+  // As exported by 0.1.0: FILL sizing, positioned from the top-left only.
+  const pinned = { left: 0, top: 0 };
+  const header = frame('Header', 'VERTICAL', {
+    layoutSizingHorizontal: FILL,
+    paddingTop: 32,
+    paddingBottom: 32,
+    paddingLeft: 32,
+    paddingRight: 32,
+    children: [frame('IconButton', 'VERTICAL', { width: 40, height: 40 })],
+  });
+  const body = frame('Body', 'VERTICAL', {
+    layoutSizingHorizontal: FILL,
+    layoutSizingVertical: FILL,
+    position: pinned,
+    fills: [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 }, opacity: 1 }],
+  });
+  const doc: DesignDocument = {
+    format: 'flutter2figma/design',
+    version: 2,
+    name: 'repro',
+    fonts: [],
+    diagnostics: [],
+    screens: [
+      frame('Screen', 'VERTICAL', {
+        children: [
+          frame('OuterStack', 'NONE', {
+            layoutSizingHorizontal: FILL,
+            layoutSizingVertical: FILL,
+            children: [
+              frame('Column', 'VERTICAL', {
+                layoutSizingHorizontal: FILL,
+                layoutSizingVertical: FILL,
+                position: { left: 0, top: 0 },
+                children: [
+                  header,
+                  frame('InnerStack', 'NONE', {
+                    layoutSizingHorizontal: FILL,
+                    layoutSizingVertical: FILL,
+                    children: [body],
+                  }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  };
+  const { result } = await run(doc);
+  const screen = result.screens[0] as unknown as MockFrame;
+  const column = find(screen, 'Column')!;
+  const innerStack = find(screen, 'InnerStack')!;
+  const bodyNode = find(screen, 'Body')!;
+
+  assert.deepEqual([column.width, column.height], [390, 844]);
+  assert.equal(find(screen, 'Header')!.height, 104); // 32 + 40 + 32
+  assert.deepEqual([innerStack.width, innerStack.height], [390, 740]);
+  assert.deepEqual([bodyNode.width, bodyNode.height], [390, 740], 'body fills the rest of the screen');
+  assert.deepEqual(bodyNode.constraints, { horizontal: 'STRETCH', vertical: 'STRETCH' });
 });
 
 function frame(name: string, layoutMode: FrameSpec['layoutMode'], overrides: Partial<FrameSpec> = {}): FrameSpec {

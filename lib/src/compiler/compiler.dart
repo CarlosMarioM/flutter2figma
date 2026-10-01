@@ -1489,12 +1489,16 @@ class FlutterCompiler {
             c.withBox(_Box(forceW: expand, forceH: expand)),
           );
           final (x, y) = alignment;
-          node.position = IrPosition(
-            left: x < 0 ? 0 : null,
-            right: x > 0 ? 0 : null,
-            top: y < 0 ? 0 : null,
-            bottom: y > 0 ? 0 : null,
-          );
+          // StackFit.expand: children get the Stack's size, i.e. are
+          // pinned on all four sides (so they keep stretching with it).
+          node.position = expand
+              ? const IrPosition(left: 0, top: 0, right: 0, bottom: 0)
+              : IrPosition(
+                  left: x < 0 ? 0 : null,
+                  right: x > 0 ? 0 : null,
+                  top: y < 0 ? 0 : null,
+                  bottom: y > 0 ? 0 : null,
+                );
           frame.children.add(node);
         }
       }

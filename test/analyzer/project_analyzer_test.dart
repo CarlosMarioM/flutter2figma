@@ -27,6 +27,7 @@ void main() {
         'ProfileScreen',
         'SettingsScreen',
         'ScoreboardScreen',
+        'StackLayoutScreen',
       ]),
     );
     expect(widget('SettingsRoute').scaffoldPath, ['SettingsScreen']);

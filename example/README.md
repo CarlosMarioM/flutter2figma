@@ -1,12 +1,14 @@
 # flutter2figma example
 
-A small Flutter app to export. It has four screens:
+A small Flutter app to export. It has five screens:
 - the reference screen: `lib/home_screen.dart`;
 - a profile screen with a reusable `StatCard` widget: `lib/profile_screen.dart`;
 - a settings screen with state-dependent UI: loading gate, loops, a builder
   and a text field (`lib/settings_screen.dart`);
 - a scoreboard driven by a cubit, exported in its initial state, with a
-  grid, a switch and a checkbox (`lib/scoreboard_screen.dart`).
+  grid, a switch and a checkbox (`lib/scoreboard_screen.dart`);
+- a Stack-based template, with a header over a body that fills the rest
+  (`lib/stack_layout_screen.dart`).
 
 The app's theme (`lib/theme.dart`) uses a seed color, a custom font, and
 component themes.
@@ -20,7 +22,7 @@ flutter2figma export
 
 This writes `build/flutter2figma/design.json`; import it with the Figma
 plugin. The export contains:
-- 4 screens;
+- 5 screens;
 - 46 color variables with Light and Dark modes;
 - 15 text styles;
 - a `Button` component set;

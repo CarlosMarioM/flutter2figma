@@ -82,6 +82,10 @@ function hasKnownWeight(style: string): boolean {
   return base in WEIGHT_BY_STYLE;
 }
 
+function isFrame(node: BaseNode): node is FrameNode {
+  return node.type === 'FRAME' || node.type === 'COMPONENT' || node.type === 'INSTANCE';
+}
+
 function isAutoLayout(node: BaseNode): boolean {
   return 'layoutMode' in node && (node as FrameNode).layoutMode !== 'NONE';
 }
@@ -102,6 +106,7 @@ export async function importDesign(api: PluginAPI, doc: DesignDocument): Promise
   const componentSpecs = doc.designSystem?.components ?? [];
   const library = componentSpecs.length > 0 ? createLibraryFrame(api, page) : null;
   const masters = new Map<string, ComponentNode>();
+  const builtNodes = new Map<NodeSpec, Built>();
   let nodeCount = 0;
   let instances = 0;
 
@@ -116,7 +121,9 @@ export async function importDesign(api: PluginAPI, doc: DesignDocument): Promise
       instance.name = spec.name;
       parent.appendChild(instance);
       layout(instance, spec, parent);
+      if (isFrame(parent)) placeChild(parent, spec, instance);
       applyTextOverrides(spec, instance);
+      builtNodes.set(spec, instance);
       instances++;
       nodeCount++;
       return instance;
@@ -143,6 +150,7 @@ export async function importDesign(api: PluginAPI, doc: DesignDocument): Promise
     component.layoutPositioning = 'AUTO';
     component.name = spec.instance!.props ? variantName(spec.instance!.props) : spec.instance!.component;
     masters.set(variant, component);
+    builtNodes.set(spec, instance);
     instances++;
     return instance;
   };
@@ -154,6 +162,10 @@ export async function importDesign(api: PluginAPI, doc: DesignDocument): Promise
     parent.appendChild(node);
     layout(node, spec, parent);
     if (spec.type === 'TEXT') (node as TextNode).textAutoResize = spec.textAutoResize;
+    // Size a child of a Stack before building its subtree, so its own FILL
+    // children are laid out against its real size, not Figma's default 100×100.
+    if (isFrame(parent)) placeChild(parent, spec, node);
+    builtNodes.set(spec, node);
 
     if (spec.type === 'FRAME') {
       const frame = node as FrameNode;
@@ -229,6 +241,7 @@ export async function importDesign(api: PluginAPI, doc: DesignDocument): Promise
   const screens: FrameNode[] = [];
   for (const screen of doc.screens) {
     const frame = (await build(screen, page)) as FrameNode;
+    settle(screen, builtNodes);
     if (ds) frame.setExplicitVariableModeForCollection(ds.collection, ds.activeModeId);
     screens.push(frame);
   }
@@ -355,29 +368,60 @@ function finishLibrary(
  * children exist, so auto-layout sizes are known.
  */
 function placeAbsoluteChildren(frame: FrameNode, children: ReadonlyArray<readonly [NodeSpec, Built]>): void {
+  for (const [spec, node] of children) placeChild(frame, spec, node);
+}
+
+/**
+ * Sizes, positions and constrains one child of [frame] when [frame] lays out
+ * absolutely (`NONE`, a Flutter Stack) or the child is absolute in auto
+ * layout. Runs as soon as the child is attached, so FILL children have their
+ * real size before their own subtree is laid out, and again once siblings and
+ * ancestors have their final sizes.
+ */
+function placeChild(frame: FrameNode, spec: NodeSpec, node: Built): void {
   const absoluteLayout = frame.layoutMode === 'NONE';
-  for (const [spec, node] of children) {
-    if (!absoluteLayout && spec.layoutPositioning !== 'ABSOLUTE') continue;
-    const p = spec.position ?? {};
+  if (!absoluteLayout && spec.layoutPositioning !== 'ABSOLUTE') return;
+  const p = spec.position ?? {};
+  const fillX = absoluteLayout && spec.layoutSizingHorizontal === 'FILL';
+  const fillY = absoluteLayout && spec.layoutSizingVertical === 'FILL';
+  const stretchX = fillX || (p.left !== undefined && p.right !== undefined);
+  const stretchY = fillY || (p.top !== undefined && p.bottom !== undefined);
 
-    if (absoluteLayout) {
-      // FILL inside a NONE-layout frame: stretch to the parent.
-      let width = node.width;
-      let height = node.height;
-      if (spec.layoutSizingHorizontal === 'FILL') width = frame.width;
-      if (spec.layoutSizingVertical === 'FILL') height = frame.height;
-      if (p.left !== undefined && p.right !== undefined) width = frame.width - p.left - p.right;
-      if (p.top !== undefined && p.bottom !== undefined) height = frame.height - p.top - p.bottom;
-      if (width !== node.width || height !== node.height) node.resize(Math.max(0.01, width), Math.max(0.01, height));
-    }
+  // FILL inside a NONE frame, or pinned on both sides: take the parent's
+  // size, minus any insets.
+  let width = node.width;
+  let height = node.height;
+  if (stretchX) width = frame.width - (p.left ?? 0) - (p.right ?? 0);
+  if (stretchY) height = frame.height - (p.top ?? 0) - (p.bottom ?? 0);
+  if (width !== node.width || height !== node.height) {
+    node.resize(Math.max(0.01, width), Math.max(0.01, height));
+  }
 
-    node.x = p.left ?? (p.right !== undefined ? frame.width - p.right - node.width : 0);
-    node.y = p.top ?? (p.bottom !== undefined ? frame.height - p.bottom - node.height : 0);
-    if ('constraints' in node) {
-      node.constraints = {
-        horizontal: p.left !== undefined && p.right !== undefined ? 'STRETCH' : p.right !== undefined && p.left === undefined ? 'MAX' : 'MIN',
-        vertical: p.top !== undefined && p.bottom !== undefined ? 'STRETCH' : p.bottom !== undefined && p.top === undefined ? 'MAX' : 'MIN',
-      };
-    }
+  node.x = p.left ?? (p.right !== undefined ? frame.width - p.right - node.width : 0);
+  node.y = p.top ?? (p.bottom !== undefined ? frame.height - p.bottom - node.height : 0);
+  if ('constraints' in node) {
+    // STRETCH keeps the child sized with its parent when an ancestor resizes
+    // later; otherwise pin it to the side it is positioned from.
+    node.constraints = {
+      horizontal: stretchX ? 'STRETCH' : p.right !== undefined && p.left === undefined ? 'MAX' : 'MIN',
+      vertical: stretchY ? 'STRETCH' : p.bottom !== undefined && p.top === undefined ? 'MAX' : 'MIN',
+    };
+  }
+}
+
+/**
+ * Re-places every absolute child top-down once a screen is complete, so
+ * each one is sized against its parent's final size. Instance subtrees are
+ * skipped: they follow their master.
+ */
+function settle(spec: NodeSpec, built: Map<NodeSpec, Built>): void {
+  if (spec.type !== 'FRAME') return;
+  const frame = built.get(spec);
+  if (!frame || frame.type !== 'FRAME') return;
+  for (const child of spec.children) {
+    const node = built.get(child);
+    if (!node) continue;
+    placeChild(frame, child, node);
+    settle(child, built);
   }
 }

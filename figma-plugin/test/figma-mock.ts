@@ -36,11 +36,16 @@ export class MockNode {
   name = '';
   x = 0;
   y = 0;
-  width = 100;
-  height = 100;
+  // Stored size. `width`/`height` are computed like Figma's layout engine:
+  // FILL takes the leftover space of an auto-layout parent, HUG sums the
+  // children, STRETCH constraints follow a NONE parent's size.
+  private _w = 100;
+  private _h = 100;
+  private _constraints: Constraints = { horizontal: 'MIN', vertical: 'MIN' };
+  // Margins to the parent's edges, recorded when constraints are set.
+  private _anchors: { left: number; right: number; top: number; bottom: number } | null = null;
   parent: MockContainer | null = null;
   private _layoutPositioning: 'AUTO' | 'ABSOLUTE' = 'AUTO';
-  constraints: Constraints = { horizontal: 'MIN', vertical: 'MIN' };
   private _fills: Paint[] = [];
   pluginData = new Map<string, string>();
   explicitModes = new Map<string, string>();
@@ -56,10 +61,49 @@ export class MockNode {
     this._fills = v;
   }
 
+  get width(): number {
+    return this.size('Horizontal');
+  }
+  get height(): number {
+    return this.size('Vertical');
+  }
+
+  get constraints(): Constraints {
+    return this._constraints;
+  }
+  set constraints(c: Constraints) {
+    this._constraints = c;
+    const p = this.parent;
+    this._anchors = p
+      ? { left: this.x, right: p.width - this.x - this.width, top: this.y, bottom: p.height - this.y - this.height }
+      : null;
+  }
+
+  sizingOf(axis: 'Horizontal' | 'Vertical'): Sizing {
+    return this.sizing[axis];
+  }
+
+  private size(axis: 'Horizontal' | 'Vertical'): number {
+    const horizontal = axis === 'Horizontal';
+    const parent = this.parent;
+    if (parent instanceof MockFrame && this.layoutPositioning === 'AUTO') {
+      if (parent.isAutoLayout && this.sizing[axis] === 'FILL') return parent.fillSizeFor(axis);
+      const stretch = this._constraints[horizontal ? 'horizontal' : 'vertical'] === 'STRETCH';
+      if (!parent.isAutoLayout && stretch && this._anchors) {
+        const margins = horizontal ? this._anchors.left + this._anchors.right : this._anchors.top + this._anchors.bottom;
+        return Math.max(0.01, (horizontal ? parent.width : parent.height) - margins);
+      }
+    }
+    if (this.sizing[axis] === 'HUG' && this instanceof MockFrame && this.isAutoLayout) return this.hugSize(axis);
+    return horizontal ? this._w : this._h;
+  }
+
   resize(width: number, height: number) {
     if (!(width >= 0.01 && height >= 0.01)) throw new Error(`resize(${width}, ${height}): must be >= 0.01`);
-    this.width = width;
-    this.height = height;
+    this._w = width;
+    this._h = height;
+    // Like Figma: resizing turns HUG/FILL into FIXED.
+    this.sizing = { Horizontal: 'FIXED', Vertical: 'FIXED' };
   }
 
   setPluginData(k: string, value: string) {
@@ -234,6 +278,38 @@ export class MockFrame extends MockContainer {
   set minHeight(v: number | null) {
     if (!this.isAutoLayout) throw new Error(`${this.name}: minHeight needs auto layout`);
     this._minHeight = v;
+  }
+
+  private isMainAxis(axis: 'Horizontal' | 'Vertical'): boolean {
+    return (this.layoutMode === 'HORIZONTAL') === (axis === 'Horizontal');
+  }
+
+  private padding(axis: 'Horizontal' | 'Vertical'): number {
+    return axis === 'Horizontal' ? this.paddingLeft + this.paddingRight : this.paddingTop + this.paddingBottom;
+  }
+
+  /** Size of each FILL child on [axis]: the leftover space, shared. */
+  fillSizeFor(axis: 'Horizontal' | 'Vertical'): number {
+    const inner = (axis === 'Horizontal' ? this.width : this.height) - this.padding(axis);
+    if (!this.isMainAxis(axis)) return Math.max(0.01, inner);
+    const flow = this.children.filter((c) => c.layoutPositioning === 'AUTO');
+    const fills = flow.filter((c) => c.sizingOf(axis) === 'FILL').length;
+    const others = flow
+      .filter((c) => c.sizingOf(axis) !== 'FILL')
+      .reduce((sum, c) => sum + (axis === 'Horizontal' ? c.width : c.height), 0);
+    const gaps = this.itemSpacing * Math.max(0, flow.length - 1);
+    return Math.max(0.01, (inner - others - gaps) / Math.max(1, fills));
+  }
+
+  /** HUG: children (summed on the main axis, max on the cross axis) + padding. */
+  hugSize(axis: 'Horizontal' | 'Vertical'): number {
+    const flow = this.children.filter((c) => c.layoutPositioning === 'AUTO');
+    const sizes = flow.map((c) => (axis === 'Horizontal' ? c.width : c.height));
+    const content = this.isMainAxis(axis)
+      ? sizes.reduce((a, b) => a + b, 0) + this.itemSpacing * Math.max(0, flow.length - 1)
+      : Math.max(0, ...sizes);
+    const min = axis === 'Horizontal' ? this.minWidth : this.minHeight;
+    return Math.max(0.01, content + this.padding(axis), min ?? 0);
   }
 
   async setEffectStyleIdAsync(id: string) {
