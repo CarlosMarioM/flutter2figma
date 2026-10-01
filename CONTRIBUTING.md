@@ -55,7 +55,20 @@ tool/validate_app.sh path/to/app lib/file_with_material_app.dart
    To release a tag that already exists, run the workflow from the Actions
    tab with that tag. `cd figma-plugin && npm run package` builds the same
    zip locally.
-5. Publish the Dart package with `dart pub publish`.
+5. The same tag runs *Publish to pub.dev* (`publish.yml`). It reruns CI,
+   then publishes through pub.dev's automated publishing, with no tokens
+   involved.
+   - pub.dev only accepts the tag `v<pubspec version>`.
+   - The very first version is published by hand (`dart pub publish`),
+     because automated publishing can only be enabled for a package that
+     already exists. After that, enable it once in the package's pub.dev
+     Admin tab: repository `CarlosMarioM/flutter2figma`, tag pattern
+     `v{{version}}`.
+
+CI (`ci.yml`) runs on every push to `main` and on pull requests:
+- format, analyze, `dart test`, the Flutter theme ground truth, and a publish
+  dry run, all with Flutter pinned to the fixtures' version;
+- the plugin's typecheck, tests and build.
 
 Versioning follows [semver](https://semver.org). While the version is 0.x, a
 minor bump may break the `design.json` / `ir.json` formats or the Dart API;

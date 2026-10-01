@@ -1,0 +1,69 @@
+# Checks every push and pull request. Also called by publish.yml before a
+# release, so nothing reaches pub.dev without passing these.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  dart:
+    name: Dart package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Flutter (with its Dart) pinned to the version the theme fixtures were
+      # generated with, so a Flutter upgrade shows up as one deliberate change.
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.41.9
+          channel: stable
+          cache: true
+
+      - name: Resolve
+        run: |
+          dart pub get
+          (cd example && flutter pub get)
+
+      - name: Format
+        run: dart format --output=none --set-exit-if-changed lib bin test
+
+      - name: Analyze
+        run: dart analyze --fatal-infos
+
+      - name: Test
+        run: dart test
+
+      - name: Theme ground truth (Flutter resolves the example's theme)
+        working-directory: example
+        run: flutter test
+
+      - name: Publish dry run
+        run: dart pub publish --dry-run
+
+  plugin:
+    name: Figma plugin
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: figma-plugin
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: figma-plugin/package-lock.json
+
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Test (imports the golden design.json)
+        run: npm test
+      - run: npm run build

@@ -1,0 +1,25 @@
+# Publishes the Dart package to pub.dev when a version tag is pushed, using
+# pub.dev's automated publishing (GitHub OIDC, no stored secrets).
+#
+# One-time setup on pub.dev (after the first, manual `dart pub publish`):
+#   pub.dev/packages/flutter2figma/admin → Automated publishing →
+#   Enable publishing from GitHub Actions
+#     Repository:  CarlosMarioM/flutter2figma
+#     Tag pattern: v{{version}}
+#
+# pub.dev only accepts the upload when the tag equals v<pubspec version>.
+name: Publish to pub.dev
+
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+*']
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: checks
+    permissions:
+      id-token: write # OIDC token pub.dev verifies
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
