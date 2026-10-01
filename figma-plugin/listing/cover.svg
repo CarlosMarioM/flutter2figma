@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <rect width="1920" height="1080" fill="#0B1226"/>
+  <!-- Bullet markers (text is drawn on top separately) -->
+  <rect x="120" y="566" width="28" height="28" rx="7" fill="#FF7262"/>
+  <rect x="120" y="646" width="28" height="28" rx="7" fill="#A259FF"/>
+  <rect x="120" y="726" width="28" height="28" rx="7" fill="#0ACF83"/>
+  <!-- Command chip -->
+  <rect x="112" y="862" width="800" height="72" rx="16" fill="#16244A"/>
+
+  <!-- Code panel -->
+  <rect x="1010" y="300" width="380" height="460" rx="28" fill="#16244A"/>
+  <circle cx="1046" cy="334" r="8" fill="#FF5F57"/>
+  <circle cx="1072" cy="334" r="8" fill="#FEBC2E"/>
+  <circle cx="1098" cy="334" r="8" fill="#28C840"/>
+  <rect x="1046" y="380" width="200" height="18" rx="9" fill="#4FC3F7"/>
+  <rect x="1078" y="420" width="240" height="18" rx="9" fill="#A259FF" opacity="0.9"/>
+  <rect x="1110" y="460" width="170" height="18" rx="9" fill="#FFD166"/>
+  <rect x="1110" y="500" width="210" height="18" rx="9" fill="#4FC3F7" opacity="0.8"/>
+  <rect x="1142" y="540" width="150" height="18" rx="9" fill="#0ACF83"/>
+  <rect x="1142" y="580" width="190" height="18" rx="9" fill="#FF7262" opacity="0.9"/>
+  <rect x="1110" y="620" width="120" height="18" rx="9" fill="#4FC3F7" opacity="0.6"/>
+  <rect x="1078" y="660" width="90" height="18" rx="9" fill="#A259FF" opacity="0.6"/>
+  <rect x="1046" y="700" width="60" height="18" rx="9" fill="#4FC3F7" opacity="0.5"/>
+
+  <!-- Arrow -->
+  <polygon points="1420,500 1444,476 1500,532 1444,588 1420,564 1452,532" fill="#FFFFFF"/>
+
+  <!-- Phone frame with an exported screen -->
+  <rect x="1530" y="200" width="300" height="660" rx="44" fill="#FFFFFF"/>
+  <rect x="1544" y="214" width="272" height="632" rx="32" fill="#F4FAFA"/>
+  <rect x="1544" y="214" width="272" height="96" rx="32" fill="#E3E9E9"/>
+  <rect x="1544" y="270" width="272" height="40" fill="#E3E9E9"/>
+  <rect x="1620" y="256" width="120" height="16" rx="8" fill="#161D1D"/>
+  <rect x="1568" y="338" width="170" height="22" rx="11" fill="#161D1D"/>
+  <rect x="1568" y="374" width="120" height="14" rx="7" fill="#6F7979"/>
+  <rect x="1568" y="414" width="108" height="120" rx="18" fill="#E3E9E9"/>
+  <rect x="1684" y="414" width="108" height="120" rx="18" fill="#E3E9E9"/>
+  <rect x="1586" y="440" width="54" height="18" rx="9" fill="#00696E"/>
+  <rect x="1702" y="440" width="54" height="18" rx="9" fill="#00696E"/>
+  <rect x="1586" y="474" width="70" height="12" rx="6" fill="#6F7979"/>
+  <rect x="1702" y="474" width="70" height="12" rx="6" fill="#6F7979"/>
+  <rect x="1568" y="560" width="224" height="40" rx="12" fill="#FFFFFF"/>
+  <rect x="1568" y="612" width="224" height="40" rx="12" fill="#FFFFFF"/>
+  <rect x="1604" y="764" width="188" height="52" rx="26" fill="#00696E"/>
+
+  <!-- Color variables: Light / Dark -->
+  <rect x="1010" y="800" width="380" height="60" rx="18" fill="#16244A"/>
+  <circle cx="1052" cy="830" r="14" fill="#00696E"/>
+  <circle cx="1090" cy="830" r="14" fill="#E3E9E9"/>
+  <circle cx="1128" cy="830" r="14" fill="#F4FAFA"/>
+  <circle cx="1214" cy="830" r="14" fill="#80D4D9"/>
+  <circle cx="1252" cy="830" r="14" fill="#252B2B"/>
+  <circle cx="1290" cy="830" r="14" fill="#0E1415"/>
+</svg>

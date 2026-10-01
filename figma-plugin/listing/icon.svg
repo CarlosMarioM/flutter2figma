@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#111C3A"/>
+  <!-- Code (left): three lines of source -->
+  <rect x="64" y="168" width="120" height="30" rx="15" fill="#4FC3F7"/>
+  <rect x="64" y="241" width="88" height="30" rx="15" fill="#3A9BC8"/>
+  <rect x="64" y="314" width="108" height="30" rx="15" fill="#2B7398"/>
+  <!-- Arrow (filled chevron) -->
+  <polygon points="206,212 228,190 294,256 228,322 206,300 250,256" fill="#FFFFFF"/>
+  <!-- Design (right): a frame with auto-layout blocks -->
+  <rect x="314" y="136" width="140" height="240" rx="28" fill="#FFFFFF"/>
+  <rect x="328" y="150" width="112" height="212" rx="18" fill="#111C3A"/>
+  <rect x="343" y="168" width="82" height="34" rx="10" fill="#FF7262"/>
+  <rect x="343" y="216" width="82" height="62" rx="12" fill="#A259FF"/>
+  <rect x="343" y="292" width="82" height="50" rx="25" fill="#0ACF83"/>
+</svg>
