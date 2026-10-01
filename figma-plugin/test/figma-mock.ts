@@ -421,6 +421,45 @@ export class MockText extends MockNode {
   }
 }
 
+// Figma's vector path grammar: absolute M/L/Q/C/Z, space-separated numbers.
+const PATH_DATA = /^(?:[MLQCZ](?: -?\d+(?:\.\d+)?)*)(?: [MLQCZ](?: -?\d+(?:\.\d+)?)*)*$/;
+
+export class MockVector extends MockNode {
+  private _paths: VectorPath[] = [];
+
+  constructor() {
+    super('VECTOR');
+  }
+
+  get vectorPaths(): VectorPath[] {
+    return this._paths;
+  }
+  /** Like Figma, the node takes the size of its geometry. */
+  set vectorPaths(paths: VectorPath[]) {
+    let maxX = 0.01;
+    let maxY = 0.01;
+    for (const path of paths) {
+      if (!PATH_DATA.test(path.data)) throw new Error(`Invalid vector path data: ${path.data.slice(0, 40)}`);
+      if (path.windingRule !== 'NONZERO' && path.windingRule !== 'EVENODD') throw new Error('Bad winding rule');
+      // On-curve points (each command's last pair) bound the geometry;
+      // control points may stick out.
+      for (const command of path.data.match(/[MLQC][^MLQCZ]*/g) ?? []) {
+        const numbers = command.slice(1).trim().split(' ').map(Number);
+        const [x, y] = numbers.slice(-2);
+        if (x < -0.01 || y < -0.01) throw new Error('Exported paths start at 0,0');
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+      }
+    }
+    this._paths = paths;
+    this.resize(maxX, maxY);
+  }
+
+  override clone(): MockNode {
+    return this.cloneAs(new MockVector());
+  }
+}
+
 export class MockPage extends MockContainer {
   selection: MockNode[] = [];
   constructor() {
@@ -540,6 +579,7 @@ export function createMockFigma(options: { maxModes?: number } = {}) {
     },
     createFrame: () => new MockFrame('FRAME', registry),
     createText: () => new MockText(registry),
+    createVector: () => new MockVector(),
     createComponentFromNode(node: MockNode) {
       if (!(node instanceof MockFrame) || node.type !== 'FRAME') throw new Error('createComponentFromNode needs a frame');
       const parent = node.parent;

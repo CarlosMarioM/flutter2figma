@@ -145,12 +145,50 @@ void main() {
       ),
     );
     final json = jsonDecode(jsonEncode(doc.toJson())) as Map<String, Object?>;
-    expect(json['version'], 2);
+    expect(json['version'], irVersion);
     final again = IrDocument.fromJson(json);
     expect(jsonEncode(again.toJson()), jsonEncode(doc.toJson()));
     final text = (again.screens.single.root.children.single as IrText).style;
     expect(text.color.token, 'ColorScheme/onSurface');
     expect(text.color.a, closeTo(0.38, 0.01));
+  });
+
+  test('v3: vectors round-trip', () {
+    final doc = IrDocument(
+      project: 'demo',
+      screens: [
+        IrScreen(
+          name: 'S',
+          width: 24,
+          height: 24,
+          root: IrFrame(
+            name: 'Icon/add',
+            direction: IrLayoutDirection.stack,
+            width: const IrSizing.fixed(24),
+            height: const IrSizing.fixed(24),
+            children: [
+              IrVector(
+                name: 'add',
+                path: 'M 0 6 L 14 6 L 14 8 L 0 8 Z',
+                fill: IrColor.fromHex(
+                  '#49454F',
+                  token: 'ColorScheme/onSurfaceVariant',
+                ),
+                width: const IrSizing.fixed(14),
+                height: const IrSizing.fixed(14),
+                position: const IrPosition(left: 5, top: 5),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+    final json = jsonDecode(jsonEncode(doc.toJson())) as Map<String, Object?>;
+    final again = IrDocument.fromJson(json);
+    expect(jsonEncode(again.toJson()), jsonEncode(doc.toJson()));
+    final vector = again.screens.single.root.children.single as IrVector;
+    expect(vector.fill.token, 'ColorScheme/onSurfaceVariant');
+    expect(vector.position!.left, 5);
   });
 
   test('instance keys and variant names', () {

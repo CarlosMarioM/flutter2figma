@@ -250,7 +250,7 @@ void main() {
         ),
       ),
     );
-    expect(design['version'], 2);
+    expect(design['version'], designVersion);
 
     final node = childrenOf(screenOf(design)).single;
     final fill = (node['fills'] as List).single as Map;

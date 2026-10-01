@@ -5,8 +5,8 @@
 | Boundary | Format | Defined in |
 | --- | --- | --- |
 | analyzer → compiler | `DartValue` tree (in-memory; `analyze --json` prints it) | `lib/src/analyzer/values.dart` |
-| compiler → renderer | IR, `flutter2figma/ir` v2 (`ir.json`) | `lib/src/ir/model.dart` |
-| renderer → plugin | `flutter2figma/design` v2 (`design.json`, spec in [design-json.md](design-json.md)) | `lib/src/figma/renderer.dart`, `figma-plugin/src/design.ts` |
+| compiler → renderer | IR, `flutter2figma/ir` v3 (`ir.json`) | `lib/src/ir/model.dart` |
+| renderer → plugin | `flutter2figma/design` v3 (`design.json`, spec in [design-json.md](design-json.md)) | `lib/src/figma/renderer.dart`, `figma-plugin/src/design.ts` |
 
 The IR is the stable centre. Adding an HTML/React backend means writing another
 renderer over `IrDocument`. Runtime inspection (`--runtime`) would be another
@@ -159,6 +159,29 @@ the component's padding must stay its own.
      component set.
 5. **Mode.** Screens and the library get `setExplicitVariableModeForCollection`
    for the exported mode.
+
+## Compiler: icons and tap targets
+
+**Icons.** `Icons.add` resolves to the SDK constant
+`IconData(0xe047, fontFamily: 'MaterialIcons')`. `projectIconFonts()`
+(`icon_font.dart`) finds the fonts behind those families through the
+project's `package_config.json`: `MaterialIcons-Regular.otf` in the Flutter
+SDK's `bin/cache/artifacts/material_fonts/`, and `CupertinoIcons.ttf` in
+`cupertino_icons`. `IconFont` reads the `cmap`, the outlines (CFF Type 2
+charstrings or TrueType `glyf`) and `hhea` metrics, and places the glyph as
+Flutter's `Icon` does: `fontSize: size, height: 1`, centered in a `size`
+square. The icon becomes a `NONE` frame holding an `IrVector`, whose path
+starts at its exact bounds (curve extremes, not control points) because
+Figma sizes vectors the same way. An icon chosen by an unknown condition uses
+the `true` branch; an icon from another font is a placeholder.
+
+**Tap targets.** Under `MaterialTapTargetSize.padded` (the default), Flutter
+lays buttons, icon buttons and selection controls out in at least 48×48
+while drawing them smaller. Buttons and icon buttons are wrapped in a
+`Tap target` frame (`role: tap-target`, min 48×48, centered); switches,
+checkboxes and radios get the padded size directly. `shrinkWrap` in the
+theme (`materialTapTargetSize`) or a button style (`tapTargetSize`) turns it
+off. `example/test/layout_ground_truth_test.dart` measures the real sizes.
 
 ## Compiler: sizing model
 

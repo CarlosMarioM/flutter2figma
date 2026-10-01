@@ -141,7 +141,9 @@ diagnostic, and anything it can't draw becomes a magenta `⚠` placeholder.
     branch with more content is used.
   - Lists built from runtime data show 3 sample items; loops over literal
     lists show the real items.
-- **Icons and images** are placeholders, and gradients use their first color.
+- **Images** are placeholders, and gradients use their first color. Icons
+  from Material icons (`Icons.*`) and `CupertinoIcons` are exact vectors read
+  from the fonts the app ships; icons from other fonts are placeholders.
   `GridView` cell heights are estimated from the screen width.
 - **Not supported yet:**
   - `ListTile`, chips, navigation and tab bars, dialogs and sheets;

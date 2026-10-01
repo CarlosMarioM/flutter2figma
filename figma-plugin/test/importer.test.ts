@@ -5,7 +5,7 @@ import { test } from 'node:test';
 
 import { DesignDocument, FrameSpec, parseDesign } from '../src/design';
 import { importDesign, PLUGIN_DATA_KEY } from '../src/importer';
-import { createMockFigma, MockFrame, MockInstance, MockNode, MockText } from './figma-mock';
+import { createMockFigma, MockFrame, MockInstance, MockNode, MockText, MockVector } from './figma-mock';
 
 // The same golden the Dart CLI test checks, so both sides share one contract.
 const GOLDEN = path.resolve(process.cwd(), '../test/goldens/basic.design.json');
@@ -263,6 +263,22 @@ test('imported sizes match what Flutter lays out', async () => {
   }
 });
 
+test('icons import as vectors of their glyph, colored by the theme', async () => {
+  const { api, result } = await run(golden());
+  const screen = result.screens.find((s) => s.name === 'StackLayoutScreen') as unknown as MockFrame;
+  const icon = find(screen, 'Icon/arrow_back_ios') as MockFrame;
+  assert.deepEqual([icon.width, icon.height, icon.layoutMode], [32, 32, 'NONE']);
+  const glyph = icon.children[0];
+  assert.ok(glyph instanceof MockVector);
+  assert.equal(icon.children.length, 1);
+  // Material's arrow_back_ios: x 0–11.67, y 2.1–21.9 on a 24 grid.
+  assert.equal(glyph.x, 0);
+  assert.ok(Math.abs(glyph.y - (2.1 * 32) / 24) < 0.05, `y ${glyph.y}`);
+  assert.ok(Math.abs(glyph.width - (11.67 * 32) / 24) < 0.05, `width ${glyph.width}`);
+  assert.ok(Math.abs(glyph.height - (19.8 * 32) / 24) < 0.05, `height ${glyph.height}`);
+  assert.equal(boundTo(api, glyph.fills[0]), 'ColorScheme/onSurfaceVariant');
+});
+
 test('FILL children of a Stack are sized before their subtree (#1)', async () => {
   const FILL = 'FILL' as const;
   // As exported by 0.1.0: FILL sizing, positioned from the top-left only.
@@ -283,7 +299,7 @@ test('FILL children of a Stack are sized before their subtree (#1)', async () =>
   });
   const doc: DesignDocument = {
     format: 'flutter2figma/design',
-    version: 2,
+    version: 3,
     name: 'repro',
     fonts: [],
     diagnostics: [],
@@ -332,7 +348,7 @@ test('FILL children of a Stack are sized before their subtree (#1)', async () =>
 test('a stretched child of a Stack keeps hugging on the other axis', async () => {
   const doc: DesignDocument = {
     format: 'flutter2figma/design',
-    version: 2,
+    version: 3,
     name: 'hug',
     fonts: [],
     diagnostics: [],

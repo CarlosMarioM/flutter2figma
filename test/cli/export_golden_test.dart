@@ -15,7 +15,9 @@ void main() {
     'example exports the expected design.json',
     () async {
       final analysis = await FlutterProjectAnalyzer('example').analyze();
-      final ir = FlutterCompiler().compile(analysis);
+      final ir = FlutterCompiler(
+        iconFonts: projectIconFonts(analysis.root),
+      ).compile(analysis);
       final design = FigmaRenderer().render(ir);
       final actual = '${const JsonEncoder.withIndent('  ').convert(design)}\n';
 

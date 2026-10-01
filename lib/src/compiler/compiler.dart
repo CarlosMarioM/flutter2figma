@@ -5,6 +5,7 @@ import 'package:flutter2figma/ir.dart';
 
 import 'component_extractor.dart';
 import 'evaluator.dart';
+import 'icon_font.dart';
 import 'material_theme.dart';
 import 'simplify.dart';
 import 'text_style.dart';
@@ -166,6 +167,7 @@ class FlutterCompiler {
     this.listPreviewCount = 3,
     this.designSystem = true,
     this.minComponentUses = 2,
+    this.iconFonts = const {},
   }) : eval = ValueEvaluator(
          theme,
          screenWidth: screenWidth,
@@ -178,6 +180,10 @@ class FlutterCompiler {
 
   /// A project widget becomes a component once used this many times.
   final int minComponentUses;
+
+  /// Icon fonts by family (e.g. `MaterialIcons`). Icons in these fonts are
+  /// exported as their glyph outlines; others as placeholders.
+  final Map<String, IconFont> iconFonts;
 
   /// Read the app's `MaterialApp` theme in [compile]. When false, the
   /// constructor's `theme` is used as is.
@@ -263,6 +269,8 @@ class FlutterCompiler {
     switch (n) {
       case IrText():
         add(n.style.color);
+      case IrVector():
+        add(n.fill);
       case IrFrame():
         add(n.fill);
         add(n.stroke?.color);
@@ -1557,18 +1565,58 @@ class FlutterCompiler {
   IrFrame _icon(ObjectValue w, _Ctx c) {
     final size = eval.number(w['size']) ?? 24;
     final iconRef = w.arg(0);
-    final name = iconRef is RefValue ? iconRef.last : 'icon';
+    var named = iconRef;
+    while (named is ConditionalValue) {
+      named = named.then;
+    }
+    final name = named is RefValue ? named.last : 'icon';
     final color = eval.color(w['color']) ?? c.iconColor;
-    _warn('Icons are exported as placeholders', w, severity: IrSeverity.info);
-    return IrFrame(
+    final frame = IrFrame(
       name: 'Icon/$name',
       role: 'icon',
       origin: ['Icon'],
+      direction: IrLayoutDirection.stack,
       width: IrSizing.fixed(size),
       height: IrSizing.fixed(size),
-      fill: color.withAlpha(color.a * 0.24),
-      corners: IrCorners.all(size / 6),
     );
+
+    // An icon chosen by an unknown condition shows its `true` branch, like
+    // other values.
+    var data = eval.deref(iconRef);
+    for (var i = 0; i < 8 && data is ConditionalValue; i++) {
+      data = eval.deref(data.then);
+    }
+    final glyph = switch (data) {
+      ObjectValue(type: 'IconData') =>
+        iconFonts[eval.string(data['fontFamily'])]?.glyph(
+          eval.integer(data.arg(0)) ?? -1,
+          size,
+        ),
+      _ => null,
+    };
+    if (glyph == null) {
+      _warn(
+        'Icons outside known icon fonts are exported as placeholders',
+        w,
+        severity: IrSeverity.info,
+      );
+      return frame
+        ..fill = color.withAlpha(color.a * 0.24)
+        ..corners = IrCorners.all(size / 6);
+    }
+    if (!glyph.isEmpty) {
+      frame.children.add(
+        IrVector(
+          name: name,
+          path: glyph.path,
+          fill: color,
+          width: IrSizing.fixed(max(0.01, glyph.width)),
+          height: IrSizing.fixed(max(0.01, glyph.height)),
+          position: IrPosition(left: glyph.x, top: glyph.y),
+        ),
+      );
+    }
+    return frame;
   }
 
   IrFrame _image(ObjectValue w, _Ctx c) {

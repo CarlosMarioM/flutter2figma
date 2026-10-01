@@ -201,6 +201,7 @@ class ExportCommand extends _ProjectCommand {
       },
       screenWidth: double.parse(size.group(1)!),
       screenHeight: double.parse(size.group(2)!),
+      iconFonts: projectIconFonts(analysis.root),
     ).compile(analysis);
 
     stdout.writeln('Generating Figma document...');

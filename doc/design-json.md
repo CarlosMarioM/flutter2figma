@@ -1,4 +1,4 @@
-# `design.json` format (version 2)
+# `design.json` format (version 3)
 
 `design.json` is what `flutter2figma export` writes and the Figma plugin
 imports. It describes Figma nodes in Figma Plugin API vocabulary:
@@ -30,7 +30,7 @@ style references, or instances. The plugin still imports it.
 ```jsonc
 {
   "format": "flutter2figma/design",
-  "version": 2,
+  "version": 3,
   "generator": { "name": "flutter2figma", "version": "0.1.0" },
   "name": "my_app",                     // the Flutter package name
   "fonts": [{ "family": "Inter", "style": "Bold" }, …],  // every font used, to load first
@@ -52,7 +52,7 @@ All nodes share these fields:
 
 | Field | Type | Notes |
 | --- | --- | --- |
-| `type` | `"FRAME"` \| `"TEXT"` | |
+| `type` | `"FRAME"` \| `"TEXT"` \| `"VECTOR"` | |
 | `name` | string | Layer name. |
 | `layoutSizingHorizontal`, `layoutSizingVertical` | `"FIXED"` \| `"HUG"` \| `"FILL"` | Never `HUG` on a `layoutMode: "NONE"` frame. Never `FILL` inside a parent that hugs on that axis. The renderer downgrades both and adds a diagnostic. |
 | `width`, `height` | number | Present only for `FIXED` axes. |
@@ -93,7 +93,16 @@ All nodes share these fields:
 | `textAutoResize` | `"WIDTH_AND_HEIGHT"` (hug) or `"HEIGHT"` (fixed or fill width). |
 | `maxLines` | Optional; truncate with an ellipsis. |
 
-## Paints
+### `VECTOR`
+
+A filled outline. Icons export as a `NONE` frame of the icon's size holding
+one vector of the glyph, positioned with `position.left/top`.
+
+| Field | Notes |
+| --- | --- |
+| `vectorPaths` | `[{windingRule: "NONZERO", data}]`, Figma's `VectorPath`. `data` uses absolute `M`, `L`, `Q`, `C` and `Z` with space-separated numbers, and its outline starts at 0,0 (control points may lie outside). |
+| `width`, `height` | The outline's bounds. Don't resize the node: Figma sizes a vector by its geometry, and resizing would scale the outline. |
+
 
 ```jsonc
 { "type": "SOLID", "color": { "r": 0.0, "g": 0.41, "b": 0.43 }, "opacity": 1,

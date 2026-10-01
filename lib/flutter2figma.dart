@@ -65,6 +65,7 @@ Future<ExportResult> exportProject(
     minComponentUses: minComponentUses,
     screenWidth: screenWidth,
     screenHeight: screenHeight,
+    iconFonts: projectIconFonts(analysis.root),
   ).compile(analysis);
   return ExportResult(
     analysis: analysis,

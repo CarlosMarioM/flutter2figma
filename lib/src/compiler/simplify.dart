@@ -95,8 +95,8 @@ bool _startAligned(IrNode node, {required bool horizontalAxis}) {
   if (node is IrText) {
     return horizontalAxis ? node.align == IrTextAlign.left : true;
   }
-  final frame = node as IrFrame;
-  if (frame.children.isEmpty) return true;
+  if (node is! IrFrame || node.children.isEmpty) return true;
+  final frame = node;
   final isMainAxis =
       (frame.direction == IrLayoutDirection.horizontal) == horizontalAxis;
   return isMainAxis

@@ -3,7 +3,7 @@ import 'package:flutter2figma/ir.dart';
 import '../version.dart';
 
 const designFormat = 'flutter2figma/design';
-const designVersion = 2;
+const designVersion = 3;
 
 /// Renders IR into `design.json`: a tree of nodes whose properties use Figma
 /// Plugin API names and enums, so the plugin can apply them almost verbatim.
@@ -53,6 +53,7 @@ class FigmaRenderer {
     final json = switch (node) {
       IrFrame() => _frame(node),
       IrText() => _text(node),
+      IrVector() => _vector(node),
     };
 
     final absolute = node.position != null;
@@ -215,6 +216,15 @@ class FigmaRenderer {
       if (t.maxLines != null) 'maxLines': t.maxLines,
     };
   }
+
+  Map<String, Object?> _vector(IrVector v) => {
+    'type': 'VECTOR',
+    'name': v.name,
+    'vectorPaths': [
+      {'windingRule': 'NONZERO', 'data': v.path},
+    ],
+    'fills': [_paint(v.fill)],
+  };
 
   /// Font, size, line height and letter spacing, in Figma's shape.
   Map<String, Object?> _typography(IrTextStyle s) {

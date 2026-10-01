@@ -1,4 +1,4 @@
-import type { ComponentSpec, DesignDocument, FrameSpec, NodeSpec, TextSpec } from './design';
+import type { ComponentSpec, DesignDocument, FrameSpec, NodeSpec, TextSpec, VectorSpec } from './design';
 import { DesignSystem, setupDesignSystem, toPaints } from './design-system';
 
 export const PLUGIN_DATA_KEY = 'flutter2figma';
@@ -18,8 +18,8 @@ export interface ImportResult {
   notes: string[];
 }
 
-/** Built nodes: plain frames and text, or component instances. */
-type Built = FrameNode | TextNode | InstanceNode;
+/** Built nodes: plain frames, text and vectors, or component instances. */
+type Built = FrameNode | TextNode | VectorNode | InstanceNode;
 
 const FALLBACK_FAMILY = 'Inter';
 
@@ -155,9 +155,10 @@ export async function importDesign(api: PluginAPI, doc: DesignDocument): Promise
     return instance;
   };
 
-  const buildNode = async (spec: NodeSpec, parent: BaseNode & ChildrenMixin): Promise<FrameNode | TextNode> => {
+  const buildNode = async (spec: NodeSpec, parent: BaseNode & ChildrenMixin): Promise<FrameNode | TextNode | VectorNode> => {
     nodeCount++;
-    const node = spec.type === 'TEXT' ? await buildText(spec) : await buildFrame(spec);
+    const node =
+      spec.type === 'TEXT' ? await buildText(spec) : spec.type === 'VECTOR' ? buildVector(spec) : await buildFrame(spec);
     node.name = spec.name;
     parent.appendChild(node);
     layout(node, spec, parent);
@@ -214,6 +215,13 @@ export async function importDesign(api: PluginAPI, doc: DesignDocument): Promise
       frame.effects = spec.effects;
     }
     return frame;
+  };
+
+  const buildVector = (spec: VectorSpec): VectorNode => {
+    const vector = api.createVector();
+    vector.vectorPaths = spec.vectorPaths;
+    vector.fills = toPaints(api, spec.fills, ds);
+    return vector;
   };
 
   const buildText = async (spec: TextSpec): Promise<TextNode> => {
@@ -282,7 +290,8 @@ function layout(node: Built, spec: NodeSpec, parent: BaseNode): void {
   if (spec.layoutPositioning === 'ABSOLUTE' && parentIsAutoLayout) {
     node.layoutPositioning = 'ABSOLUTE';
   }
-  if (spec.width !== undefined || spec.height !== undefined) {
+  // A vector is as big as its geometry; resizing would scale the outline.
+  if ((spec.width !== undefined || spec.height !== undefined) && spec.type !== 'VECTOR') {
     node.resize(Math.max(0.01, spec.width ?? node.width), Math.max(0.01, spec.height ?? node.height));
   }
   if (spec.x !== undefined) node.x = spec.x;
@@ -311,7 +320,7 @@ function applyTextOverrides(spec: NodeSpec, node: SceneNode): void {
     if (node.type === 'TEXT' && node.characters !== spec.characters) node.characters = spec.characters;
     return;
   }
-  if (!('children' in node)) return;
+  if (spec.type !== 'FRAME' || !('children' in node)) return;
   spec.children.forEach((child, i) => {
     const target = node.children[i];
     if (target) applyTextOverrides(child, target);
@@ -400,7 +409,7 @@ function placeChild(frame: FrameNode, spec: NodeSpec, node: Built): void {
     // at its empty size.
     if (node.type === 'TEXT') {
       node.textAutoResize = stretchX && stretchY ? 'NONE' : stretchX ? 'HEIGHT' : spec.type === 'TEXT' ? spec.textAutoResize : 'NONE';
-    } else if (node.layoutMode !== 'NONE') {
+    } else if ('layoutMode' in node && node.layoutMode !== 'NONE') {
       if (!stretchX && spec.layoutSizingHorizontal === 'HUG') node.layoutSizingHorizontal = 'HUG';
       if (!stretchY && spec.layoutSizingVertical === 'HUG') node.layoutSizingVertical = 'HUG';
     }

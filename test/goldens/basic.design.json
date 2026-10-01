@@ -1,6 +1,6 @@
 {
   "format": "flutter2figma/design",
-  "version": 2,
+  "version": 3,
   "generator": {
     "name": "flutter2figma",
     "version": "0.1.0"
@@ -4529,29 +4529,42 @@
                                 {
                                   "type": "FRAME",
                                   "name": "Icon/arrow_back_ios",
-                                  "layoutMode": "VERTICAL",
-                                  "primaryAxisAlignItems": "MIN",
-                                  "counterAxisAlignItems": "MIN",
-                                  "itemSpacing": 0.0,
-                                  "paddingTop": 0.0,
-                                  "paddingRight": 0.0,
-                                  "paddingBottom": 0.0,
-                                  "paddingLeft": 0.0,
-                                  "fills": [
+                                  "layoutMode": "NONE",
+                                  "fills": [],
+                                  "clipsContent": false,
+                                  "children": [
                                     {
-                                      "type": "SOLID",
-                                      "color": {
-                                        "r": 0.24705882352941178,
-                                        "g": 0.28627450980392155,
-                                        "b": 0.28627450980392155
+                                      "type": "VECTOR",
+                                      "name": "arrow_back_ios",
+                                      "vectorPaths": [
+                                        {
+                                          "windingRule": "NONZERO",
+                                          "data": "M 15.563 2.375 L 13.188 0 L 0 13.188 L 13.188 26.375 L 15.563 24 L 4.75 13.188 L 15.563 2.375 Z"
+                                        }
+                                      ],
+                                      "fills": [
+                                        {
+                                          "type": "SOLID",
+                                          "color": {
+                                            "r": 0.24705882352941178,
+                                            "g": 0.28627450980392155,
+                                            "b": 0.28627450980392155
+                                          },
+                                          "opacity": 1.0,
+                                          "variable": "ColorScheme/onSurfaceVariant"
+                                        }
+                                      ],
+                                      "position": {
+                                        "left": 0.0,
+                                        "top": 2.8125
                                       },
-                                      "opacity": 0.24,
-                                      "variable": "ColorScheme/onSurfaceVariant"
+                                      "layoutSizingHorizontal": "FIXED",
+                                      "layoutSizingVertical": "FIXED",
+                                      "width": 15.5625,
+                                      "height": 26.375,
+                                      "pluginData": {}
                                     }
                                   ],
-                                  "cornerRadius": 5.333333333333333,
-                                  "clipsContent": false,
-                                  "children": [],
                                   "layoutSizingHorizontal": "FIXED",
                                   "layoutSizingVertical": "FIXED",
                                   "width": 32.0,
@@ -4851,11 +4864,6 @@
       "severity": "info",
       "message": "Progress indicators are drawn at a fixed value",
       "source": "lib/settings_screen.dart:58"
-    },
-    {
-      "severity": "info",
-      "message": "Icons are exported as placeholders",
-      "source": "lib/stack_layout_screen.dart:25"
     }
   ]
 }

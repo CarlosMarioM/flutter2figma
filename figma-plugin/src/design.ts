@@ -3,7 +3,7 @@
 // mirror the Figma Plugin API.
 
 export const DESIGN_FORMAT = 'flutter2figma/design';
-export const DESIGN_VERSION = 2;
+export const DESIGN_VERSION = 3;
 
 export interface DesignDocument {
   format: typeof DESIGN_FORMAT;
@@ -125,7 +125,13 @@ export interface TextSpec extends BaseSpec {
   maxLines?: number;
 }
 
-export type NodeSpec = FrameSpec | TextSpec;
+/** A filled outline, such as an icon glyph; sized by its geometry. */
+export interface VectorSpec extends BaseSpec {
+  type: 'VECTOR';
+  vectorPaths: VectorPath[];
+}
+
+export type NodeSpec = FrameSpec | TextSpec | VectorSpec;
 
 export function parseDesign(text: string): DesignDocument {
   let doc: DesignDocument;

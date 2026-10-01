@@ -7,7 +7,7 @@ library;
 import '../version.dart';
 
 const irFormat = 'flutter2figma/ir';
-const irVersion = 2;
+const irVersion = 3;
 
 class IrDocument {
   IrDocument({
@@ -484,6 +484,7 @@ sealed class IrNode {
     final node = switch (json['type']) {
       'frame' => IrFrame._fromJson(json),
       'text' => IrText._fromJson(json),
+      'vector' => IrVector._fromJson(json),
       _ => throw FormatException('Unknown IR node type: ${json['type']}'),
     };
     node
@@ -718,6 +719,39 @@ class IrText extends IrNode {
     height: IrSizing.fromJson(json['height']),
     align: IrTextAlign.values.byName(json['align'] as String? ?? 'left'),
     maxLines: (json['maxLines'] as num?)?.toInt(),
+  );
+}
+
+/// A filled outline, such as an icon glyph.
+class IrVector extends IrNode {
+  IrVector({
+    required super.name,
+    required this.path,
+    required this.fill,
+    required super.width,
+    required super.height,
+    super.origin,
+    super.source,
+    super.position,
+  });
+
+  /// SVG path data (`M`, `L`, `Q`, `C`, `Z`) in this node's coordinates,
+  /// filled with the nonzero rule.
+  String path;
+  IrColor fill;
+
+  @override
+  String get type => 'vector';
+
+  @override
+  Map<String, Object?> _props() => {'path': path, 'fill': fill.toJson()};
+
+  static IrVector _fromJson(Map<String, Object?> json) => IrVector(
+    name: json['name'] as String,
+    path: json['path'] as String,
+    fill: IrColor.fromJson(json['fill']),
+    width: IrSizing.fromJson(json['width']),
+    height: IrSizing.fromJson(json['height']),
   );
 }
 

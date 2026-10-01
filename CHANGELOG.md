@@ -6,6 +6,12 @@
   the layout around them matches the app. Buttons sit in a `Tap target`
   frame; `materialTapTargetSize` in the theme and `tapTargetSize` in a
   button's style are honored.
+- Icons are exact vectors: `Icons.*` glyphs are read from the Material icons
+  font of the project's Flutter SDK, and `CupertinoIcons` from the
+  `cupertino_icons` package, placed where Flutter draws them and colored by
+  the theme's icon color variable. Icons from other fonts stay placeholders.
+- `design.json` version 3 (adds `VECTOR` nodes) and IR version 3. Update the
+  Figma plugin to import them.
 
 ### Tests
 - The example app measures real Flutter layout sizes
