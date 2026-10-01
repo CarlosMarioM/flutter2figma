@@ -395,6 +395,15 @@ function placeChild(frame: FrameNode, spec: NodeSpec, node: Built): void {
   if (stretchY) height = frame.height - (p.top ?? 0) - (p.bottom ?? 0);
   if (width !== node.width || height !== node.height) {
     node.resize(Math.max(0.01, width), Math.max(0.01, height));
+    // resize() fixes both axes. Give back hugging on any axis that isn't
+    // stretched, or a child placed before its own children exist would stay
+    // at its empty size.
+    if (node.type === 'TEXT') {
+      node.textAutoResize = stretchX && stretchY ? 'NONE' : stretchX ? 'HEIGHT' : spec.type === 'TEXT' ? spec.textAutoResize : 'NONE';
+    } else if (node.layoutMode !== 'NONE') {
+      if (!stretchX && spec.layoutSizingHorizontal === 'HUG') node.layoutSizingHorizontal = 'HUG';
+      if (!stretchY && spec.layoutSizingVertical === 'HUG') node.layoutSizingVertical = 'HUG';
+    }
   }
 
   node.x = p.left ?? (p.right !== undefined ? frame.width - p.right - node.width : 0);

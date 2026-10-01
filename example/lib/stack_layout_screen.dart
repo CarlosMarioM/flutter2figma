@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 class StackLayoutScreen extends StatelessWidget {
   const StackLayoutScreen({super.key});
 
+  static const _gap = 16.0;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -16,7 +18,7 @@ class StackLayoutScreen extends StatelessWidget {
             children: [
               Container(
                 color: const Color(0xFF423F9A),
-                padding: const EdgeInsets.all(32),
+                padding: const EdgeInsets.all(_gap * 2), // arithmetic folds to 32
                 child: Row(
                   children: [
                     IconButton(

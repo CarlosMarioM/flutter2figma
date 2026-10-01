@@ -303,6 +303,39 @@ test('FILL children of a Stack are sized before their subtree (#1)', async () =>
   assert.deepEqual(bodyNode.constraints, { horizontal: 'STRETCH', vertical: 'STRETCH' });
 });
 
+// Positioned(left: 20, right: 30, child: Column(...)): stretched across,
+// hugging its content down. Placing it before its children exist must not
+// freeze the empty height.
+test('a stretched child of a Stack keeps hugging on the other axis', async () => {
+  const doc: DesignDocument = {
+    format: 'flutter2figma/design',
+    version: 2,
+    name: 'hug',
+    fonts: [],
+    diagnostics: [],
+    screens: [
+      frame('Screen', 'VERTICAL', {
+        children: [
+          frame('Header', 'NONE', {
+            layoutSizingHorizontal: 'FILL',
+            height: 200,
+            children: [
+              frame('Titles', 'VERTICAL', {
+                position: { left: 20, right: 30 },
+                children: [frame('Title', 'VERTICAL', { width: 200, height: 77 })],
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  };
+  const { result } = await run(doc);
+  const titles = find(result.screens[0] as unknown as MockNode, 'Titles')!;
+  assert.deepEqual([titles.width, titles.height], [390 - 20 - 30, 77]);
+  assert.equal(titles.layoutSizingVertical, 'HUG');
+});
+
 function frame(name: string, layoutMode: FrameSpec['layoutMode'], overrides: Partial<FrameSpec> = {}): FrameSpec {
   return {
     type: 'FRAME',
@@ -327,5 +360,22 @@ for (const file of (process.env.F2F_DESIGNS ?? '').split(':').filter(Boolean)) {
     const doc = parseDesign(readFileSync(file, 'utf8'));
     const { result } = await run(doc);
     assert.equal(result.screens.length, doc.screens.length);
+
+    // Content must not collapse (the symptom of #1): no frame with children
+    // may end up ~0 px on either axis.
+    // Boxes the code itself sizes to 0 (e.g. an invisible audio renderer in
+    // a `SizedBox(width: 0, height: 0)`) are intentional; skip them.
+    const collapsed: string[] = [];
+    const zero = (node: MockNode) => node.width <= 0.011 || node.height <= 0.011;
+    const walk = (node: MockNode, path: string) => {
+      const here = `${path}/${node.name}`;
+      const children = (node as MockFrame).children ?? [];
+      const intended = node.layoutSizingHorizontal === 'FIXED' && node.layoutSizingVertical === 'FIXED';
+      if (zero(node) && intended) return;
+      if (children.length > 0 && zero(node)) collapsed.push(`${here} (${node.width}×${node.height})`);
+      children.forEach((c) => walk(c, here));
+    };
+    for (const screen of result.screens) walk(screen as unknown as MockNode, '');
+    assert.deepEqual(collapsed, [], 'collapsed frames with content');
   });
 }

@@ -163,7 +163,11 @@ class FlutterCompiler {
     this.listPreviewCount = 3,
     this.designSystem = true,
     this.minComponentUses = 2,
-  }) : eval = ValueEvaluator(theme);
+  }) : eval = ValueEvaluator(
+         theme,
+         screenWidth: screenWidth,
+         screenHeight: screenHeight,
+       );
 
   /// Emit an [IrDesignSystem]: color variables (per theme mode), text and
   /// effect styles, and components.

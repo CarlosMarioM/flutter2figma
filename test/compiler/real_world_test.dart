@@ -250,6 +250,57 @@ void main() {
     });
   });
 
+  group('arithmetic and MediaQuery', () {
+    final mediaQuery = CallValue(
+      ref('MediaQuery'),
+      'of',
+      positional: [const UnknownValue('context')],
+    );
+    DartValue size(String side) =>
+        AccessValue(AccessValue(mediaQuery, 'size'), side);
+
+    test('MediaQuery size is the exported screen size', () {
+      final doc = compileApp(
+        {},
+        w(
+          'SizedBox',
+          named: {
+            'height': BinaryValue('*', size('height'), lit(0.5)),
+            'width': BinaryValue('-', size('width'), lit(40)),
+            'child': w(
+              'ColoredBox',
+              named: {
+                'color': v('Color', positional: [lit(0xFF000000)]),
+              },
+            ),
+          },
+        ),
+      );
+      final box = bodyOf(doc);
+      expect(box.height, const IrSizing.fixed(422)); // 844 * 0.5
+      expect(box.width, const IrSizing.fixed(350)); // 390 - 40
+    });
+
+    test('safe-area paddings are 0 in a design frame', () {
+      final bottom = AccessValue(AccessValue(mediaQuery, 'padding'), 'bottom');
+      final doc = compileApp(
+        {},
+        w(
+          'Padding',
+          named: {
+            'padding': v(
+              'EdgeInsets',
+              ctor: 'only',
+              named: {'bottom': BinaryValue('+', bottom, lit(15))},
+            ),
+            'child': text('x'),
+          },
+        ),
+      );
+      expect((bodyOf(doc) as IrFrame).padding.bottom, 15);
+    });
+  });
+
   group('from tic_tac_toe', () {
     test('selection controls follow their known value', () {
       final doc = compileApp(

@@ -516,6 +516,17 @@ class _Expander {
       // Enum values and other constants without a known initializer.
       RefValue() => v,
       CallValue(:final result?) => _known(result, depth + 1),
+      BinaryValue(:final operator, :final left, :final right) => switch ((
+        _known(left, depth + 1),
+        _known(right, depth + 1),
+      )) {
+        (LiteralValue(value: final a), LiteralValue(value: final b)) =>
+          switch (applyArithmetic(operator, a, b)) {
+            final Object v => LiteralValue(v),
+            null => null,
+          },
+        _ => null,
+      },
       AccessValue(:final target, :final name) => switch (_known(
         target,
         depth + 1,
@@ -613,12 +624,26 @@ class _Expander {
         return LiteralValue(buffer.toString(), source: loc);
       case PrefixExpression(operator: Token(lexeme: '-')):
         final inner = value(e.operand, s);
-        if (inner is LiteralValue && inner.value is num) {
-          return LiteralValue(-(inner.value as num), source: loc);
+        final known = _known(inner);
+        if (known is LiteralValue && known.value is num) {
+          return LiteralValue(-(known.value as num), source: loc);
         }
-        return UnknownValue(e.toSource(), source: loc);
+        return BinaryValue('-', const LiteralValue(0), inner, source: loc);
       case ParenthesizedExpression():
         return value(e.expression, s);
+      case BinaryExpression(
+        operator: Token(lexeme: '+' || '-' || '*' || '/' || '~/'),
+      ):
+        // `size / 2 - 1`: folded when both sides are known.
+        final left = value(e.leftOperand, s);
+        final right = value(e.rightOperand, s);
+        final l = _known(left), r = _known(right);
+        final folded = l is LiteralValue && r is LiteralValue
+            ? applyArithmetic(e.operator.lexeme, l.value, r.value)
+            : null;
+        return folded != null
+            ? LiteralValue(folded, source: loc)
+            : BinaryValue(e.operator.lexeme, left, right, source: loc);
       case AsExpression():
         return value(e.expression, s);
       case PostfixExpression(operator: Token(lexeme: '!')):

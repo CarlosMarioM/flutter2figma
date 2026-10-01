@@ -14,7 +14,11 @@ typedef ColorSchemeValue = ({
 /// Interprets analyzed Dart values (`EdgeInsets.all(16)`, `Colors.blue`, ...)
 /// as design values.
 class ValueEvaluator {
-  ValueEvaluator(this.theme);
+  ValueEvaluator(this.theme, {this.screenWidth = 390, this.screenHeight = 844});
+
+  /// What `MediaQuery.of(context).size` resolves to: the exported screen.
+  final double screenWidth;
+  final double screenHeight;
 
   /// The theme `Theme.of(context)` resolves to at the current point in the
   /// tree. The compiler swaps it inside `Theme` widgets.
@@ -80,8 +84,67 @@ class ValueEvaluator {
       if (v.dotted == 'double.infinity') return double.infinity;
       if (v.dotted == 'double.maxFinite') return double.infinity;
     }
+    final media = _mediaQuery(v);
+    if (media != null) return media;
     final d = deref(v);
     if (d is LiteralValue) return d.asDouble;
+    if (d is BinaryValue) {
+      final a = number(d.left), b = number(d.right);
+      if (a == null || b == null) return null;
+      return (applyArithmetic(d.operator, a, b) as num?)?.toDouble();
+    }
+    return null;
+  }
+
+  /// `MediaQuery.of(context).size.height`, `MediaQuery.sizeOf(context).width`
+  /// → the exported screen size; `.padding.top`, `viewInsets`, ... → 0 (the
+  /// design frame has no system bars or keyboard).
+  double? _mediaQuery(DartValue? v) {
+    final d = deref(v);
+    if (d is! AccessValue) return null;
+    bool isMediaQuery(DartValue? t, Set<String> methods) =>
+        t is CallValue &&
+        methods.contains(t.method) &&
+        t.target is RefValue &&
+        (t.target as RefValue).last == 'MediaQuery';
+    final target = deref(d.target);
+    // .size.width / .size.height, or sizeOf(context).width / .height
+    final sized = switch (target) {
+      AccessValue(name: 'size', :final target) => isMediaQuery(
+        deref(target),
+        const {'of', 'maybeOf'},
+      ),
+      _ => isMediaQuery(target, const {'sizeOf', 'maybeSizeOf'}),
+    };
+    if (sized) {
+      return switch (d.name) {
+        'width' => screenWidth,
+        'height' => screenHeight,
+        'shortestSide' =>
+          screenWidth < screenHeight ? screenWidth : screenHeight,
+        'longestSide' =>
+          screenWidth > screenHeight ? screenWidth : screenHeight,
+        _ => null,
+      };
+    }
+    const insets = {
+      'padding',
+      'viewPadding',
+      'viewInsets',
+      'systemGestureInsets',
+    };
+    final inset = switch (target) {
+      AccessValue(:final name, :final target) when insets.contains(name) =>
+        isMediaQuery(deref(target), const {'of', 'maybeOf'}),
+      _ => isMediaQuery(target, const {
+        'paddingOf',
+        'viewPaddingOf',
+        'viewInsetsOf',
+      }),
+    };
+    if (inset && const {'top', 'bottom', 'left', 'right'}.contains(d.name)) {
+      return 0;
+    }
     return null;
   }
 

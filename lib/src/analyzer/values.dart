@@ -218,6 +218,40 @@ class ConditionalValue extends DartValue {
   };
 }
 
+/// Arithmetic that can't be folded statically, e.g.
+/// `MediaQuery.of(context).size.height * .4`: the compiler evaluates it once
+/// it knows more (like the screen size).
+class BinaryValue extends DartValue {
+  const BinaryValue(this.operator, this.left, this.right, {super.source});
+
+  /// `+`, `-`, `*`, `/` or `~/`.
+  final String operator;
+  final DartValue left;
+  final DartValue right;
+
+  @override
+  Map<String, Object?> toJson() => {
+    'op': operator,
+    'left': left.toJson(),
+    'right': right.toJson(),
+  };
+}
+
+/// Applies an arithmetic [operator] to two known values: numbers, or
+/// strings for `+`. Null if they can't be combined.
+Object? applyArithmetic(String operator, Object? a, Object? b) {
+  if (operator == '+' && a is String && b is String) return a + b;
+  if (a is! num || b is! num) return null;
+  return switch (operator) {
+    '+' => a + b,
+    '-' => a - b,
+    '*' => a * b,
+    '/' => b == 0 ? null : a / b,
+    '~/' => b == 0 ? null : a ~/ b,
+    _ => null,
+  };
+}
+
 /// A collection `for`: [body] is produced once per element of a collection
 /// only known at runtime.
 class LoopValue extends DartValue {
