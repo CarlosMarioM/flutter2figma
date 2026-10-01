@@ -20,6 +20,7 @@ const _handledThemeArgs = {
   'filledButtonTheme',
   'outlinedButtonTheme',
   'textButtonTheme',
+  'materialTapTargetSize',
 };
 
 const _buttonThemes = {
@@ -241,6 +242,8 @@ class ThemeExtractor {
         appBar: _appBarTheme(args['appBarTheme']),
         card: _cardTheme(args['cardTheme']),
         buttonStyles: _buttonStyles(args),
+        tapTargetPadded:
+            eval.enumName(args['materialTapTargetSize']) != 'shrinkWrap',
       );
     } finally {
       eval.theme = outer;
@@ -280,6 +283,11 @@ class ThemeExtractor {
           ? base.card
           : _cardTheme(args['cardTheme']),
       buttonStyles: {...base.buttonStyles, ...buttons},
+      tapTargetPadded: switch (eval.enumName(args['materialTapTargetSize'])) {
+        'shrinkWrap' => false,
+        'padded' => true,
+        _ => base.tapTargetPadded,
+      },
     );
   }
 

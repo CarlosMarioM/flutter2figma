@@ -152,6 +152,9 @@ const _passThrough = {
   'Expanded',
 };
 
+/// Flutter's minimum tap target (`kMinInteractiveDimension`).
+const _kMinInteractiveDimension = 48.0;
+
 /// Compiles analyzed Flutter widget trees into [IrDocument]s.
 class FlutterCompiler {
   FlutterCompiler({
@@ -1598,7 +1601,7 @@ class FlutterCompiler {
     );
   }
 
-  IrFrame _button(ObjectValue w, _Ctx c) {
+  IrNode _button(ObjectValue w, _Ctx c) {
     final enabled = w['onPressed'] != null && !_isLiteral(w['onPressed'], null);
     final kind = w.type;
     final tonal = w.constructor?.startsWith('tonal') ?? false;
@@ -1650,8 +1653,11 @@ class FlutterCompiler {
       widgetStyle = style.named;
     }
     TextStyleSpec? labelStyle;
+    String? tapTargetSize;
     // Theme style first, then the widget's own: per property, the widget wins.
     for (final overrides in [theme.buttonStyles[kind], widgetStyle].nonNulls) {
+      tapTargetSize =
+          eval.enumName(overrides['tapTargetSize']) ?? tapTargetSize;
       final (bgKey, fgKey) = enabled
           ? ('backgroundColor', 'foregroundColor')
           : ('disabledBackgroundColor', 'disabledForegroundColor');
@@ -1708,7 +1714,7 @@ class FlutterCompiler {
         children.isNotEmpty &&
         children.last is IrText &&
         children.length == (hasIcon ? 2 : 1);
-    return IrFrame(
+    final button = IrFrame(
       name: '${w.displayName}${enabled ? '' : ' (disabled)'}',
       instance: labelled
           ? IrInstanceRef('Button', {
@@ -1743,9 +1749,53 @@ class FlutterCompiler {
       shadows: theme.shadows(elevation),
       children: children,
     );
+    return _tapTarget(button, padded: _padded(tapTargetSize));
   }
 
-  IrFrame _iconButton(ObjectValue w, _Ctx c) {
+  /// Whether a control gets Flutter's 48 px tap target
+  /// (`MaterialTapTargetSize.padded`, the default on phones): the widget's
+  /// own setting, else the theme's.
+  bool _padded(String? widgetSetting) => switch (widgetSetting) {
+    'padded' => true,
+    'shrinkWrap' => false,
+    _ => theme.tapTargetPadded,
+  };
+
+  /// Wraps [control] in the transparent space Flutter lays it out in:
+  /// buttons are drawn 40 px tall but take at least 48 px, so everything
+  /// after them sits where it does in the app.
+  IrNode _tapTarget(
+    IrFrame control, {
+    required bool padded,
+    double minWidth = _kMinInteractiveDimension,
+    double minHeight = _kMinInteractiveDimension,
+  }) {
+    // Tag the control itself: `_widget` only tags the node it returns, which
+    // is now the (shadowless) target.
+    control.shadowToken ??= theme.shadowToken(control.shadows);
+    if (!padded) return control;
+    final target = IrFrame(
+      name: 'Tap target',
+      role: 'tap-target',
+      origin: const ['MaterialTapTargetSize.padded'],
+      width: control.width.isFill
+          ? const IrSizing.fill()
+          : const IrSizing.hug(),
+      height: control.height.isFill
+          ? const IrSizing.fill()
+          : const IrSizing.hug(),
+      minWidth: minWidth,
+      minHeight: minHeight,
+      mainAlign: IrMainAlign.center,
+      crossAlign: IrCrossAlign.center,
+      position: control.position,
+      children: [control],
+    );
+    control.position = null;
+    return target;
+  }
+
+  IrNode _iconButton(ObjectValue w, _Ctx c) {
     final (background, foreground) = switch (w.constructor) {
       'filled' => (theme.color('primary'), theme.color('onPrimary')),
       'filledTonal' => (
@@ -1757,7 +1807,13 @@ class FlutterCompiler {
     final childCtx = c
         .withText(null, iconColor: foreground)
         .withBox(const _Box());
-    return IrFrame(
+    final style = eval.deref(w['style']);
+    final styleArgs = switch (style) {
+      CallValue(method: 'styleFrom', :final named) => named,
+      ObjectValue(type: 'ButtonStyle', :final named) => named,
+      _ => const <String, DartValue>{},
+    };
+    final button = IrFrame(
       name: w.displayName,
       role: 'button',
       origin: [w.type],
@@ -1771,6 +1827,10 @@ class FlutterCompiler {
           : null,
       corners: const IrCorners.all(20),
       children: [if (w['icon'] != null) _widget(w['icon'], childCtx)],
+    );
+    return _tapTarget(
+      button,
+      padded: _padded(eval.enumName(styleArgs['tapTargetSize'])),
     );
   }
 
@@ -1939,11 +1999,11 @@ class FlutterCompiler {
   }
 
   /// M3 switch (`_SwitchDefaultsM3`): 52×32 track, 24/16 px thumb.
-  IrFrame _switch(ObjectValue w) {
+  IrNode _switch(ObjectValue w) {
     final on = _state(w, 'value', false);
     final thumb = on ? 24.0 : 16.0;
-    return IrFrame(
-      name: w.displayName,
+    final track = IrFrame(
+      name: 'Track',
       role: 'switch',
       origin: [w.type],
       direction: IrLayoutDirection.horizontal,
@@ -1968,6 +2028,18 @@ class FlutterCompiler {
           corners: IrCorners.all(thumb / 2),
         ),
       ],
+    );
+    // Flutter lays the 52×32 track out in a 60×48 box (60×40 when
+    // shrink-wrapped): 4 px padding each side, plus the tap target.
+    final padded = _padded(eval.enumName(w['materialTapTargetSize']));
+    return IrFrame(
+      name: w.displayName,
+      origin: [w.type],
+      width: const IrSizing.fixed(60),
+      height: IrSizing.fixed(padded ? _kMinInteractiveDimension : 40),
+      mainAlign: IrMainAlign.center,
+      crossAlign: IrCrossAlign.center,
+      children: [track],
     );
   }
 
@@ -2030,12 +2102,18 @@ class FlutterCompiler {
     );
   }
 
+  double _selectionSize(ObjectValue w) =>
+      _padded(eval.enumName(w['materialTapTargetSize']))
+      ? _kMinInteractiveDimension
+      : 40;
+
+  /// Checkbox and Radio take 48×48 (40×40 when shrink-wrapped).
   IrFrame _selectionTarget(ObjectValue w, IrFrame mark) => IrFrame(
     name: w.displayName,
     role: w.type.toLowerCase(),
     origin: [w.type],
-    width: const IrSizing.fixed(40),
-    height: const IrSizing.fixed(40),
+    width: IrSizing.fixed(_selectionSize(w)),
+    height: IrSizing.fixed(_selectionSize(w)),
     mainAlign: IrMainAlign.center,
     crossAlign: IrCrossAlign.center,
     children: [mark],

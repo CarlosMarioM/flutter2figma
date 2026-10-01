@@ -392,6 +392,20 @@ export class MockText extends MockNode {
     this._characters = v;
   }
 
+  // Auto-resizing text measures its content: one line of the line height,
+  // with glyphs approximated as 0.6em wide (no real font metrics here).
+  override get width(): number {
+    if (this.textAutoResize !== 'WIDTH_AND_HEIGHT') return super.width;
+    return Math.max(0.01, this._characters.length * this.fontSize * 0.6);
+  }
+  override get height(): number {
+    if (this.textAutoResize !== 'WIDTH_AND_HEIGHT' && this.textAutoResize !== 'HEIGHT') return super.height;
+    const lh = this.lineHeight;
+    if (lh.unit === 'PIXELS') return lh.value;
+    if (lh.unit === 'PERCENT') return (this.fontSize * lh.value) / 100;
+    return this.fontSize * 1.2;
+  }
+
   async setTextStyleIdAsync(id: string) {
     const style = this.registry.textStyles.get(id);
     if (!style) throw new Error(`Unknown text style ${id}`);

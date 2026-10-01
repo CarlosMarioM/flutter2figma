@@ -63,8 +63,9 @@ void main() {
       expect(column.children.map((c) => c.name), [
         'Welcome',
         'Container',
-        'ElevatedButton',
+        'Tap target',
       ]);
+      expect(unwrap(column.children.last).name, 'ElevatedButton');
     });
 
     test('sizes like Flutter: body fills, Column fills its max main axis', () {
@@ -83,7 +84,7 @@ void main() {
       expect(welcome.style.lineHeight, 20.02);
       expect(welcome.style.color.toHex(), '#1D1B20');
 
-      final button = column.children.last as IrFrame;
+      final button = unwrap(column.children.last);
       expect(button.role, 'button');
       expect(button.fill!.toHex(), '#F7F2FA');
       expect(button.corners.topLeft, 20);
@@ -308,14 +309,14 @@ void main() {
   });
 
   test('disabled buttons use disabled colors', () {
-    final button =
-        body(
-              w(
-                'FilledButton',
-                named: {'onPressed': lit(null), 'child': text('Save')},
-              ),
-            )
-            as IrFrame;
+    final button = unwrap(
+      body(
+        w(
+          'FilledButton',
+          named: {'onPressed': lit(null), 'child': text('Save')},
+        ),
+      ),
+    );
     expect(button.name, 'FilledButton (disabled)');
     expect(button.fill!.toHex(), '#1D1B201F');
     expect((button.children.single as IrText).style.color.toHex(), '#1D1B2061');
@@ -437,11 +438,11 @@ void main() {
     final appBar = root.children.first as IrFrame;
     expect(appBar.role, 'app-bar');
     expect(appBar.height, const IrSizing.fixed(64));
-    expect(appBar.children.map((c) => c.name), ['Inbox', 'IconButton']);
+    expect(appBar.children.map((c) => c.name), ['Inbox', 'Tap target']);
     final title = appBar.children.first as IrText;
     expect(title.style.fontSize, 22);
     expect(title.width, const IrSizing.fill());
-    final icon = (appBar.children.last as IrFrame).children.single;
+    final icon = unwrap(appBar.children.last).children.single;
     expect(icon.name, 'Icon/search');
   });
 }

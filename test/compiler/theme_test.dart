@@ -32,7 +32,7 @@ void main() {
       brightness: ThemeBrightness.light,
     );
     expect(screenOf(doc).fill!.toArgb32(), seeded['surface']);
-    expect((bodyOf(doc) as IrFrame).fill!.toArgb32(), seeded['primary']);
+    expect(unwrap(bodyOf(doc)).fill!.toArgb32(), seeded['primary']);
     expect(doc.diagnostics, isEmpty);
   });
 
@@ -58,7 +58,7 @@ void main() {
       ),
     );
     final column = bodyOf(doc) as IrFrame;
-    expect((column.children[0] as IrFrame).fill!.toHex(), '#123456');
+    expect(unwrap(column.children[0]).fill!.toHex(), '#123456');
     // Card uses surfaceContainerLow, which falls back to surface (white).
     final card = (column.children[1] as IrFrame).children.single as IrFrame;
     expect(card.fill!.toHex(), '#FFFFFF');
@@ -70,7 +70,7 @@ void main() {
         'colorScheme': v('ColorScheme', named: {'primary': color(0xFF123456)}),
       }),
     }, filled('Go'));
-    expect((bodyOf(doc) as IrFrame).fill!.toHex(), '#6750A4');
+    expect(unwrap(bodyOf(doc)).fill!.toHex(), '#6750A4');
     expect(
       doc.diagnostics.map((d) => d.message),
       contains(startsWith('Could not evaluate ThemeData.colorScheme')),
@@ -242,12 +242,69 @@ void main() {
         ),
       ),
     );
-    final button = bodyOf(doc) as IrFrame;
+    final button = unwrap(bodyOf(doc));
     expect(button.fill!.toHex(), '#AA0000'); // theme
     expect(
       (button.children.single as IrText).style.color.toHex(),
       '#0000AA',
     ); // widget
+  });
+
+  test('tap targets follow materialTapTargetSize', () {
+    const shrinkWrap = 'MaterialTapTargetSize.shrinkWrap';
+    // Padded by default: a 40 px button lays out 48 px tall.
+    final padded = bodyOf(compileApp({}, filled('Go'))) as IrFrame;
+    expect(padded.role, 'tap-target');
+    expect([padded.minWidth, padded.minHeight], [48, 48]);
+    expect(padded.children.single.name, 'FilledButton');
+
+    // shrinkWrap in the theme drops the target everywhere...
+    final themed = bodyOf(
+      compileApp({
+        'theme': themeData({'materialTapTargetSize': ref(shrinkWrap)}),
+      }, filled('Go')),
+    );
+    expect(themed.name, 'FilledButton');
+
+    // ...and per widget, through its style.
+    final styled = bodyOf(
+      compileApp(
+        {},
+        filled(
+          'Go',
+          style: CallValue(
+            ref('FilledButton'),
+            'styleFrom',
+            named: {'tapTargetSize': ref(shrinkWrap)},
+          ),
+        ),
+      ),
+    );
+    expect(styled.name, 'FilledButton');
+
+    // Selection controls shrink from 48 to 40.
+    final checkbox =
+        bodyOf(
+              compileApp(
+                {
+                  'theme': themeData({
+                    'materialTapTargetSize': ref(shrinkWrap),
+                  }),
+                },
+                w(
+                  'Checkbox',
+                  named: {
+                    'value': lit(true),
+                    'onChanged': const FunctionValue(),
+                  },
+                ),
+              ),
+            )
+            as IrFrame;
+    expect(
+      [checkbox.width, checkbox.height],
+      [const IrSizing.fixed(40), const IrSizing.fixed(40)],
+    );
   });
 
   test('Theme widget scopes a derived theme to its subtree', () {
@@ -274,10 +331,10 @@ void main() {
         },
       ),
     );
-    final [outer, inner] = (bodyOf(doc) as IrFrame).children.cast<IrFrame>();
-    expect(outer.fill!.toHex(), '#6750A4');
-    expect(inner.fill!.toHex(), '#00AA00');
-    expect(inner.origin.first, 'Theme');
+    final [outerTarget, innerTarget] = (bodyOf(doc) as IrFrame).children;
+    expect(unwrap(outerTarget).fill!.toHex(), '#6750A4');
+    expect(unwrap(innerTarget).fill!.toHex(), '#00AA00');
+    expect(innerTarget.origin.first, 'Theme');
   });
 
   test('ThemeData.copyWith on an app theme', () {
@@ -289,7 +346,7 @@ void main() {
       ),
     }, filled('Go'));
     expect(screenOf(doc).fill!.toHex(), '#FFFFFF');
-    expect((bodyOf(doc) as IrFrame).fill!.toHex(), '#00696E');
+    expect(unwrap(bodyOf(doc)).fill!.toHex(), '#00696E');
   });
 
   test('reports what it cannot apply', () {

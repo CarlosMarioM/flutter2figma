@@ -1,0 +1,26 @@
+{
+  "HomeScreen/ElevatedButton": [
+    160.8000030517578,
+    48.0
+  ],
+  "StackLayoutScreen/header": [
+    390.0,
+    112.0
+  ],
+  "StackLayoutScreen/body": [
+    390.0,
+    732.0
+  ],
+  "StackLayoutScreen/IconButton": [
+    48.0,
+    48.0
+  ],
+  "ScoreboardScreen/Switch": [
+    60.0,
+    48.0
+  ],
+  "ScoreboardScreen/Checkbox": [
+    48.0,
+    48.0
+  ]
+}

@@ -46,7 +46,7 @@ void main() {
           button('FilledButton', 'No', enabled: false),
         ]),
       );
-      final [go, no] = columnChildren(doc).cast<IrFrame>();
+      final [go, no] = columnChildren(doc).map(unwrap).toList();
       expect(go.fill!.token, 'ColorScheme/primary');
       expect(no.fill!.token, 'ColorScheme/onSurface');
       expect(no.fill!.a, closeTo(0.12, 0.001));
@@ -123,7 +123,8 @@ void main() {
         w('Card', named: {'elevation': lit(0), 'child': text('x')}),
       ]),
     );
-    final [elevated, card] = columnChildren(doc).cast<IrFrame>();
+    final [elevatedTarget, card] = columnChildren(doc).cast<IrFrame>();
+    final elevated = unwrap(elevatedTarget);
     expect(elevated.shadowToken, 'Elevation/level1');
     expect((card.children.single as IrFrame).shadowToken, isNull);
     expect(doc.designSystem!.shadows.map((s) => s.name), [
@@ -156,7 +157,7 @@ void main() {
         '{Type: Filled, State: Disabled}': 1,
         '{Type: Outlined, State: Enabled}': 1,
       });
-      final [save, send, ..._] = columnChildren(doc);
+      final [save, send, ..._] = columnChildren(doc).map(unwrap).toList();
       expect(save.instance!.key, send.instance!.key);
     });
 

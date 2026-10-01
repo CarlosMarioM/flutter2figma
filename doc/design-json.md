@@ -61,7 +61,7 @@ All nodes share these fields:
 | `position` | `{left?, top?, right?, bottom?}` | Insets inside the parent. Used for children of `NONE` frames (Stack) and for absolute children. Resolve them after the parent has its size. |
 | `fills` | Paint[] | See [Paints](#paints). |
 | `instance` | `{component, variant, props?}` | Marks a component occurrence. See [Components](#components). |
-| `pluginData` | `{origin?, source?, role?}` | Provenance. `origin` lists the Flutter widgets folded into this node, outermost first, e.g. `["Padding", "Column"]`. `source` is `"lib/file.dart:line"`. `role` is a hint: `screen`, `app-bar`, `button`, `card`, `icon`, `image`, `placeholder`, `grid`, `switch`, `checkbox`, `radio`, `text-field`, `progress`. |
+| `pluginData` | `{origin?, source?, role?}` | Provenance. `origin` lists the Flutter widgets folded into this node, outermost first, e.g. `["Padding", "Column"]`. `source` is `"lib/file.dart:line"`. `role` is a hint: `screen`, `app-bar`, `button`, `tap-target`, `card`, `icon`, `image`, `placeholder`, `grid`, `switch`, `checkbox`, `radio`, `text-field`, `progress`. |
 
 ### `FRAME`
 

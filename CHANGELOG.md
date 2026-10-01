@@ -1,3 +1,17 @@
+## Unreleased
+
+### Export
+- Tap targets: buttons, icon buttons, switches, checkboxes and radios take the
+  48 px space Flutter lays them out in (`MaterialTapTargetSize.padded`), so
+  the layout around them matches the app. Buttons sit in a `Tap target`
+  frame; `materialTapTargetSize` in the theme and `tapTargetSize` in a
+  button's style are honored.
+
+### Tests
+- The example app measures real Flutter layout sizes
+  (`test/goldens/basic_layout.json`), and the plugin test checks Figma
+  produces the same ones.
+
 ## 0.1.0
 
 First release.

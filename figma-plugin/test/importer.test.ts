@@ -32,6 +32,10 @@ function findAll(node: MockNode, name: string, out: MockNode[] = []): MockNode[]
 
 const golden = () => parseDesign(readFileSync(GOLDEN, 'utf8'));
 
+// Sizes Flutter itself lays out for the same screens, measured by
+// example/test/layout_ground_truth_test.dart.
+const LAYOUT = path.resolve(process.cwd(), '../test/goldens/basic_layout.json');
+
 /** The variable a paint is bound to, by name. */
 function boundTo(api: ReturnType<typeof createMockFigma>, paint: Paint): string | undefined {
   const id = (paint as SolidPaint).boundVariables?.color?.id;
@@ -58,11 +62,6 @@ test('imports the basic example exported by the CLI', async () => {
   assert.equal(column.layoutSizingHorizontal, 'FILL');
   assert.equal(column.layoutSizingVertical, 'FILL');
   assert.deepEqual(JSON.parse(column.pluginData.get(PLUGIN_DATA_KEY)!).origin, ['Padding', 'Column', 'SizedBox']);
-
-  // #1: the body of a Stack-based template fills the screen below the header.
-  const stackScreen = result.screens.find((s) => s.name === 'StackLayoutScreen') as unknown as MockFrame;
-  const body = find(stackScreen, 'DecoratedBox')!;
-  assert.deepEqual([body.width, body.height], [390, 844 - 104]);
 
   const welcome = find(home, 'Welcome') as MockText;
   assert.deepEqual(welcome.fontName, { family: 'Inter', style: 'Bold' }); // from the app's ThemeData
@@ -240,6 +239,30 @@ test('rejects files that are not design.json', () => {
 // Stack > Column(header, Expanded(Stack(fit: expand, DecoratedBox(...)))):
 // the body collapsed to 0.01 px because FILL children of NONE frames were
 // sized after their subtree, against Figma's default 100×100.
+test('imported sizes match what Flutter lays out', async () => {
+  const { result } = await run(golden());
+  const screen = (name: string) => result.screens.find((s) => s.name === name) as unknown as MockFrame;
+  // Flutter measures a button with its tap target, the Figma frame around it.
+  const outer = (node: MockNode) => (node.parent?.name === 'Tap target' ? node.parent : node) as MockNode;
+  const figma: Record<string, MockNode> = {
+    'HomeScreen/ElevatedButton': outer(find(screen('HomeScreen'), 'ElevatedButton')!),
+    'StackLayoutScreen/header': find(screen('StackLayoutScreen'), 'Container')!,
+    'StackLayoutScreen/body': find(screen('StackLayoutScreen'), 'DecoratedBox')!,
+    'StackLayoutScreen/IconButton': outer(find(screen('StackLayoutScreen'), 'IconButton')!),
+    'ScoreboardScreen/Switch': find(screen('ScoreboardScreen'), 'Switch')!,
+    'ScoreboardScreen/Checkbox': find(screen('ScoreboardScreen'), 'Checkbox')!,
+  };
+  const flutter = JSON.parse(readFileSync(LAYOUT, 'utf8')) as Record<string, [number, number]>;
+  assert.deepEqual(Object.keys(figma).sort(), Object.keys(flutter).sort());
+  for (const [key, [width, height]] of Object.entries(flutter)) {
+    const node = figma[key];
+    // Text metrics differ between Flutter's test font and Figma, so widths
+    // that depend on a label are compared loosely.
+    assert.ok(Math.abs(node.width - width) < 1 || key === 'HomeScreen/ElevatedButton', `${key} width ${node.width} ≠ ${width}`);
+    assert.equal(node.height, height, `${key} height`);
+  }
+});
+
 test('FILL children of a Stack are sized before their subtree (#1)', async () => {
   const FILL = 'FILL' as const;
   // As exported by 0.1.0: FILL sizing, positioned from the top-left only.

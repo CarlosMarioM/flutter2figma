@@ -78,3 +78,17 @@ IrDocument compileApp(
     ],
   ),
 );
+
+/// The visible control inside the space Flutter lays it out in: a button's
+/// 48 px tap target, or a Switch's 60×48 box. What tests assert on.
+IrFrame unwrap(IrNode node) {
+  var n = node as IrFrame;
+  while (n.role == 'tap-target' ||
+      (n.role == null &&
+          n.children.length == 1 &&
+          n.children.single is IrFrame &&
+          (n.children.single as IrFrame).role == 'switch')) {
+    n = n.children.single as IrFrame;
+  }
+  return n;
+}

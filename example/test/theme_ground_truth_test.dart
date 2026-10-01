@@ -113,18 +113,18 @@ Map<String, Object?> theme(ThemeData t) => {
     'elevation': t.appBarTheme.elevation,
     'centerTitle': t.appBarTheme.centerTitle,
   },
-  'card': {
-    'color': hex(t.cardTheme.color),
-    'elevation': t.cardTheme.elevation,
-  },
+  'card': {'color': hex(t.cardTheme.color), 'elevation': t.cardTheme.elevation},
 };
 
 void main() {
-  testWidgets('resolved app theme matches the extraction fixture', (tester) async {
+  testWidgets('resolved app theme matches the extraction fixture', (
+    tester,
+  ) async {
     // Theme.of(context) is what widgets render with: MaterialApp's ThemeData
     // localized with the typography geometry (font sizes, heights).
     Future<ThemeData> resolved(Brightness platformBrightness) async {
-      tester.platformDispatcher.platformBrightnessTestValue = platformBrightness;
+      tester.platformDispatcher.platformBrightnessTestValue =
+          platformBrightness;
       await tester.pumpWidget(const MainApp());
       await tester.pumpAndSettle();
       return Theme.of(tester.element(find.byType(Scaffold).first));
@@ -134,10 +134,8 @@ void main() {
     final dark = theme(await resolved(Brightness.dark));
     tester.platformDispatcher.clearPlatformBrightnessTestValue();
 
-    final actual = '${const JsonEncoder.withIndent('  ').convert({
-      'light': light,
-      'dark': dark,
-    })}\n';
+    final actual =
+        '${const JsonEncoder.withIndent('  ').convert({'light': light, 'dark': dark})}\n';
 
     final fixture = File(fixturePath);
     if (Platform.environment['UPDATE_GOLDENS'] == '1') {

@@ -1574,127 +1574,153 @@
             },
             {
               "type": "FRAME",
-              "name": "ElevatedButton",
-              "layoutMode": "HORIZONTAL",
+              "name": "Tap target",
+              "layoutMode": "VERTICAL",
               "primaryAxisAlignItems": "CENTER",
               "counterAxisAlignItems": "CENTER",
               "itemSpacing": 0.0,
               "paddingTop": 0.0,
-              "paddingRight": 24.0,
+              "paddingRight": 0.0,
               "paddingBottom": 0.0,
-              "paddingLeft": 24.0,
-              "minWidth": 64.0,
-              "minHeight": 40.0,
-              "fills": [
-                {
-                  "type": "SOLID",
-                  "color": {
-                    "r": 0.9372549019607843,
-                    "g": 0.9607843137254902,
-                    "b": 0.9607843137254902
-                  },
-                  "opacity": 1.0,
-                  "variable": "ColorScheme/surfaceContainerLow"
-                }
-              ],
-              "cornerRadius": 20.0,
-              "effects": [
-                {
-                  "type": "DROP_SHADOW",
-                  "color": {
-                    "r": 0.0,
-                    "g": 0.0,
-                    "b": 0.0,
-                    "a": 0.3
-                  },
-                  "offset": {
-                    "x": 0.0,
-                    "y": 1.0
-                  },
-                  "radius": 2.0,
-                  "spread": 0.0,
-                  "visible": true,
-                  "blendMode": "NORMAL"
-                },
-                {
-                  "type": "DROP_SHADOW",
-                  "color": {
-                    "r": 0.0,
-                    "g": 0.0,
-                    "b": 0.0,
-                    "a": 0.15
-                  },
-                  "offset": {
-                    "x": 0.0,
-                    "y": 1.0
-                  },
-                  "radius": 3.0,
-                  "spread": 1.0,
-                  "visible": true,
-                  "blendMode": "NORMAL"
-                }
-              ],
-              "effectStyle": "Elevation/level1",
+              "paddingLeft": 0.0,
+              "minWidth": 48.0,
+              "minHeight": 48.0,
+              "fills": [],
               "clipsContent": false,
               "children": [
                 {
-                  "type": "TEXT",
-                  "name": "Continue",
-                  "characters": "Continue",
-                  "fontName": {
-                    "family": "Inter",
-                    "style": "Medium"
-                  },
-                  "fontSize": 14.0,
-                  "lineHeight": {
-                    "unit": "PIXELS",
-                    "value": 20.02
-                  },
-                  "letterSpacing": {
-                    "unit": "PIXELS",
-                    "value": 0.1
-                  },
-                  "textStyle": "TextTheme/labelLarge",
+                  "type": "FRAME",
+                  "name": "ElevatedButton",
+                  "layoutMode": "HORIZONTAL",
+                  "primaryAxisAlignItems": "CENTER",
+                  "counterAxisAlignItems": "CENTER",
+                  "itemSpacing": 0.0,
+                  "paddingTop": 0.0,
+                  "paddingRight": 24.0,
+                  "paddingBottom": 0.0,
+                  "paddingLeft": 24.0,
+                  "minWidth": 64.0,
+                  "minHeight": 40.0,
                   "fills": [
                     {
                       "type": "SOLID",
                       "color": {
-                        "r": 0.0,
-                        "g": 0.4117647058823529,
-                        "b": 0.43137254901960786
+                        "r": 0.9372549019607843,
+                        "g": 0.9607843137254902,
+                        "b": 0.9607843137254902
                       },
                       "opacity": 1.0,
-                      "variable": "ColorScheme/primary"
+                      "variable": "ColorScheme/surfaceContainerLow"
                     }
                   ],
-                  "textAlignHorizontal": "LEFT",
-                  "textAutoResize": "WIDTH_AND_HEIGHT",
+                  "cornerRadius": 20.0,
+                  "effects": [
+                    {
+                      "type": "DROP_SHADOW",
+                      "color": {
+                        "r": 0.0,
+                        "g": 0.0,
+                        "b": 0.0,
+                        "a": 0.3
+                      },
+                      "offset": {
+                        "x": 0.0,
+                        "y": 1.0
+                      },
+                      "radius": 2.0,
+                      "spread": 0.0,
+                      "visible": true,
+                      "blendMode": "NORMAL"
+                    },
+                    {
+                      "type": "DROP_SHADOW",
+                      "color": {
+                        "r": 0.0,
+                        "g": 0.0,
+                        "b": 0.0,
+                        "a": 0.15
+                      },
+                      "offset": {
+                        "x": 0.0,
+                        "y": 1.0
+                      },
+                      "radius": 3.0,
+                      "spread": 1.0,
+                      "visible": true,
+                      "blendMode": "NORMAL"
+                    }
+                  ],
+                  "effectStyle": "Elevation/level1",
+                  "clipsContent": false,
+                  "children": [
+                    {
+                      "type": "TEXT",
+                      "name": "Continue",
+                      "characters": "Continue",
+                      "fontName": {
+                        "family": "Inter",
+                        "style": "Medium"
+                      },
+                      "fontSize": 14.0,
+                      "lineHeight": {
+                        "unit": "PIXELS",
+                        "value": 20.02
+                      },
+                      "letterSpacing": {
+                        "unit": "PIXELS",
+                        "value": 0.1
+                      },
+                      "textStyle": "TextTheme/labelLarge",
+                      "fills": [
+                        {
+                          "type": "SOLID",
+                          "color": {
+                            "r": 0.0,
+                            "g": 0.4117647058823529,
+                            "b": 0.43137254901960786
+                          },
+                          "opacity": 1.0,
+                          "variable": "ColorScheme/primary"
+                        }
+                      ],
+                      "textAlignHorizontal": "LEFT",
+                      "textAutoResize": "WIDTH_AND_HEIGHT",
+                      "layoutSizingHorizontal": "HUG",
+                      "layoutSizingVertical": "HUG",
+                      "pluginData": {
+                        "origin": [
+                          "Text"
+                        ],
+                        "source": "lib/home_screen.dart:32"
+                      }
+                    }
+                  ],
                   "layoutSizingHorizontal": "HUG",
                   "layoutSizingVertical": "HUG",
+                  "instance": {
+                    "component": "Button",
+                    "variant": "Button[Type=Elevated, State=Enabled]",
+                    "props": {
+                      "Type": "Elevated",
+                      "State": "Enabled"
+                    }
+                  },
                   "pluginData": {
                     "origin": [
-                      "Text"
+                      "ElevatedButton"
                     ],
-                    "source": "lib/home_screen.dart:32"
+                    "role": "button"
                   }
                 }
               ],
               "layoutSizingHorizontal": "HUG",
               "layoutSizingVertical": "HUG",
-              "instance": {
-                "component": "Button",
-                "variant": "Button[Type=Elevated, State=Enabled]",
-                "props": {
-                  "Type": "Elevated",
-                  "State": "Enabled"
-                }
-              },
               "pluginData": {
                 "origin": [
-                  "ElevatedButton"
+                  "MaterialTapTargetSize.padded"
                 ],
                 "source": "lib/home_screen.dart:30",
-                "role": "button"
+                "role": "tap-target"
               }
             }
           ],
@@ -2331,39 +2357,136 @@
               "children": [
                 {
                   "type": "FRAME",
-                  "name": "TextButton",
-                  "layoutMode": "HORIZONTAL",
+                  "name": "Tap target",
+                  "layoutMode": "VERTICAL",
                   "primaryAxisAlignItems": "CENTER",
                   "counterAxisAlignItems": "CENTER",
                   "itemSpacing": 0.0,
-                  "paddingTop": 8.0,
-                  "paddingRight": 12.0,
-                  "paddingBottom": 8.0,
-                  "paddingLeft": 12.0,
-                  "minWidth": 64.0,
-                  "minHeight": 40.0,
+                  "paddingTop": 0.0,
+                  "paddingRight": 0.0,
+                  "paddingBottom": 0.0,
+                  "paddingLeft": 0.0,
+                  "minWidth": 48.0,
+                  "minHeight": 48.0,
                   "fills": [],
-                  "cornerRadius": 20.0,
                   "clipsContent": false,
                   "children": [
                     {
-                      "type": "TEXT",
-                      "name": "Cancel",
-                      "characters": "Cancel",
-                      "fontName": {
-                        "family": "Inter",
-                        "style": "Medium"
+                      "type": "FRAME",
+                      "name": "TextButton",
+                      "layoutMode": "HORIZONTAL",
+                      "primaryAxisAlignItems": "CENTER",
+                      "counterAxisAlignItems": "CENTER",
+                      "itemSpacing": 0.0,
+                      "paddingTop": 8.0,
+                      "paddingRight": 12.0,
+                      "paddingBottom": 8.0,
+                      "paddingLeft": 12.0,
+                      "minWidth": 64.0,
+                      "minHeight": 40.0,
+                      "fills": [],
+                      "cornerRadius": 20.0,
+                      "clipsContent": false,
+                      "children": [
+                        {
+                          "type": "TEXT",
+                          "name": "Cancel",
+                          "characters": "Cancel",
+                          "fontName": {
+                            "family": "Inter",
+                            "style": "Medium"
+                          },
+                          "fontSize": 14.0,
+                          "lineHeight": {
+                            "unit": "PIXELS",
+                            "value": 20.02
+                          },
+                          "letterSpacing": {
+                            "unit": "PIXELS",
+                            "value": 0.1
+                          },
+                          "textStyle": "TextTheme/labelLarge",
+                          "fills": [
+                            {
+                              "type": "SOLID",
+                              "color": {
+                                "r": 0.0,
+                                "g": 0.4117647058823529,
+                                "b": 0.43137254901960786
+                              },
+                              "opacity": 1.0,
+                              "variable": "ColorScheme/primary"
+                            }
+                          ],
+                          "textAlignHorizontal": "LEFT",
+                          "textAutoResize": "WIDTH_AND_HEIGHT",
+                          "layoutSizingHorizontal": "HUG",
+                          "layoutSizingVertical": "HUG",
+                          "pluginData": {
+                            "origin": [
+                              "Text"
+                            ],
+                            "source": "lib/profile_screen.dart:43"
+                          }
+                        }
+                      ],
+                      "layoutSizingHorizontal": "HUG",
+                      "layoutSizingVertical": "HUG",
+                      "instance": {
+                        "component": "Button",
+                        "variant": "Button[Type=Text, State=Enabled]",
+                        "props": {
+                          "Type": "Text",
+                          "State": "Enabled"
+                        }
                       },
-                      "fontSize": 14.0,
-                      "lineHeight": {
-                        "unit": "PIXELS",
-                        "value": 20.02
-                      },
-                      "letterSpacing": {
-                        "unit": "PIXELS",
-                        "value": 0.1
-                      },
-                      "textStyle": "TextTheme/labelLarge",
+                      "pluginData": {
+                        "origin": [
+                          "TextButton"
+                        ],
+                        "role": "button"
+                      }
+                    }
+                  ],
+                  "layoutSizingHorizontal": "HUG",
+                  "layoutSizingVertical": "HUG",
+                  "pluginData": {
+                    "origin": [
+                      "MaterialTapTargetSize.padded"
+                    ],
+                    "source": "lib/profile_screen.dart:43",
+                    "role": "tap-target"
+                  }
+                },
+                {
+                  "type": "FRAME",
+                  "name": "Tap target",
+                  "layoutMode": "VERTICAL",
+                  "primaryAxisAlignItems": "CENTER",
+                  "counterAxisAlignItems": "CENTER",
+                  "itemSpacing": 0.0,
+                  "paddingTop": 0.0,
+                  "paddingRight": 0.0,
+                  "paddingBottom": 0.0,
+                  "paddingLeft": 0.0,
+                  "minWidth": 48.0,
+                  "minHeight": 48.0,
+                  "fills": [],
+                  "clipsContent": false,
+                  "children": [
+                    {
+                      "type": "FRAME",
+                      "name": "FilledButton",
+                      "layoutMode": "HORIZONTAL",
+                      "primaryAxisAlignItems": "CENTER",
+                      "counterAxisAlignItems": "CENTER",
+                      "itemSpacing": 0.0,
+                      "paddingTop": 0.0,
+                      "paddingRight": 24.0,
+                      "paddingBottom": 0.0,
+                      "paddingLeft": 24.0,
+                      "minWidth": 64.0,
+                      "minHeight": 40.0,
                       "fills": [
                         {
                           "type": "SOLID",
@@ -2376,123 +2499,78 @@
                           "variable": "ColorScheme/primary"
                         }
                       ],
-                      "textAlignHorizontal": "LEFT",
-                      "textAutoResize": "WIDTH_AND_HEIGHT",
-                      "layoutSizingHorizontal": "HUG",
-                      "layoutSizingVertical": "HUG",
-                      "pluginData": {
-                        "origin": [
-                          "Text"
-                        ],
-                        "source": "lib/profile_screen.dart:43"
-                      }
-                    }
-                  ],
-                  "layoutSizingHorizontal": "HUG",
-                  "layoutSizingVertical": "HUG",
-                  "instance": {
-                    "component": "Button",
-                    "variant": "Button[Type=Text, State=Enabled]",
-                    "props": {
-                      "Type": "Text",
-                      "State": "Enabled"
-                    }
-                  },
-                  "pluginData": {
-                    "origin": [
-                      "TextButton"
-                    ],
-                    "source": "lib/profile_screen.dart:43",
-                    "role": "button"
-                  }
-                },
-                {
-                  "type": "FRAME",
-                  "name": "FilledButton",
-                  "layoutMode": "HORIZONTAL",
-                  "primaryAxisAlignItems": "CENTER",
-                  "counterAxisAlignItems": "CENTER",
-                  "itemSpacing": 0.0,
-                  "paddingTop": 0.0,
-                  "paddingRight": 24.0,
-                  "paddingBottom": 0.0,
-                  "paddingLeft": 24.0,
-                  "minWidth": 64.0,
-                  "minHeight": 40.0,
-                  "fills": [
-                    {
-                      "type": "SOLID",
-                      "color": {
-                        "r": 0.0,
-                        "g": 0.4117647058823529,
-                        "b": 0.43137254901960786
-                      },
-                      "opacity": 1.0,
-                      "variable": "ColorScheme/primary"
-                    }
-                  ],
-                  "cornerRadius": 8.0,
-                  "clipsContent": false,
-                  "children": [
-                    {
-                      "type": "TEXT",
-                      "name": "Save",
-                      "characters": "Save",
-                      "fontName": {
-                        "family": "Inter",
-                        "style": "Medium"
-                      },
-                      "fontSize": 14.0,
-                      "lineHeight": {
-                        "unit": "PIXELS",
-                        "value": 20.02
-                      },
-                      "letterSpacing": {
-                        "unit": "PIXELS",
-                        "value": 0.1
-                      },
-                      "textStyle": "TextTheme/labelLarge",
-                      "fills": [
+                      "cornerRadius": 8.0,
+                      "clipsContent": false,
+                      "children": [
                         {
-                          "type": "SOLID",
-                          "color": {
-                            "r": 1.0,
-                            "g": 1.0,
-                            "b": 1.0
+                          "type": "TEXT",
+                          "name": "Save",
+                          "characters": "Save",
+                          "fontName": {
+                            "family": "Inter",
+                            "style": "Medium"
                           },
-                          "opacity": 1.0,
-                          "variable": "ColorScheme/onPrimary"
+                          "fontSize": 14.0,
+                          "lineHeight": {
+                            "unit": "PIXELS",
+                            "value": 20.02
+                          },
+                          "letterSpacing": {
+                            "unit": "PIXELS",
+                            "value": 0.1
+                          },
+                          "textStyle": "TextTheme/labelLarge",
+                          "fills": [
+                            {
+                              "type": "SOLID",
+                              "color": {
+                                "r": 1.0,
+                                "g": 1.0,
+                                "b": 1.0
+                              },
+                              "opacity": 1.0,
+                              "variable": "ColorScheme/onPrimary"
+                            }
+                          ],
+                          "textAlignHorizontal": "LEFT",
+                          "textAutoResize": "WIDTH_AND_HEIGHT",
+                          "layoutSizingHorizontal": "HUG",
+                          "layoutSizingVertical": "HUG",
+                          "pluginData": {
+                            "origin": [
+                              "Text"
+                            ],
+                            "source": "lib/profile_screen.dart:45"
+                          }
                         }
                       ],
-                      "textAlignHorizontal": "LEFT",
-                      "textAutoResize": "WIDTH_AND_HEIGHT",
                       "layoutSizingHorizontal": "HUG",
                       "layoutSizingVertical": "HUG",
+                      "instance": {
+                        "component": "Button",
+                        "variant": "Button[Type=Filled, State=Enabled, Variant=1]",
+                        "props": {
+                          "Type": "Filled",
+                          "State": "Enabled",
+                          "Variant": "1"
+                        }
+                      },
                       "pluginData": {
                         "origin": [
-                          "Text"
+                          "FilledButton"
                         ],
-                        "source": "lib/profile_screen.dart:45"
+                        "role": "button"
                       }
                     }
                   ],
                   "layoutSizingHorizontal": "HUG",
                   "layoutSizingVertical": "HUG",
-                  "instance": {
-                    "component": "Button",
-                    "variant": "Button[Type=Filled, State=Enabled, Variant=1]",
-                    "props": {
-                      "Type": "Filled",
-                      "State": "Enabled",
-                      "Variant": "1"
-                    }
-                  },
                   "pluginData": {
                     "origin": [
-                      "FilledButton"
+                      "MaterialTapTargetSize.padded"
                     ],
                     "source": "lib/profile_screen.dart:45",
-                    "role": "button"
+                    "role": "tap-target"
                   }
                 }
               ],
@@ -2707,55 +2785,41 @@
                 {
                   "type": "FRAME",
                   "name": "Switch",
-                  "layoutMode": "HORIZONTAL",
-                  "primaryAxisAlignItems": "MIN",
+                  "layoutMode": "VERTICAL",
+                  "primaryAxisAlignItems": "CENTER",
                   "counterAxisAlignItems": "CENTER",
                   "itemSpacing": 0.0,
                   "paddingTop": 0.0,
-                  "paddingRight": 8.0,
+                  "paddingRight": 0.0,
                   "paddingBottom": 0.0,
-                  "paddingLeft": 8.0,
-                  "fills": [
-                    {
-                      "type": "SOLID",
-                      "color": {
-                        "r": 0.8666666666666667,
-                        "g": 0.8941176470588236,
-                        "b": 0.8941176470588236
-                      },
-                      "opacity": 1.0,
-                      "variable": "ColorScheme/surfaceContainerHighest"
-                    }
-                  ],
-                  "strokes": [
-                    {
-                      "type": "SOLID",
-                      "color": {
-                        "r": 0.43529411764705883,
-                        "g": 0.4745098039215686,
-                        "b": 0.4745098039215686
-                      },
-                      "opacity": 1.0,
-                      "variable": "ColorScheme/outline"
-                    }
-                  ],
-                  "strokeWeight": 2.0,
-                  "strokeAlign": "INSIDE",
-                  "cornerRadius": 16.0,
+                  "paddingLeft": 0.0,
+                  "fills": [],
                   "clipsContent": false,
                   "children": [
                     {
                       "type": "FRAME",
-                      "name": "Thumb",
-                      "layoutMode": "VERTICAL",
+                      "name": "Track",
+                      "layoutMode": "HORIZONTAL",
                       "primaryAxisAlignItems": "MIN",
-                      "counterAxisAlignItems": "MIN",
+                      "counterAxisAlignItems": "CENTER",
                       "itemSpacing": 0.0,
                       "paddingTop": 0.0,
-                      "paddingRight": 0.0,
+                      "paddingRight": 8.0,
                       "paddingBottom": 0.0,
-                      "paddingLeft": 0.0,
+                      "paddingLeft": 8.0,
                       "fills": [
+                        {
+                          "type": "SOLID",
+                          "color": {
+                            "r": 0.8666666666666667,
+                            "g": 0.8941176470588236,
+                            "b": 0.8941176470588236
+                          },
+                          "opacity": 1.0,
+                          "variable": "ColorScheme/surfaceContainerHighest"
+                        }
+                      ],
+                      "strokes": [
                         {
                           "type": "SOLID",
                           "color": {
@@ -2767,26 +2831,65 @@
                           "variable": "ColorScheme/outline"
                         }
                       ],
-                      "cornerRadius": 8.0,
+                      "strokeWeight": 2.0,
+                      "strokeAlign": "INSIDE",
+                      "cornerRadius": 16.0,
                       "clipsContent": false,
-                      "children": [],
+                      "children": [
+                        {
+                          "type": "FRAME",
+                          "name": "Thumb",
+                          "layoutMode": "VERTICAL",
+                          "primaryAxisAlignItems": "MIN",
+                          "counterAxisAlignItems": "MIN",
+                          "itemSpacing": 0.0,
+                          "paddingTop": 0.0,
+                          "paddingRight": 0.0,
+                          "paddingBottom": 0.0,
+                          "paddingLeft": 0.0,
+                          "fills": [
+                            {
+                              "type": "SOLID",
+                              "color": {
+                                "r": 0.43529411764705883,
+                                "g": 0.4745098039215686,
+                                "b": 0.4745098039215686
+                              },
+                              "opacity": 1.0,
+                              "variable": "ColorScheme/outline"
+                            }
+                          ],
+                          "cornerRadius": 8.0,
+                          "clipsContent": false,
+                          "children": [],
+                          "layoutSizingHorizontal": "FIXED",
+                          "layoutSizingVertical": "FIXED",
+                          "width": 16.0,
+                          "height": 16.0,
+                          "pluginData": {}
+                        }
+                      ],
                       "layoutSizingHorizontal": "FIXED",
                       "layoutSizingVertical": "FIXED",
-                      "width": 16.0,
-                      "height": 16.0,
-                      "pluginData": {}
+                      "width": 52.0,
+                      "height": 32.0,
+                      "pluginData": {
+                        "origin": [
+                          "Switch"
+                        ],
+                        "role": "switch"
+                      }
                     }
                   ],
                   "layoutSizingHorizontal": "FIXED",
                   "layoutSizingVertical": "FIXED",
-                  "width": 52.0,
-                  "height": 32.0,
+                  "width": 60.0,
+                  "height": 48.0,
                   "pluginData": {
                     "origin": [
                       "Switch"
                     ],
-                    "source": "lib/scoreboard_screen.dart:26",
-                    "role": "switch"
+                    "source": "lib/scoreboard_screen.dart:26"
                   }
                 }
               ],
@@ -3538,8 +3641,8 @@
               ],
               "layoutSizingHorizontal": "FIXED",
               "layoutSizingVertical": "FIXED",
-              "width": 40.0,
-              "height": 40.0,
+              "width": 48.0,
+              "height": 48.0,
               "pluginData": {
                 "origin": [
                   "Checkbox"
@@ -4170,91 +4273,117 @@
             },
             {
               "type": "FRAME",
-              "name": "FilledButton",
-              "layoutMode": "HORIZONTAL",
+              "name": "Tap target",
+              "layoutMode": "VERTICAL",
               "primaryAxisAlignItems": "CENTER",
               "counterAxisAlignItems": "CENTER",
               "itemSpacing": 0.0,
               "paddingTop": 0.0,
-              "paddingRight": 24.0,
+              "paddingRight": 0.0,
               "paddingBottom": 0.0,
-              "paddingLeft": 24.0,
-              "minWidth": 64.0,
-              "minHeight": 52.0,
-              "fills": [
-                {
-                  "type": "SOLID",
-                  "color": {
-                    "r": 0.0,
-                    "g": 0.4117647058823529,
-                    "b": 0.43137254901960786
-                  },
-                  "opacity": 1.0,
-                  "variable": "ColorScheme/primary"
-                }
-              ],
-              "cornerRadius": 8.0,
+              "paddingLeft": 0.0,
+              "minWidth": 48.0,
+              "minHeight": 48.0,
+              "fills": [],
               "clipsContent": false,
               "children": [
                 {
-                  "type": "TEXT",
-                  "name": "Save changes",
-                  "characters": "Save changes",
-                  "fontName": {
-                    "family": "Inter",
-                    "style": "Medium"
-                  },
-                  "fontSize": 14.0,
-                  "lineHeight": {
-                    "unit": "PIXELS",
-                    "value": 20.02
-                  },
-                  "letterSpacing": {
-                    "unit": "PIXELS",
-                    "value": 0.1
-                  },
-                  "textStyle": "TextTheme/labelLarge",
+                  "type": "FRAME",
+                  "name": "FilledButton",
+                  "layoutMode": "HORIZONTAL",
+                  "primaryAxisAlignItems": "CENTER",
+                  "counterAxisAlignItems": "CENTER",
+                  "itemSpacing": 0.0,
+                  "paddingTop": 0.0,
+                  "paddingRight": 24.0,
+                  "paddingBottom": 0.0,
+                  "paddingLeft": 24.0,
+                  "minWidth": 64.0,
+                  "minHeight": 52.0,
                   "fills": [
                     {
                       "type": "SOLID",
                       "color": {
-                        "r": 1.0,
-                        "g": 1.0,
-                        "b": 1.0
+                        "r": 0.0,
+                        "g": 0.4117647058823529,
+                        "b": 0.43137254901960786
                       },
                       "opacity": 1.0,
-                      "variable": "ColorScheme/onPrimary"
+                      "variable": "ColorScheme/primary"
                     }
                   ],
-                  "textAlignHorizontal": "LEFT",
-                  "textAutoResize": "WIDTH_AND_HEIGHT",
-                  "layoutSizingHorizontal": "HUG",
+                  "cornerRadius": 8.0,
+                  "clipsContent": false,
+                  "children": [
+                    {
+                      "type": "TEXT",
+                      "name": "Save changes",
+                      "characters": "Save changes",
+                      "fontName": {
+                        "family": "Inter",
+                        "style": "Medium"
+                      },
+                      "fontSize": 14.0,
+                      "lineHeight": {
+                        "unit": "PIXELS",
+                        "value": 20.02
+                      },
+                      "letterSpacing": {
+                        "unit": "PIXELS",
+                        "value": 0.1
+                      },
+                      "textStyle": "TextTheme/labelLarge",
+                      "fills": [
+                        {
+                          "type": "SOLID",
+                          "color": {
+                            "r": 1.0,
+                            "g": 1.0,
+                            "b": 1.0
+                          },
+                          "opacity": 1.0,
+                          "variable": "ColorScheme/onPrimary"
+                        }
+                      ],
+                      "textAlignHorizontal": "LEFT",
+                      "textAutoResize": "WIDTH_AND_HEIGHT",
+                      "layoutSizingHorizontal": "HUG",
+                      "layoutSizingVertical": "HUG",
+                      "pluginData": {
+                        "origin": [
+                          "Text"
+                        ],
+                        "source": "lib/settings_screen.dart:69"
+                      }
+                    }
+                  ],
+                  "layoutSizingHorizontal": "FILL",
                   "layoutSizingVertical": "HUG",
+                  "instance": {
+                    "component": "Button",
+                    "variant": "Button[Type=Filled, State=Enabled, Variant=2]",
+                    "props": {
+                      "Type": "Filled",
+                      "State": "Enabled",
+                      "Variant": "2"
+                    }
+                  },
                   "pluginData": {
                     "origin": [
-                      "Text"
+                      "FilledButton"
                     ],
-                    "source": "lib/settings_screen.dart:69"
+                    "role": "button"
                   }
                 }
               ],
               "layoutSizingHorizontal": "FILL",
               "layoutSizingVertical": "HUG",
-              "instance": {
-                "component": "Button",
-                "variant": "Button[Type=Filled, State=Enabled, Variant=2]",
-                "props": {
-                  "Type": "Filled",
-                  "State": "Enabled",
-                  "Variant": "2"
-                }
-              },
               "pluginData": {
                 "origin": [
-                  "FilledButton"
+                  "MaterialTapTargetSize.padded"
                 ],
                 "source": "lib/settings_screen.dart:64",
-                "role": "button"
+                "role": "tap-target"
               }
             }
           ],
@@ -4368,7 +4497,7 @@
                       "children": [
                         {
                           "type": "FRAME",
-                          "name": "IconButton",
+                          "name": "Tap target",
                           "layoutMode": "VERTICAL",
                           "primaryAxisAlignItems": "CENTER",
                           "counterAxisAlignItems": "CENTER",
@@ -4377,59 +4506,85 @@
                           "paddingRight": 0.0,
                           "paddingBottom": 0.0,
                           "paddingLeft": 0.0,
+                          "minWidth": 48.0,
+                          "minHeight": 48.0,
                           "fills": [],
-                          "cornerRadius": 20.0,
                           "clipsContent": false,
                           "children": [
                             {
                               "type": "FRAME",
-                              "name": "Icon/arrow_back_ios",
+                              "name": "IconButton",
                               "layoutMode": "VERTICAL",
-                              "primaryAxisAlignItems": "MIN",
-                              "counterAxisAlignItems": "MIN",
+                              "primaryAxisAlignItems": "CENTER",
+                              "counterAxisAlignItems": "CENTER",
                               "itemSpacing": 0.0,
                               "paddingTop": 0.0,
                               "paddingRight": 0.0,
                               "paddingBottom": 0.0,
                               "paddingLeft": 0.0,
-                              "fills": [
+                              "fills": [],
+                              "cornerRadius": 20.0,
+                              "clipsContent": false,
+                              "children": [
                                 {
-                                  "type": "SOLID",
-                                  "color": {
-                                    "r": 0.24705882352941178,
-                                    "g": 0.28627450980392155,
-                                    "b": 0.28627450980392155
-                                  },
-                                  "opacity": 0.24,
-                                  "variable": "ColorScheme/onSurfaceVariant"
+                                  "type": "FRAME",
+                                  "name": "Icon/arrow_back_ios",
+                                  "layoutMode": "VERTICAL",
+                                  "primaryAxisAlignItems": "MIN",
+                                  "counterAxisAlignItems": "MIN",
+                                  "itemSpacing": 0.0,
+                                  "paddingTop": 0.0,
+                                  "paddingRight": 0.0,
+                                  "paddingBottom": 0.0,
+                                  "paddingLeft": 0.0,
+                                  "fills": [
+                                    {
+                                      "type": "SOLID",
+                                      "color": {
+                                        "r": 0.24705882352941178,
+                                        "g": 0.28627450980392155,
+                                        "b": 0.28627450980392155
+                                      },
+                                      "opacity": 0.24,
+                                      "variable": "ColorScheme/onSurfaceVariant"
+                                    }
+                                  ],
+                                  "cornerRadius": 5.333333333333333,
+                                  "clipsContent": false,
+                                  "children": [],
+                                  "layoutSizingHorizontal": "FIXED",
+                                  "layoutSizingVertical": "FIXED",
+                                  "width": 32.0,
+                                  "height": 32.0,
+                                  "pluginData": {
+                                    "origin": [
+                                      "Icon"
+                                    ],
+                                    "source": "lib/stack_layout_screen.dart:25",
+                                    "role": "icon"
+                                  }
                                 }
                               ],
-                              "cornerRadius": 5.333333333333333,
-                              "clipsContent": false,
-                              "children": [],
                               "layoutSizingHorizontal": "FIXED",
                               "layoutSizingVertical": "FIXED",
-                              "width": 32.0,
-                              "height": 32.0,
+                              "width": 40.0,
+                              "height": 40.0,
                               "pluginData": {
                                 "origin": [
-                                  "Icon"
+                                  "IconButton"
                                 ],
-                                "source": "lib/stack_layout_screen.dart:25",
-                                "role": "icon"
+                                "role": "button"
                               }
                             }
                           ],
-                          "layoutSizingHorizontal": "FIXED",
-                          "layoutSizingVertical": "FIXED",
-                          "width": 40.0,
-                          "height": 40.0,
+                          "layoutSizingHorizontal": "HUG",
+                          "layoutSizingVertical": "HUG",
                           "pluginData": {
                             "origin": [
-                              "IconButton"
+                              "MaterialTapTargetSize.padded"
                             ],
                             "source": "lib/stack_layout_screen.dart:24",
-                            "role": "button"
+                            "role": "tap-target"
                           }
                         }
                       ],

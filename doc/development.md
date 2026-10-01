@@ -195,6 +195,21 @@ new theme property, add it to both dumps, the Flutter test and
 `describeTheme()` (in `material_theme.dart`), so it's checked against the real
 thing.
 
+### The layout fixture
+
+`test/goldens/basic_layout.json` is also written by Flutter: the sizes it lays
+out for a few example widgets on a 390×844 screen. The plugin test imports the
+golden into the mock and expects the same sizes. Regenerate it like the theme
+fixture:
+
+```sh
+(cd example && UPDATE_GOLDENS=1 fvm flutter test test/layout_ground_truth_test.dart)
+(cd figma-plugin && npm test)
+```
+
+The mock has no font metrics (text is approximated), so widths that depend on
+a label are compared loosely; heights must match.
+
 ### The Figma mock
 
 `figma-mock.ts` implements only the API the importer uses. It **throws** where

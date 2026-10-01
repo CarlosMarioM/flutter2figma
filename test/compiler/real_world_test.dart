@@ -118,7 +118,9 @@ void main() {
         ),
       ]),
     );
-    final button = (bodyOf(doc) as IrFrame).children.single as IrFrame;
+    final target = (bodyOf(doc) as IrFrame).children.single as IrFrame;
+    expect(target.width, const IrSizing.fill(), reason: 'tap target fills too');
+    final button = unwrap(target);
     expect(button.width, const IrSizing.fill());
     expect(button.minWidth, 64);
     expect(button.minHeight, 52);
@@ -313,7 +315,8 @@ void main() {
         ]),
       );
       final [off, on, checkbox, radio] = (bodyOf(doc) as IrFrame).children
-          .cast<IrFrame>();
+          .map(unwrap)
+          .toList();
       expect(off.mainAlign, IrMainAlign.start);
       expect(off.fill!.token, 'ColorScheme/surfaceContainerHighest');
       expect(on.mainAlign, IrMainAlign.end);
@@ -330,7 +333,7 @@ void main() {
         {},
         w('Switch', named: {'value': const UnknownValue('state.on')}),
       );
-      expect((bodyOf(doc) as IrFrame).mainAlign, IrMainAlign.start);
+      expect(unwrap(bodyOf(doc)).mainAlign, IrMainAlign.start);
       expect(messages(doc), contains(contains('is runtime state')));
     });
 

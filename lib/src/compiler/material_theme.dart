@@ -52,6 +52,7 @@ class MaterialTheme {
     this.appBar = const AppBarThemeSpec(),
     this.card = const CardThemeSpec(),
     this.buttonStyles = const {},
+    this.tapTargetPadded = true,
   });
 
   /// `ThemeData(brightness: b)` with no other arguments.
@@ -80,6 +81,10 @@ class MaterialTheme {
 
   /// `elevatedButtonTheme` etc.: button type → `ButtonStyle` arguments.
   final Map<String, Map<String, DartValue>> buttonStyles;
+
+  /// `ThemeData.materialTapTargetSize`: padded (48 px tap targets, the
+  /// default on phones) unless the app sets `shrinkWrap`.
+  final bool tapTargetPadded;
 
   bool get isDark => brightness == ThemeBrightness.dark;
 
