@@ -84,7 +84,8 @@ as of 0.1.0, checked in `manifest.json` and `src/`:
    screens, components, and Light/Dark variables.
 2. Publish from **Plugins → Development → Manage plugins in development →
    Publish**, using the text and images above.
-3. Figma assigns a permanent plugin ID. Replace `"id": "flutter2figma-dev"`
-   in `../manifest.json` with it, commit, and tag a release, so release zips
-   update the published plugin instead of creating a new one.
+3. The plugin ID in `../manifest.json` (`1687559887675755742`) was generated
+   by Figma (Plugins → Development → New plugin). Figma rejects IDs it
+   didn't issue. Publish with this ID, so release zips update the published
+   plugin instead of creating a new one.
 4. Update the README's plugin install steps to point to the Community page.
