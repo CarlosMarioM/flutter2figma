@@ -1,0 +1,35 @@
+name: Export or import problem
+description: Something exported wrong, is missing, or fails in Figma.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you expected to see in Figma, and what you got instead. Screenshots of both help a lot.
+    validations:
+      required: true
+  - type: textarea
+    id: code
+    attributes:
+      label: Flutter code
+      description: The smallest widget code that shows the problem (no private code needed).
+      render: dart
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: The warnings printed by `flutter2figma export -v`, or the plugin console (Plugins → Development → Open console).
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: flutter2figma version
+      description: Output of `flutter2figma --version`.
+    validations:
+      required: true
+  - type: input
+    id: flutter
+    attributes:
+      label: Flutter version
+      description: Output of `flutter --version` (first line).

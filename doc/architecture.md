@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | analyzer → compiler | `DartValue` tree (in-memory; `analyze --json` prints it) | `lib/src/analyzer/values.dart` |
 | compiler → renderer | IR, `flutter2figma/ir` v2 (`ir.json`) | `lib/src/ir/model.dart` |
-| renderer → plugin | `flutter2figma/design` v2 (`design.json`) | `lib/src/figma/renderer.dart`, `figma-plugin/src/design.ts` |
+| renderer → plugin | `flutter2figma/design` v2 (`design.json`, spec in [design-json.md](design-json.md)) | `lib/src/figma/renderer.dart`, `figma-plugin/src/design.ts` |
 
 The IR is the stable centre. Adding an HTML/React backend means writing another
 renderer over `IrDocument`. Runtime inspection (`--runtime`) would be another

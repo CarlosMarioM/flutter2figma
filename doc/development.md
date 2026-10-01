@@ -57,8 +57,12 @@ figma-plugin/                  TypeScript Figma plugin (not part of the pub pack
   ui.html                      drop zone UI
   test/figma-mock.ts           strict fake Figma API
   test/importer.test.ts        node:test suite
+  scripts/package.sh           builds the release zip
+  listing/                     Figma Community listing text, icon, cover
 tool/validate_app.sh           check any real app (theme, export, Figma import)
-doc/                           this guide and architecture.md
+doc/                           this guide, architecture.md, design-json.md (format spec)
+.github/workflows/             ci.yml, publish.yml (pub.dev), release-plugin.yml (zip)
+SECURITY.md, CONTRIBUTING.md
 ```
 
 ## Everyday commands
@@ -103,6 +107,21 @@ The analyzer and golden tests resolve a real Flutter project. The first run
 takes about 7 seconds. `test/compiler/real_world_test.dart` holds regressions
 found by running against real apps; add to it when validation finds a new
 pattern.
+
+### CI
+
+`.github/workflows/ci.yml` runs on every push to `main` and on pull
+requests:
+- **Dart job:** format, `dart analyze --fatal-infos`, `dart test`, the
+  example's Flutter ground-truth test, and `dart pub publish --dry-run`;
+- **Plugin job:** typecheck, tests and build.
+
+Flutter is pinned to **3.41.9** in CI, the version the theme fixtures were
+generated with. When you upgrade Flutter:
+1. regenerate the fixtures (see *The theme fixture* below);
+2. bump that pin in the same commit.
+
+`publish.yml` reuses CI before publishing, so a red CI blocks a release.
 
 ### Validating against real apps
 
@@ -368,6 +387,10 @@ in the plugin UI.
 - **`TextTheme.apply(displayColor:)`** covers display\* and
   headlineLarge/Medium only; `headlineSmall` takes `bodyColor`. This is a
   Flutter quirk that we mirror.
+- **The plugin `id` in `manifest.json` must be issued by Figma**
+  (Plugins → Development → New plugin). Figma rejects made-up IDs with
+  "invalid id". The mock doesn't validate IDs, so only a real import catches
+  this. Keep the current ID: the Community listing is tied to it.
 - **TypeScript 7** doesn't pick up `@figma/plugin-typings` through `typeRoots`.
   `tsconfig.json` lists it under `types`.
 - **Node 21's `node --test`** doesn't accept a directory, so the npm script

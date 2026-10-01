@@ -1,5 +1,9 @@
 # flutter2figma
 
+[![pub package](https://img.shields.io/pub/v/flutter2figma.svg)](https://pub.dev/packages/flutter2figma)
+[![CI](https://github.com/CarlosMarioM/flutter2figma/actions/workflows/ci.yml/badge.svg)](https://github.com/CarlosMarioM/flutter2figma/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 Convert a Flutter UI that already exists into an **editable** Figma design.
 You get real frames with auto layout, text layers, color variables with
 light/dark modes, text styles, and components. It doesn't take screenshots.
@@ -146,11 +150,20 @@ diagnostic, and anything it can't draw becomes a magenta `⚠` placeholder.
 - **Fonts** are exported by family name; the plugin substitutes any font
   that isn't installed in Figma.
 
-## Contributing
+## Documentation
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). [doc/architecture.md](doc/architecture.md)
-explains how the pipeline works, and [doc/development.md](doc/development.md)
-covers setup, tests and how to add widget support.
+| | |
+| --- | --- |
+| [doc/design-json.md](doc/design-json.md) | The `design.json` format, for building your own importer or tooling |
+| [doc/architecture.md](doc/architecture.md) | How the pipeline works: analysis, theme, layout model, design system |
+| [doc/development.md](doc/development.md) | Setup, tests, adding widget support, debugging |
+| [figma-plugin/README.md](figma-plugin/README.md) | The Figma plugin: install, develop, release |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Checks and the release process |
+| [SECURITY.md](SECURITY.md) | Reporting vulnerabilities; what the tool can and can't do |
+
+Bugs and wrong exports:
+[open an issue](https://github.com/CarlosMarioM/flutter2figma/issues/new/choose)
+with the diagnostics from `flutter2figma export -v`.
 
 ## License
 

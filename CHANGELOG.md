@@ -42,6 +42,14 @@ First release.
 - Material buttons become a `Button` component set. Project widgets used
   twice or more become components with instances.
 
+### Figma plugin
+- Imports `design.json` (format version 2, documented in
+  `doc/design-json.md`). It creates or updates the variable collection,
+  variables and styles by name, builds components from first occurrences,
+  binds paints to variables, and sets each screen's mode.
+- Has no network access.
+- Released as `flutter2figma-figma-plugin-<version>.zip` on GitHub Releases.
+
 ### API
 - `package:flutter2figma/flutter2figma.dart` provides `exportProject()`.
   The stages are separate libraries: `analyzer.dart`, `compiler.dart`,
