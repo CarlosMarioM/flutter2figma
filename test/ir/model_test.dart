@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter2figma/ir.dart';
 import 'package:test/test.dart';
@@ -153,9 +154,18 @@ void main() {
     expect(text.color.a, closeTo(0.38, 0.01));
   });
 
-  test('v3: vectors round-trip', () {
+  test('v3: vectors and images round-trip', () {
     final doc = IrDocument(
       project: 'demo',
+      images: {
+        'assets/a.png': IrImageAsset(
+          key: 'assets/a.png',
+          format: 'png',
+          width: 2,
+          height: 1,
+          data: Uint8List.fromList([1, 2, 3]),
+        ),
+      },
       screens: [
         IrScreen(
           name: 'S',
@@ -163,6 +173,7 @@ void main() {
           height: 24,
           root: IrFrame(
             name: 'Icon/add',
+            image: const IrImagePaint('assets/a.png', fit: IrBoxFit.cover),
             direction: IrLayoutDirection.stack,
             width: const IrSizing.fixed(24),
             height: const IrSizing.fixed(24),
@@ -186,6 +197,8 @@ void main() {
     final json = jsonDecode(jsonEncode(doc.toJson())) as Map<String, Object?>;
     final again = IrDocument.fromJson(json);
     expect(jsonEncode(again.toJson()), jsonEncode(doc.toJson()));
+    expect(again.images['assets/a.png']!.data, [1, 2, 3]);
+    expect(again.screens.single.root.image!.fit, IrBoxFit.cover);
     final vector = again.screens.single.root.children.single as IrVector;
     expect(vector.fill.token, 'ColorScheme/onSurfaceVariant');
     expect(vector.position!.left, 5);

@@ -4,6 +4,9 @@
 /// compiler) and consumers (the Figma renderer, and later HTML/React) meet here.
 library;
 
+import 'dart:convert';
+import 'dart:typed_data';
+
 import '../version.dart';
 
 const irFormat = 'flutter2figma/ir';
@@ -15,10 +18,14 @@ class IrDocument {
     required this.screens,
     this.designSystem,
     this.diagnostics = const [],
+    this.images = const {},
   });
 
   final String project;
   final List<IrScreen> screens;
+
+  /// Image files the screens paint, by [IrImageAsset.key].
+  final Map<String, IrImageAsset> images;
 
   /// Tokens and components the screens reference.
   final IrDesignSystem? designSystem;
@@ -31,6 +38,8 @@ class IrDocument {
     'project': project,
     'screens': [for (final s in screens) s.toJson()],
     if (designSystem != null) 'designSystem': designSystem!.toJson(),
+    if (images.isNotEmpty)
+      'images': {for (final e in images.entries) e.key: e.value.toJson()},
     'diagnostics': [for (final d in diagnostics) d.toJson()],
   };
 
@@ -58,6 +67,76 @@ class IrDocument {
         for (final d in (json['diagnostics'] as List? ?? const []))
           IrDiagnostic.fromJson(d as Map<String, Object?>),
       ],
+      images: {
+        for (final MapEntry(:key, :value)
+            in ((json['images'] as Map?) ?? const {}).entries)
+          key as String: IrImageAsset.fromJson(
+            key,
+            value as Map<String, Object?>,
+          ),
+      },
+    );
+  }
+}
+
+/// An image file, embedded so the document is self-contained.
+class IrImageAsset {
+  IrImageAsset({
+    required this.key,
+    required this.format,
+    required this.width,
+    required this.height,
+    required this.data,
+  });
+
+  /// The asset name, e.g. `assets/logo.png`.
+  final String key;
+
+  /// `png`, `jpeg`, `gif` or `svg`.
+  final String format;
+
+  /// Logical size: pixels divided by the resolution variant's ratio.
+  final double width, height;
+  final Uint8List data;
+
+  bool get isSvg => format == 'svg';
+
+  Map<String, Object?> toJson() => {
+    'format': format,
+    'width': width,
+    'height': height,
+    'data': base64Encode(data),
+  };
+
+  static IrImageAsset fromJson(String key, Map<String, Object?> json) =>
+      IrImageAsset(
+        key: key,
+        format: json['format'] as String,
+        width: _d(json['width'])!,
+        height: _d(json['height'])!,
+        data: base64Decode(json['data'] as String),
+      );
+}
+
+/// How an image is fitted into its box, as Flutter's `BoxFit`.
+enum IrBoxFit { fill, contain, cover, fitWidth, fitHeight, none, scaleDown }
+
+/// An image painted over a frame's fill.
+class IrImagePaint {
+  const IrImagePaint(this.asset, {this.fit = IrBoxFit.scaleDown});
+
+  /// Key into [IrDocument.images].
+  final String asset;
+  final IrBoxFit fit;
+
+  Map<String, Object?> toJson() => {'asset': asset, 'fit': fit.name};
+
+  static IrImagePaint? fromJson(Object? json) {
+    if (json == null) return null;
+    final m = json as Map<String, Object?>;
+    return IrImagePaint(
+      m['asset'] as String,
+      fit: IrBoxFit.values.byName(m['fit'] as String),
     );
   }
 }
@@ -511,6 +590,7 @@ class IrFrame extends IrNode {
     this.mainAlign = IrMainAlign.start,
     this.crossAlign = IrCrossAlign.start,
     this.fill,
+    this.image,
     this.corners = IrCorners.zero,
     this.stroke,
     this.shadows = const [],
@@ -528,6 +608,9 @@ class IrFrame extends IrNode {
   IrMainAlign mainAlign;
   IrCrossAlign crossAlign;
   IrColor? fill;
+
+  /// Painted over [fill].
+  IrImagePaint? image;
   IrCorners corners;
   IrStroke? stroke;
   List<IrShadow> shadows;
@@ -543,7 +626,12 @@ class IrFrame extends IrNode {
   List<IrNode> children;
 
   /// True when the frame paints nothing itself and is purely structural.
-  bool get isBare => fill == null && stroke == null && shadows.isEmpty && !clip;
+  bool get isBare =>
+      fill == null &&
+      image == null &&
+      stroke == null &&
+      shadows.isEmpty &&
+      !clip;
 
   @override
   String get type => 'frame';
@@ -561,6 +649,7 @@ class IrFrame extends IrNode {
     if (minWidth != null) 'minWidth': minWidth,
     if (minHeight != null) 'minHeight': minHeight,
     if (fill != null) 'fill': fill!.toJson(),
+    if (image != null) 'image': image!.toJson(),
     if (!corners.isZero) 'corners': corners.toJson(),
     if (stroke != null) 'stroke': stroke!.toJson(),
     if (shadows.isNotEmpty) 'shadows': [for (final s in shadows) s.toJson()],
@@ -590,6 +679,7 @@ class IrFrame extends IrNode {
       minWidth: _d(json['minWidth']),
       minHeight: _d(json['minHeight']),
       fill: json['fill'] == null ? null : IrColor.fromJson(json['fill']),
+      image: IrImagePaint.fromJson(json['image']),
       corners: IrCorners.fromJson(json['corners']),
       stroke: IrStroke.fromJson(json['stroke']),
       shadows: [

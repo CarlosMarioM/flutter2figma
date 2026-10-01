@@ -92,8 +92,18 @@ export async function setupDesignSystem(
  * variable. The paint keeps its opacity, so `onSurface` at 38% stays bound
  * to `onSurface`.
  */
-export function toPaints(api: PluginAPI, specs: PaintSpec[], ds: DesignSystem | null): SolidPaint[] {
-  return specs.map(({ variable, ...paint }) => {
+/** Embedded images by key, created in Figma on first use. */
+export type ImageHashes = (key: string) => string;
+
+export function toPaints(api: PluginAPI, specs: PaintSpec[], ds: DesignSystem | null, images?: ImageHashes): Paint[] {
+  return specs.map((spec): Paint => {
+    if (spec.type === 'IMAGE') {
+      if (!images) throw new Error(`Image ${spec.image} outside an image fill`);
+      const paint: ImagePaint = { type: 'IMAGE', imageHash: images(spec.image), scaleMode: spec.scaleMode };
+      // CROP with the identity transform stretches the image to the node.
+      return spec.scaleMode === 'CROP' ? { ...paint, imageTransform: [[1, 0, 0], [0, 1, 0]] } : paint;
+    }
+    const { variable, ...paint } = spec;
     const bound = variable ? ds?.variables.get(variable) : undefined;
     return bound ? api.variables.setBoundVariableForPaint(paint, 'color', bound) : paint;
   });

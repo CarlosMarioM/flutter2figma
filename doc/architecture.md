@@ -175,6 +175,17 @@ starts at its exact bounds (curve extremes, not control points) because
 Figma sizes vectors the same way. An icon chosen by an unknown condition uses
 the `true` branch; an icon from another font is a placeholder.
 
+**Images.** `ProjectAssets` (`image_assets.dart`) resolves asset names as
+Flutter's bundle does: relative to the project, `packages/<name>/…` (or a
+`package:` argument) through `package_config.json`, picking the highest
+`N.Nx/` variant. Its logical size is pixels ÷ ratio. Images Figma can't take
+are decoded with `package:image`, scaled to 4096 px and re-encoded. Used
+assets are collected into `IrDocument.images` and painted with
+`IrFrame.image` (`IrImagePaint`, with its `BoxFit`). `_image` sizes like
+`RenderImage`: given dimensions, else the intrinsic size, keeping the aspect
+ratio when one side is known; an image stretched across unknown space
+estimates the free side from the screen width.
+
 **Tap targets.** Under `MaterialTapTargetSize.padded` (the default), Flutter
 lays buttons, icon buttons and selection controls out in at least 48×48
 while drawing them smaller. Buttons and icon buttons are wrapped in a

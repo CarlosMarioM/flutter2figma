@@ -15,6 +15,7 @@ export 'src/compiler/color_scheme.dart'
     show seedColorScheme, completeColorScheme;
 export 'src/compiler/compiler.dart' show FlutterCompiler;
 export 'src/compiler/component_extractor.dart';
+export 'src/compiler/image_assets.dart' show ProjectAssets, AssetLookup;
 export 'src/compiler/icon_font.dart' show IconFont, IconGlyph, projectIconFonts;
 export 'src/compiler/evaluator.dart' show ValueEvaluator, ColorSchemeValue;
 export 'src/compiler/material_theme.dart';

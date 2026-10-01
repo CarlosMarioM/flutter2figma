@@ -11,6 +11,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter2figma_example/home_screen.dart';
+import 'package:flutter2figma_example/profile_screen.dart';
 import 'package:flutter2figma_example/scoreboard_screen.dart';
 import 'package:flutter2figma_example/stack_layout_screen.dart';
 import 'package:flutter2figma_example/theme.dart';
@@ -34,6 +35,16 @@ void main() {
     }
 
     final sizes = <String, List<double>>{};
+
+    // Decode the asset images first, so they lay out at their real size.
+    await show(const ProfileScreen());
+    await tester.runAsync(() async {
+      final context = tester.element(find.byType(ProfileScreen));
+      await precacheImage(const AssetImage('assets/logo.png'), context);
+      await precacheImage(const AssetImage('assets/avatar.png'), context);
+    });
+    await tester.pump();
+    sizes['ProfileScreen/Image'] = sizeOf(tester, find.byType(Image));
 
     await show(const HomeScreen());
     // Tap target: drawn 40 px tall, laid out 48 px tall.

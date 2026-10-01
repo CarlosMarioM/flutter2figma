@@ -202,7 +202,7 @@ void main() {
     expect(actions.method, '_actions');
     final row = actions.result as ObjectValue;
     expect(row.type, 'Row');
-    expect(row.source, 'lib/profile_screen.dart:40');
+    expect(row.source, 'lib/profile_screen.dart:58');
     final save = (row['children'] as ListValue).items.last as ObjectValue;
     final label = save['child'] as ObjectValue;
     expect((label.arg(0) as LiteralValue).value, 'Save');

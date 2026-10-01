@@ -12,8 +12,21 @@ export interface DesignDocument {
   fonts: FontName[];
   designSystem?: DesignSystemSpec;
   screens: FrameSpec[];
+  /** Embedded image files, by asset name. */
+  images?: Record<string, ImageAssetSpec>;
   diagnostics: Diagnostic[];
 }
+
+export interface ImageAssetSpec {
+  format: 'png' | 'jpeg' | 'gif' | 'svg';
+  /** Logical size in the app. */
+  width: number;
+  height: number;
+  /** Base64 for raster formats, SVG markup for `svg`. */
+  data: string;
+}
+
+export type ScaleMode = 'FILL' | 'FIT' | 'CROP';
 
 export interface Diagnostic {
   severity: 'info' | 'warning' | 'error';
@@ -29,9 +42,18 @@ export interface Position {
 }
 
 /** A solid paint; `variable` names the color variable to bind. */
-export interface PaintSpec extends SolidPaint {
+export interface SolidPaintSpec extends SolidPaint {
   variable?: string;
 }
+
+/** An embedded image (a key of `images`); `CROP` means stretched. */
+export interface ImagePaintSpec {
+  type: 'IMAGE';
+  image: string;
+  scaleMode: ScaleMode;
+}
+
+export type PaintSpec = SolidPaintSpec | ImagePaintSpec;
 
 export interface DesignSystemSpec {
   /** Variable collection name. */
@@ -108,6 +130,8 @@ export interface FrameSpec extends BaseSpec {
   /** Effect style name the effects came from. */
   effectStyle?: string;
   clipsContent: boolean;
+  /** An embedded SVG drawn inside the frame. */
+  svg?: { image: string; scaleMode: ScaleMode };
   children: NodeSpec[];
 }
 

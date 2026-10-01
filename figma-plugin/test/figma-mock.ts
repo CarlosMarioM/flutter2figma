@@ -20,12 +20,20 @@ let nextId = 1;
 const newId = (prefix: string) => `${prefix}:${nextId++}`;
 
 const PAINT_KEYS = new Set(['type', 'color', 'opacity', 'visible', 'blendMode', 'boundVariables']);
+const IMAGE_PAINT_KEYS = new Set(['type', 'imageHash', 'scaleMode', 'imageTransform', 'opacity', 'visible', 'blendMode']);
+const images = new Map<string, Uint8Array>();
 
 /** Figma rejects paints with unknown keys or RGBA in a solid paint's color. */
 function checkPaints(paints: readonly Paint[]): void {
   for (const p of paints) {
+    const allowed = p.type === 'IMAGE' ? IMAGE_PAINT_KEYS : PAINT_KEYS;
     for (const k of Object.keys(p)) {
-      if (!PAINT_KEYS.has(k)) throw new Error(`Unrecognized key "${k}" in paint`);
+      if (!allowed.has(k)) throw new Error(`Unrecognized key "${k}" in paint`);
+    }
+    if (p.type === 'IMAGE') {
+      if (!p.imageHash || !images.has(p.imageHash)) throw new Error('Image paint needs the hash of a created image');
+      if (!['FILL', 'FIT', 'CROP', 'TILE'].includes(p.scaleMode)) throw new Error(`Bad scaleMode ${p.scaleMode}`);
+      if (p.scaleMode === 'CROP' && !p.imageTransform) throw new Error('CROP needs an imageTransform');
     }
     if (p.type === 'SOLID' && 'a' in p.color) throw new Error('Solid paint color must be RGB (use opacity)');
   }
@@ -96,6 +104,14 @@ export class MockNode {
     }
     if (this.sizing[axis] === 'HUG' && this instanceof MockFrame && this.isAutoLayout) return this.hugSize(axis);
     return horizontal ? this._w : this._h;
+  }
+
+  /** Scales the node (and, in Figma, its content) uniformly. */
+  rescale(scale: number) {
+    if (!(scale > 0)) throw new Error(`rescale(${scale}): must be > 0`);
+    const sizing = { ...this.sizing };
+    this.resize(this.width * scale, this.height * scale);
+    this.sizing = sizing;
   }
 
   resize(width: number, height: number) {
@@ -559,6 +575,7 @@ export function createMockFigma(options: { maxModes?: number } = {}) {
   const notifications: string[] = [];
   const collections: MockCollection[] = [];
   const variables: MockVariable[] = [];
+  const created: string[] = [];
 
   const api = {
     pages,
@@ -580,6 +597,31 @@ export function createMockFigma(options: { maxModes?: number } = {}) {
     createFrame: () => new MockFrame('FRAME', registry),
     createText: () => new MockText(registry),
     createVector: () => new MockVector(),
+    base64Decode(data: string): Uint8Array {
+      if (!/^[A-Za-z0-9+/]*={0,2}$/.test(data)) throw new Error('Invalid base64');
+      return Uint8Array.from(Buffer.from(data, 'base64'));
+    },
+    createImage(bytes: Uint8Array) {
+      const png = bytes[0] === 0x89 && bytes[1] === 0x50;
+      const jpeg = bytes[0] === 0xff && bytes[1] === 0xd8;
+      const gif = bytes[0] === 0x47 && bytes[1] === 0x49;
+      if (!png && !jpeg && !gif) throw new Error('Image type is unsupported');
+      const hash = `image:${images.size + 1}`;
+      images.set(hash, bytes);
+      created.push(hash);
+      return { hash };
+    },
+    /** Images this API instance created. */
+    imageCount: () => created.length,
+    createNodeFromSvg(svg: string) {
+      const tag = /<svg\b[^>]*>/i.exec(svg)?.[0];
+      if (!tag) throw new Error('Failed to parse SVG');
+      const attr = (name: string) => Number(new RegExp(`\\b${name}\\s*=\\s*["']([\\d.]+)`).exec(tag)?.[1]);
+      const frame = new MockFrame('FRAME', registry);
+      frame.resize(attr('width') || 100, attr('height') || 100);
+      frame.appendChild(new MockVector());
+      return frame;
+    },
     createComponentFromNode(node: MockNode) {
       if (!(node instanceof MockFrame) || node.type !== 'FRAME') throw new Error('createComponentFromNode needs a frame');
       const parent = node.parent;

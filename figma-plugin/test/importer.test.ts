@@ -251,6 +251,7 @@ test('imported sizes match what Flutter lays out', async () => {
     'StackLayoutScreen/IconButton': outer(find(screen('StackLayoutScreen'), 'IconButton')!),
     'ScoreboardScreen/Switch': find(screen('ScoreboardScreen'), 'Switch')!,
     'ScoreboardScreen/Checkbox': find(screen('ScoreboardScreen'), 'Checkbox')!,
+    'ProfileScreen/Image': find(screen('ProfileScreen'), 'Image/logo.png')!,
   };
   const flutter = JSON.parse(readFileSync(LAYOUT, 'utf8')) as Record<string, [number, number]>;
   assert.deepEqual(Object.keys(figma).sort(), Object.keys(flutter).sort());
@@ -277,6 +278,47 @@ test('icons import as vectors of their glyph, colored by the theme', async () =>
   assert.ok(Math.abs(glyph.width - (11.67 * 32) / 24) < 0.05, `width ${glyph.width}`);
   assert.ok(Math.abs(glyph.height - (19.8 * 32) / 24) < 0.05, `height ${glyph.height}`);
   assert.equal(boundTo(api, glyph.fills[0]), 'ColorScheme/onSurfaceVariant');
+});
+
+test('asset images become image fills, uploaded once', async () => {
+  const { api, result } = await run(golden());
+  const profile = result.screens.find((s) => s.name === 'ProfileScreen') as unknown as MockFrame;
+  const logo = find(profile, 'Image/logo.png') as MockFrame;
+  assert.deepEqual([logo.width, logo.height], [48, 48]); // 96 px at 2.0x
+  assert.equal(logo.fills.length, 1);
+  const paint = logo.fills[0] as ImagePaint;
+  assert.equal(paint.type, 'IMAGE');
+  assert.equal(paint.scaleMode, 'FIT');
+
+  // DecorationImage(fit: BoxFit.cover) on a circle.
+  const avatar = findAll(profile, 'Container').find((n) =>
+    (n as MockFrame).fills.some((f) => f.type === 'IMAGE'),
+  ) as MockFrame;
+  assert.equal((avatar.fills[0] as ImagePaint).scaleMode, 'FILL');
+  assert.equal(avatar.cornerRadius, 9999);
+  assert.equal(api.imageCount(), 2);
+});
+
+test('SVG assets are drawn inside their frame, fitted', async () => {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="10" viewBox="0 0 20 10"><rect width="20" height="10"/></svg>';
+  const doc: DesignDocument = {
+    format: 'flutter2figma/design',
+    version: 3,
+    name: 'svg',
+    fonts: [],
+    diagnostics: [],
+    images: { 'assets/wide.svg': { format: 'svg', width: 20, height: 10, data: svg } },
+    screens: [
+      frame('Screen', 'VERTICAL', {
+        children: [frame('Image/wide.svg', 'NONE', { width: 40, height: 40, svg: { image: 'assets/wide.svg', scaleMode: 'FIT' } })],
+      }),
+    ],
+  };
+  const { result } = await run(doc);
+  const box = find(result.screens[0] as unknown as MockFrame, 'Image/wide.svg') as MockFrame;
+  const drawn = box.children[0];
+  assert.deepEqual([drawn.width, drawn.height, drawn.x, drawn.y], [40, 20, 0, 10]);
+  assert.deepEqual(drawn.constraints, { horizontal: 'SCALE', vertical: 'SCALE' });
 });
 
 test('FILL children of a Stack are sized before their subtree (#1)', async () => {

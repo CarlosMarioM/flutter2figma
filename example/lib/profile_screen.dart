@@ -28,6 +28,24 @@ class ProfileScreen extends StatelessWidget {
                 Expanded(child: StatCard(label: 'Followers', value: '4.2k')),
               ],
             ),
+            Row(
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    image: DecorationImage(
+                      image: AssetImage('assets/avatar.png'),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                // Sized by the 2.0x variant: 96 px → 48 logical pixels.
+                Image.asset('assets/logo.png'),
+              ],
+            ),
             const Spacer(),
             _actions(primary: 'Save'),
           ],

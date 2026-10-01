@@ -1,11 +1,14 @@
 import 'dart:math';
 
+import 'package:path/path.dart' as p;
+
 import 'package:flutter2figma/analyzer.dart';
 import 'package:flutter2figma/ir.dart';
 
 import 'component_extractor.dart';
 import 'evaluator.dart';
 import 'icon_font.dart';
+import 'image_assets.dart';
 import 'material_theme.dart';
 import 'simplify.dart';
 import 'text_style.dart';
@@ -168,6 +171,7 @@ class FlutterCompiler {
     this.designSystem = true,
     this.minComponentUses = 2,
     this.iconFonts = const {},
+    this.assets,
   }) : eval = ValueEvaluator(
          theme,
          screenWidth: screenWidth,
@@ -184,6 +188,13 @@ class FlutterCompiler {
   /// Icon fonts by family (e.g. `MaterialIcons`). Icons in these fonts are
   /// exported as their glyph outlines; others as placeholders.
   final Map<String, IconFont> iconFonts;
+
+  /// Where asset images are read from; [compile] defaults it to the
+  /// project being compiled.
+  ProjectAssets? assets;
+
+  /// Images painted so far, embedded in the document.
+  final _images = <String, IrImageAsset>{};
 
   /// Read the app's `MaterialApp` theme in [compile]. When false, the
   /// constructor's `theme` is used as is.
@@ -206,6 +217,8 @@ class FlutterCompiler {
 
   IrDocument compile(ProjectAnalysis analysis) {
     _diagnostics.clear();
+    _images.clear();
+    assets ??= ProjectAssets(analysis.root);
     if (extractTheme) {
       final extractor = ThemeExtractor(eval);
       eval.theme = extractor.fromProject(analysis, brightness: brightness);
@@ -242,6 +255,7 @@ class FlutterCompiler {
       project: analysis.name,
       screens: screens,
       designSystem: system,
+      images: Map.of(_images),
       diagnostics: [
         for (final d in analysis.diagnostics) IrDiagnostic(IrSeverity.error, d),
         ..._diagnostics.values,
@@ -583,7 +597,13 @@ class FlutterCompiler {
           'Image.asset' ||
           'Image.network' ||
           'Image.file' ||
-          'Image.memory':
+          'Image.memory' ||
+          'SvgPicture' ||
+          'SvgPicture.asset' ||
+          'SvgPicture.network' ||
+          'SvgPicture.string' ||
+          'SvgPicture.file' ||
+          'SvgPicture.memory':
         return _image(w, c);
       case 'ElevatedButton' ||
           'ElevatedButton.icon' ||
@@ -1173,8 +1193,15 @@ class FlutterCompiler {
           severity: IrSeverity.info,
         );
       }
-      if (d['image'] != null) {
-        _warn('Decoration images are not exported yet', d['image']);
+      final image = eval.deref(d['image']);
+      if (image is ObjectValue && image.type == 'DecorationImage') {
+        final (asset, _) = _imageProvider(image['image'], image);
+        if (asset != null) {
+          frame.image = IrImagePaint(
+            asset.key,
+            fit: _boxFit(image['fit'], asset),
+          );
+        }
       }
     } else if (d is ObjectValue && d.type == 'ShapeDecoration') {
       final (corners, stroke) = eval.shape(d['shape']);
@@ -1620,33 +1647,133 @@ class FlutterCompiler {
   }
 
   IrFrame _image(ObjectValue w, _Ctx c) {
-    final width = eval.number(w['width']);
-    final height = eval.number(w['height']);
-    final src = eval.string(w.arg(0)) ?? 'image';
-    _warn('Images are exported as placeholders', w, severity: IrSeverity.info);
+    // `double.infinity` takes the available space, like tight constraints.
+    final rawWidth = eval.number(w['width']);
+    final rawHeight = eval.number(w['height']);
+    final width = rawWidth?.isFinite ?? false ? rawWidth : null;
+    final height = rawHeight?.isFinite ?? false ? rawHeight : null;
+    final fillW =
+        width == null &&
+        (c.box.forceW || (rawWidth?.isInfinite ?? false) && c.box.boundedW);
+    final fillH =
+        height == null &&
+        (c.box.forceH || (rawHeight?.isInfinite ?? false) && c.box.boundedH);
+    final (asset, label) = switch (w.constructor) {
+      'asset' => _assetImage(w.arg(0), eval.string(w['package']), w),
+      null when w.type == 'Image' => _imageProvider(w['image'], w),
+      _ => _unembedded(w),
+    };
+    final name = 'Image/${p.basename(label)}';
+    if (asset == null) {
+      return IrFrame(
+        name: name,
+        role: 'image',
+        origin: [w.type],
+        width: width != null
+            ? IrSizing.fixed(width)
+            : fillW
+            ? const IrSizing.fill()
+            : const IrSizing.fixed(120),
+        height: height != null
+            ? IrSizing.fixed(height)
+            : fillH
+            ? const IrSizing.fill()
+            : const IrSizing.fixed(120),
+        fill: theme.color('surfaceContainerHighest'),
+      );
+    }
+
+    // RenderImage: the given dimensions, else the intrinsic size, keeping
+    // the aspect ratio when only one side is known.
+    final aspect = asset.width / asset.height;
+    IrSizing w0, h0;
+    if (fillW || fillH) {
+      // Stretched across space of unknown size; a free side follows the
+      // aspect ratio, estimated from the screen width.
+      w0 = fillW ? const IrSizing.fill() : IrSizing.fixed(width ?? asset.width);
+      h0 = fillH
+          ? const IrSizing.fill()
+          : IrSizing.fixed(height ?? (width ?? screenWidth) / aspect);
+    } else if (width != null && height != null) {
+      (w0, h0) = (IrSizing.fixed(width), IrSizing.fixed(height));
+    } else if (width != null) {
+      (w0, h0) = (IrSizing.fixed(width), IrSizing.fixed(width / aspect));
+    } else if (height != null) {
+      (w0, h0) = (IrSizing.fixed(height * aspect), IrSizing.fixed(height));
+    } else {
+      var iw = asset.width, ih = asset.height;
+      if (c.box.boundedW && iw > screenWidth) {
+        (iw, ih) = (screenWidth, screenWidth / aspect);
+      }
+      (w0, h0) = (IrSizing.fixed(iw), IrSizing.fixed(ih));
+    }
     return IrFrame(
-      name: 'Image/$src',
+      name: name,
       role: 'image',
       origin: [w.type],
-      width:
-          _axis(
-            width,
-            forced: c.box.forceW,
-            bounded: c.box.boundedW,
-            expands: false,
-          ).isHug
-          ? const IrSizing.fixed(120)
-          : _axis(
-              width,
-              forced: c.box.forceW,
-              bounded: c.box.boundedW,
-              expands: false,
-            ),
-      height: height == null
-          ? const IrSizing.fixed(120)
-          : IrSizing.fixed(height),
-      fill: theme.color('surfaceContainerHighest'),
+      direction: IrLayoutDirection.stack,
+      width: w0,
+      height: h0,
+      image: IrImagePaint(asset.key, fit: _boxFit(w['fit'], asset)),
     );
+  }
+
+  /// Network, file and in-memory images: only a placeholder.
+  (IrImageAsset?, String) _unembedded(ObjectValue w) {
+    _warn(
+      '${w.displayName} images are exported as placeholders; only assets '
+      'are embedded',
+      w,
+      severity: IrSeverity.info,
+    );
+    final source = eval.string(w.arg(0));
+    return (null, source ?? w.constructor ?? 'image');
+  }
+
+  /// `BoxFit` of an image; SVGs default to `contain` like `SvgPicture`,
+  /// raster images to `scaleDown` like `paintImage`.
+  IrBoxFit _boxFit(DartValue? fit, IrImageAsset asset) {
+    final name = eval.enumName(fit);
+    return IrBoxFit.values.where((f) => f.name == name).firstOrNull ??
+        (asset.isSvg ? IrBoxFit.contain : IrBoxFit.scaleDown);
+  }
+
+  /// An `ImageProvider`: `AssetImage` / `ExactAssetImage` are embedded,
+  /// anything else is reported. Returns the asset and a name for the layer.
+  (IrImageAsset?, String) _imageProvider(DartValue? provider, DartValue at) {
+    final v = eval.deref(provider);
+    if (v is ObjectValue &&
+        (v.type == 'AssetImage' || v.type == 'ExactAssetImage')) {
+      return _assetImage(v.arg(0), eval.string(v['package']), at);
+    }
+    final label = v is ObjectValue ? eval.string(v.arg(0)) ?? v.type : 'image';
+    _warn(
+      '${v is ObjectValue ? v.type : 'Image'} images are exported as '
+      'placeholders; only assets are embedded',
+      at,
+      severity: IrSeverity.info,
+    );
+    return (null, label);
+  }
+
+  (IrImageAsset?, String) _assetImage(
+    DartValue? nameValue,
+    String? package,
+    DartValue at,
+  ) {
+    final name = eval.string(nameValue);
+    if (name == null) {
+      _warn('Image asset name is only known at runtime', at);
+      return (null, 'image');
+    }
+    final lookup = assets?.resolve(name, package: package);
+    final asset = lookup?.asset;
+    if (asset == null) {
+      _warn('Image not embedded: ${lookup?.problem ?? 'no project'}', at);
+      return (null, name);
+    }
+    _images[asset.key] = asset;
+    return (asset, name);
   }
 
   IrNode _button(ObjectValue w, _Ctx c) {

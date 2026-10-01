@@ -108,6 +108,19 @@ export async function importDesign(api: PluginAPI, doc: DesignDocument): Promise
   const masters = new Map<string, ComponentNode>();
   const builtNodes = new Map<NodeSpec, Built>();
   let nodeCount = 0;
+
+  // Each embedded image is uploaded once and shared by every fill using it.
+  const imageHashes = new Map<string, string>();
+  const imageHash = (key: string): string => {
+    let hash = imageHashes.get(key);
+    if (hash === undefined) {
+      const asset = doc.images?.[key];
+      if (!asset || asset.format === 'svg') throw new Error(`Image ${key} is missing from design.json`);
+      hash = api.createImage(api.base64Decode(asset.data)).hash;
+      imageHashes.set(key, hash);
+    }
+    return hash;
+  };
   let instances = 0;
 
   /** Builds [spec] under [parent], as an instance when it is a component occurrence. */
@@ -175,6 +188,7 @@ export async function importDesign(api: PluginAPI, doc: DesignDocument): Promise
       const children: (readonly [NodeSpec, Built])[] = [];
       for (const child of spec.children) children.push([child, await build(child, frame)]);
       placeAbsoluteChildren(frame, children);
+      if (spec.svg) drawSvg(api, frame, spec.svg, doc);
     }
 
     node.setPluginData(PLUGIN_DATA_KEY, JSON.stringify(spec.pluginData));
@@ -183,7 +197,7 @@ export async function importDesign(api: PluginAPI, doc: DesignDocument): Promise
 
   const buildFrame = async (spec: FrameSpec): Promise<FrameNode> => {
     const frame = api.createFrame();
-    frame.fills = toPaints(api, spec.fills, ds);
+    frame.fills = toPaints(api, spec.fills, ds, imageHash);
     frame.clipsContent = spec.clipsContent;
     frame.layoutMode = spec.layoutMode;
     if (spec.layoutMode !== 'NONE') {
@@ -425,6 +439,26 @@ function placeChild(frame: FrameNode, spec: NodeSpec, node: Built): void {
       vertical: stretchY ? 'STRETCH' : p.bottom !== undefined && p.top === undefined ? 'MAX' : 'MIN',
     };
   }
+}
+
+/**
+ * Draws an embedded SVG inside [frame], scaled like the image's `BoxFit`
+ * and centered. SCALE constraints keep it fitted if the frame resizes later.
+ */
+function drawSvg(api: PluginAPI, frame: FrameNode, svg: NonNullable<FrameSpec['svg']>, doc: DesignDocument): void {
+  const asset = doc.images?.[svg.image];
+  if (!asset || asset.format !== 'svg') throw new Error(`SVG ${svg.image} is missing from design.json`);
+  const node = api.createNodeFromSvg(asset.data);
+  node.name = svg.image.split('/').pop() ?? svg.image;
+  frame.appendChild(node);
+  const sx = frame.width / node.width;
+  const sy = frame.height / node.height;
+  const scale = svg.scaleMode === 'FILL' ? Math.max(sx, sy) : Math.min(sx, sy);
+  if (Number.isFinite(scale) && scale > 0) node.rescale(scale);
+  if (svg.scaleMode === 'FILL') frame.clipsContent = true;
+  node.x = (frame.width - node.width) / 2;
+  node.y = (frame.height - node.height) / 2;
+  node.constraints = { horizontal: 'SCALE', vertical: 'SCALE' };
 }
 
 /**

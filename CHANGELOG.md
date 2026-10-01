@@ -10,8 +10,15 @@
   font of the project's Flutter SDK, and `CupertinoIcons` from the
   `cupertino_icons` package, placed where Flutter draws them and colored by
   the theme's icon color variable. Icons from other fonts stay placeholders.
-- `design.json` version 3 (adds `VECTOR` nodes) and IR version 3. Update the
-  Figma plugin to import them.
+- Asset images are embedded: `Image.asset`, `Image(image: AssetImage(...))`,
+  `DecorationImage` and `SvgPicture.asset` (flutter_svg). The highest
+  resolution variant (`2.0x/`, `3.0x/`) is used at its logical size, `fit`
+  maps to Figma's scale modes, and images over Figma's 4096 px limit are
+  scaled down (other formats such as WebP become PNG). Network, file and
+  memory images stay placeholders.
+- New dependency: `image`, to scale and convert images.
+- `design.json` version 3 (adds `VECTOR` nodes, `images` and image paints)
+  and IR version 3. Update the Figma plugin to import them.
 
 ### Tests
 - The example app measures real Flutter layout sizes

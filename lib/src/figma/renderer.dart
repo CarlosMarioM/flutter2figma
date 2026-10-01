@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter2figma/ir.dart';
 
 import '../version.dart';
@@ -17,8 +19,10 @@ class FigmaRenderer {
 
   final _fonts = <String, Map<String, String>>{};
   final _diagnostics = <IrDiagnostic>[];
+  IrDocument? _doc;
 
   Map<String, Object?> render(IrDocument doc) {
+    _doc = doc;
     _fonts.clear();
     _diagnostics.clear();
     var x = 0.0;
@@ -42,6 +46,19 @@ class FigmaRenderer {
       'name': doc.project,
       'fonts': _fonts.values.toList(),
       'designSystem': ?designSystem,
+      if (doc.images.isNotEmpty)
+        'images': {
+          for (final MapEntry(:key, :value) in doc.images.entries)
+            key: {
+              'format': value.format,
+              'width': value.width,
+              'height': value.height,
+              // SVG markup as text (for createNodeFromSvg); raster as base64.
+              'data': value.isSvg
+                  ? utf8.decode(value.data, allowMalformed: true)
+                  : base64Encode(value.data),
+            },
+        },
       'screens': screens,
       'diagnostics': [
         for (final d in [...doc.diagnostics, ..._diagnostics]) d.toJson(),
@@ -167,7 +184,20 @@ class FigmaRenderer {
     }
     if (f.minWidth != null) json['minWidth'] = f.minWidth;
     if (f.minHeight != null) json['minHeight'] = f.minHeight;
-    json['fills'] = [if (f.fill != null) _paint(f.fill!)];
+    final image = f.image;
+    final svg = image != null && (_doc?.images[image.asset]?.isSvg ?? false);
+    json['fills'] = [
+      if (f.fill != null) _paint(f.fill!),
+      if (image != null && !svg)
+        {
+          'type': 'IMAGE',
+          'image': image.asset,
+          'scaleMode': _scaleMode(image.fit),
+        },
+    ];
+    if (svg) {
+      json['svg'] = {'image': image.asset, 'scaleMode': _scaleMode(image.fit)};
+    }
     if (f.stroke != null) {
       json['strokes'] = [_paint(f.stroke!.color)];
       json['strokeWeight'] = f.stroke!.width;
@@ -242,6 +272,13 @@ class FigmaRenderer {
       'letterSpacing': {'unit': 'PIXELS', 'value': s.letterSpacing},
     };
   }
+
+  /// Figma's closest scale mode: `CROP` without a transform stretches.
+  String _scaleMode(IrBoxFit fit) => switch (fit) {
+    IrBoxFit.cover || IrBoxFit.fitWidth || IrBoxFit.fitHeight => 'FILL',
+    IrBoxFit.contain || IrBoxFit.scaleDown || IrBoxFit.none => 'FIT',
+    IrBoxFit.fill => 'CROP',
+  };
 
   /// A solid paint. Token colors name the variable to bind; the alpha stays
   /// on the paint so e.g. `onSurface` at 38% binds to `onSurface`.

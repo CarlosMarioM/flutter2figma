@@ -19,11 +19,12 @@ representation. Its model is documented in the API docs of
 | Field | Meaning |
 | --- | --- |
 | `format` | Always `"flutter2figma/design"`. |
-| `version` | Format version, currently `2`. It is bumped when a change would break an existing importer. Importers must reject versions newer than they know; the plugin does. |
+| `version` | Format version, currently `3`. It is bumped when a change would break an existing importer. Importers must reject versions newer than they know; the plugin does. |
 | `generator` | `{ "name": "flutter2figma", "version": "<package version>" }`, for diagnostics only. |
 
 Version 1 had no design system, generator, paint variables, text or effect
-style references, or instances. The plugin still imports it.
+style references, or instances. Version 2 had no vectors or images. The
+plugin still imports both.
 
 ## Top level
 
@@ -36,6 +37,9 @@ style references, or instances. The plugin still imports it.
   "fonts": [{ "family": "Inter", "style": "Bold" }, …],  // every font used, to load first
   "designSystem": { … },                // optional; see below
   "screens": [ <FRAME>, … ],            // top-level frames, placed left to right
+  "images": {                           // optional; embedded image files by asset name
+    "assets/logo.png": { "format": "png", "width": 48, "height": 48, "data": "<base64>" }
+  },
   "diagnostics": [
     { "severity": "warning", "message": "…", "source": "lib/home.dart:12" }
   ]
@@ -103,6 +107,31 @@ one vector of the glyph, positioned with `position.left/top`.
 | `vectorPaths` | `[{windingRule: "NONZERO", data}]`, Figma's `VectorPath`. `data` uses absolute `M`, `L`, `Q`, `C` and `Z` with space-separated numbers, and its outline starts at 0,0 (control points may lie outside). |
 | `width`, `height` | The outline's bounds. Don't resize the node: Figma sizes a vector by its geometry, and resizing would scale the outline. |
 
+## Images
+
+`images` holds every image file the screens paint, keyed by its Flutter
+asset name. `format` is `png`, `jpeg` or `gif` (base64 `data`, ready for
+`figma.createImage`) or `svg` (`data` is the SVG markup, for
+`figma.createNodeFromSvg`). `width`/`height` are the logical size in the app.
+Images larger than Figma's 4096 px limit are already scaled down, and other
+formats (WebP, BMP, …) converted to PNG.
+
+A raster image is painted with an image paint in `fills`, over any solid
+fill. Upload each image once and reuse its hash:
+
+```jsonc
+{ "type": "IMAGE", "image": "assets/logo.png", "scaleMode": "FIT" }
+```
+
+`scaleMode` is Figma's: `FILL` (`BoxFit.cover`, `fitWidth`, `fitHeight`),
+`FIT` (`contain`, `scaleDown`, `none`) or `CROP` (`BoxFit.fill`; use the
+identity `imageTransform` so the image stretches). `image` is not a Figma
+paint key: replace it with `imageHash`.
+
+An SVG is not a paint. Its frame has `"svg": {"image", "scaleMode"}`: draw
+the SVG inside the frame, scaled uniformly (`FIT` or `FILL`) and centered.
+
+## Paints
 
 ```jsonc
 { "type": "SOLID", "color": { "r": 0.0, "g": 0.41, "b": 0.43 }, "opacity": 1,
