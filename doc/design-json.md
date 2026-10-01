@@ -65,7 +65,7 @@ All nodes share these fields:
 | `position` | `{left?, top?, right?, bottom?}` | Insets inside the parent. Used for children of `NONE` frames (Stack) and for absolute children. Resolve them after the parent has its size. |
 | `fills` | Paint[] | See [Paints](#paints). |
 | `instance` | `{component, variant, props?}` | Marks a component occurrence. See [Components](#components). |
-| `pluginData` | `{origin?, source?, role?}` | Provenance. `origin` lists the Flutter widgets folded into this node, outermost first, e.g. `["Padding", "Column"]`. `source` is `"lib/file.dart:line"`. `role` is a hint: `screen`, `app-bar`, `button`, `tap-target`, `card`, `icon`, `image`, `placeholder`, `grid`, `switch`, `checkbox`, `radio`, `text-field`, `progress`. |
+| `pluginData` | `{origin?, source?, role?}` | Provenance. `origin` lists the Flutter widgets folded into this node, outermost first, e.g. `["Padding", "Column"]`. `source` is `"lib/file.dart:line"`. `role` is a hint: `screen`, `app-bar`, `button`, `tap-target`, `list-tile`, `chip`, `navigation-bar`, `card`, `icon`, `image`, `placeholder`, `grid`, `switch`, `checkbox`, `radio`, `text-field`, `progress`. |
 
 ### `FRAME`
 
@@ -75,6 +75,7 @@ All nodes share these fields:
 | `primaryAxisAlignItems` | `MIN` \| `CENTER` \| `MAX` \| `SPACE_BETWEEN`. Auto layout only. |
 | `counterAxisAlignItems` | `MIN` \| `CENTER` \| `MAX` \| `BASELINE`. Auto layout only. |
 | `itemSpacing`, `paddingTop/Right/Bottom/Left` | Auto layout only. |
+| `layoutWrap`, `counterAxisSpacing` | Optional; `"WRAP"` on horizontal frames whose children flow onto new rows, `counterAxisSpacing` apart. Set after `layoutMode`. |
 | `minWidth`, `minHeight` | Optional; auto layout only. |
 | `strokes`, `strokeWeight`, `strokeAlign` | Optional; `strokeAlign` is `"INSIDE"`. |
 | `cornerRadius` or `topLeftRadius`… | A uniform radius, or four corners. |

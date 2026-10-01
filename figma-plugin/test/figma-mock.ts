@@ -239,6 +239,8 @@ export class MockFrame extends MockContainer {
   primaryAxisAlignItems = 'MIN';
   counterAxisAlignItems = 'MIN';
   itemSpacing = 0;
+  counterAxisSpacing = 0;
+  private _layoutWrap: 'NO_WRAP' | 'WRAP' = 'NO_WRAP';
   paddingTop = 0;
   paddingRight = 0;
   paddingBottom = 0;
@@ -272,6 +274,31 @@ export class MockFrame extends MockContainer {
 
   get layoutMode() {
     return this._layoutMode;
+  }
+
+  get layoutWrap() {
+    return this._layoutWrap;
+  }
+  set layoutWrap(v: 'NO_WRAP' | 'WRAP') {
+    if (v === 'WRAP' && this._layoutMode !== 'HORIZONTAL') throw new Error(`${this.name}: WRAP needs horizontal auto layout`);
+    this._layoutWrap = v;
+  }
+
+  /** Wrapped rows: children flow left to right within the inner width. */
+  private wrappedHeight(): number {
+    const inner = this.width - this.paddingLeft - this.paddingRight;
+    const rows: number[] = [];
+    let used = 0;
+    for (const c of this.children.filter((c) => c.layoutPositioning === 'AUTO')) {
+      if (rows.length === 0 || (used > 0 && used + this.itemSpacing + c.width > inner + 0.01)) {
+        rows.push(c.height);
+        used = c.width;
+      } else {
+        rows[rows.length - 1] = Math.max(rows[rows.length - 1], c.height);
+        used += this.itemSpacing + c.width;
+      }
+    }
+    return rows.reduce((a, b) => a + b, 0) + this.counterAxisSpacing * Math.max(0, rows.length - 1);
   }
   set layoutMode(v) {
     this._layoutMode = v;
@@ -319,6 +346,9 @@ export class MockFrame extends MockContainer {
 
   /** HUG: children (summed on the main axis, max on the cross axis) + padding. */
   hugSize(axis: 'Horizontal' | 'Vertical'): number {
+    if (this._layoutWrap === 'WRAP' && axis === 'Vertical') {
+      return Math.max(0.01, this.wrappedHeight() + this.paddingTop + this.paddingBottom, this.minHeight ?? 0);
+    }
     const flow = this.children.filter((c) => c.layoutPositioning === 'AUTO');
     const sizes = flow.map((c) => (axis === 'Horizontal' ? c.width : c.height));
     const content = this.isMainAxis(axis)

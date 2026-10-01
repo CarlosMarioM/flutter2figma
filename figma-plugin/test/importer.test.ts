@@ -32,6 +32,12 @@ function findAll(node: MockNode, name: string, out: MockNode[] = []): MockNode[]
 
 const golden = () => parseDesign(readFileSync(GOLDEN, 'utf8'));
 
+function screenNamed(result: { screens: FrameNode[] }, name: string): MockFrame {
+  const screen = result.screens.find((s) => s.name === name);
+  assert.ok(screen, `no screen ${name}`);
+  return screen as unknown as MockFrame;
+}
+
 // Sizes Flutter itself lays out for the same screens, measured by
 // example/test/layout_ground_truth_test.dart.
 const LAYOUT = path.resolve(process.cwd(), '../test/goldens/basic_layout.json');
@@ -45,11 +51,11 @@ function boundTo(api: ReturnType<typeof createMockFigma>, paint: Paint): string 
 test('imports the basic example exported by the CLI', async () => {
   const { api, result } = await run(golden());
 
-  assert.equal(result.screens.length, 5);
+  assert.equal(result.screens.length, 6);
   assert.deepEqual(Object.keys(result.fontSubstitutions), []);
   assert.equal(api.pages.length, 1);
 
-  const home = result.screens[0] as unknown as MockFrame;
+  const home = screenNamed(result, 'HomeScreen');
   assert.equal(home.name, 'HomeScreen');
   assert.equal(home.width, 390);
   assert.equal(home.height, 844);
@@ -86,7 +92,7 @@ test('creates the design system: variables per mode, text and effect styles', as
   assert.equal(Object.keys(primary.valuesByMode).length, 2);
 
   // Screens are pinned to the exported mode; paints are bound, not raw.
-  const home = result.screens[0] as unknown as MockFrame;
+  const home = screenNamed(result, 'HomeScreen');
   const light = collection.modes.find((m) => m.name === 'Light')!.modeId;
   assert.equal(home.explicitModes.get(collection.id), light);
   assert.equal(boundTo(api, home.fills[0]), 'ColorScheme/surface');
@@ -117,14 +123,14 @@ test('turns buttons and repeated widgets into components with instances', async 
     'Type=Text, State=Enabled',
   ]);
 
-  const home = result.screens[0] as unknown as MockFrame;
+  const home = screenNamed(result, 'HomeScreen');
   const elevated = find(home, 'ElevatedButton') as MockInstance;
   assert.equal(elevated.type, 'INSTANCE');
   assert.equal(elevated.mainComponent!.name, 'Type=Elevated, State=Enabled');
   assert.notEqual(elevated.effectStyleId, '', 'elevation comes from an effect style');
 
   // Both stat cards are instances of one master; the second overrides text.
-  const profile = result.screens[1] as unknown as MockFrame;
+  const profile = screenNamed(result, 'ProfileScreen');
   const cards = findAll(profile, 'StatCard') as MockInstance[];
   assert.equal(cards.length, 2);
   assert.ok(cards.every((c) => c.type === 'INSTANCE'));
@@ -252,6 +258,13 @@ test('imported sizes match what Flutter lays out', async () => {
     'ScoreboardScreen/Switch': find(screen('ScoreboardScreen'), 'Switch')!,
     'ScoreboardScreen/Checkbox': find(screen('ScoreboardScreen'), 'Checkbox')!,
     'ProfileScreen/Image': find(screen('ProfileScreen'), 'Image/logo.png')!,
+    'ContactsScreen/ListTile 1': findAll(screen('ContactsScreen'), 'ListTile')[0],
+    'ContactsScreen/ListTile 2': findAll(screen('ContactsScreen'), 'ListTile')[1],
+    'ContactsScreen/SwitchListTile': find(screen('ContactsScreen'), 'SwitchListTile')!,
+    'ContactsScreen/Chip': outer(find(screen('ContactsScreen'), 'Chip')!),
+    'ContactsScreen/FilterChip': outer(find(screen('ContactsScreen'), 'FilterChip')!),
+    'ContactsScreen/InputChip': outer(find(screen('ContactsScreen'), 'InputChip')!),
+    'ContactsScreen/NavigationBar': find(screen('ContactsScreen'), 'NavigationBar')!,
   };
   const flutter = JSON.parse(readFileSync(LAYOUT, 'utf8')) as Record<string, [number, number]>;
   assert.deepEqual(Object.keys(figma).sort(), Object.keys(flutter).sort());
@@ -259,7 +272,8 @@ test('imported sizes match what Flutter lays out', async () => {
     const node = figma[key];
     // Text metrics differ between Flutter's test font and Figma, so widths
     // that depend on a label are compared loosely.
-    assert.ok(Math.abs(node.width - width) < 1 || key === 'HomeScreen/ElevatedButton', `${key} width ${node.width} ≠ ${width}`);
+    const labelled = key === 'HomeScreen/ElevatedButton' || /Chip$/.test(key);
+    assert.ok(Math.abs(node.width - width) < 1 || labelled, `${key} width ${node.width} ≠ ${width}`);
     assert.equal(node.height, height, `${key} height`);
   }
 });
@@ -319,6 +333,36 @@ test('SVG assets are drawn inside their frame, fitted', async () => {
   const drawn = box.children[0];
   assert.deepEqual([drawn.width, drawn.height, drawn.x, drawn.y], [40, 20, 0, 10]);
   assert.deepEqual(drawn.constraints, { horizontal: 'SCALE', vertical: 'SCALE' });
+});
+
+test('Wrap frames wrap onto new rows', async () => {
+  const chip = (name: string) => frame(name, 'HORIZONTAL', { width: 100, height: 32 });
+  const doc: DesignDocument = {
+    format: 'flutter2figma/design',
+    version: 3,
+    name: 'wrap',
+    fonts: [],
+    diagnostics: [],
+    screens: [
+      frame('Screen', 'VERTICAL', {
+        children: [
+          frame('Wrap', 'HORIZONTAL', {
+            width: 250,
+            itemSpacing: 8,
+            layoutWrap: 'WRAP',
+            counterAxisSpacing: 4,
+            layoutSizingVertical: 'HUG',
+            children: [chip('a'), chip('b'), chip('c')],
+          }),
+        ],
+      }),
+    ],
+  };
+  const { result } = await run(doc);
+  const wrap = find(result.screens[0] as unknown as MockFrame, 'Wrap') as MockFrame;
+  assert.equal(wrap.layoutWrap, 'WRAP');
+  assert.equal(wrap.counterAxisSpacing, 4);
+  assert.equal(wrap.height, 32 + 4 + 32); // two rows: a b | c
 });
 
 test('FILL children of a Stack are sized before their subtree (#1)', async () => {

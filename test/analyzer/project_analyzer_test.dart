@@ -23,6 +23,7 @@ void main() {
     expect(
       analysis.screens.map((s) => s.name),
       unorderedEquals([
+        'ContactsScreen',
         'HomeScreen',
         'ProfileScreen',
         'SettingsScreen',

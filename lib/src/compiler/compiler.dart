@@ -55,6 +55,7 @@ class _Ctx {
     required this.box,
     required this.text,
     required this.iconColor,
+    this.iconSize = 24,
     this.flex,
   });
 
@@ -67,22 +68,27 @@ class _Ctx {
   /// Inherited `DefaultTextStyle`.
   final TextStyleSpec text;
 
-  /// Inherited `IconTheme` color.
+  /// Inherited `IconTheme` color and size.
   final IrColor iconColor;
+  final double iconSize;
 
-  _Ctx withBox(_Box box) => _Ctx(box: box, text: text, iconColor: iconColor);
+  _Ctx withBox(_Box box) =>
+      _Ctx(box: box, text: text, iconColor: iconColor, iconSize: iconSize);
 
-  _Ctx withText(TextStyleSpec? style, {IrColor? iconColor}) => _Ctx(
-    box: box,
-    text: text.merge(style),
-    iconColor: iconColor ?? this.iconColor,
-    flex: flex,
-  );
+  _Ctx withText(TextStyleSpec? style, {IrColor? iconColor, double? iconSize}) =>
+      _Ctx(
+        box: box,
+        text: text.merge(style),
+        iconColor: iconColor ?? this.iconColor,
+        iconSize: iconSize ?? this.iconSize,
+        flex: flex,
+      );
 
   _Ctx inFlex(IrFrame parent, IrLayoutDirection direction) => _Ctx(
     box: box,
     text: text,
     iconColor: iconColor,
+    iconSize: iconSize,
     flex: _FlexSlot(parent, direction),
   );
 }
@@ -560,12 +566,7 @@ class FlutterCompiler {
               : IrLayoutDirection.vertical,
         );
       case 'Wrap':
-        _warn(
-          'Wrap is exported as a Row without wrapping',
-          w,
-          severity: IrSeverity.info,
-        );
-        return _flex(w, c, IrLayoutDirection.horizontal);
+        return _wrap(w, c);
       case 'Stack':
         return _stack(w, c);
       case 'Spacer':
@@ -623,6 +624,29 @@ class FlutterCompiler {
         return _iconButton(w, c);
       case 'FloatingActionButton' || 'FloatingActionButton.extended':
         return _fab(w, c);
+      case 'ListTile':
+        return _listTile(w, c);
+      case 'SwitchListTile' ||
+          'SwitchListTile.adaptive' ||
+          'CheckboxListTile' ||
+          'CheckboxListTile.adaptive' ||
+          'RadioListTile' ||
+          'RadioListTile.adaptive':
+        return _controlListTile(w, c);
+      case 'Chip' ||
+          'RawChip' ||
+          'InputChip' ||
+          'FilterChip' ||
+          'FilterChip.elevated' ||
+          'ChoiceChip' ||
+          'ChoiceChip.elevated' ||
+          'ActionChip' ||
+          'ActionChip.elevated':
+        return _chip(w, c);
+      case 'NavigationBar':
+        return _navigationBar(w, c);
+      case 'BottomNavigationBar':
+        return _bottomNavigationBar(w, c);
       case 'Switch' || 'Switch.adaptive':
         return _switch(w);
       case 'Checkbox' || 'Checkbox.adaptive':
@@ -900,20 +924,44 @@ class FlutterCompiler {
     if (appBar != null) {
       children.add(_widget(appBar, c.withBox(const _Box(forceW: true))));
     }
+    final navValue = w['bottomNavigationBar'];
+    final nav = navValue == null || _isLiteral(navValue, null)
+        ? null
+        : _widget(navValue, c.withBox(const _Box(forceW: true)));
     final body = w['body'];
     if (body != null) {
-      children.add(
-        _widget(body, c.withBox(const _Box(forceW: true, forceH: false))),
+      var node = _widget(
+        body,
+        c.withBox(const _Box(forceW: true, forceH: false)),
       );
+      // The body takes the space above the bottom bar even when its content
+      // is shorter, so the bar stays at the bottom.
+      if (nav != null && !node.height.isFill) {
+        node = IrFrame(
+          name: 'Body',
+          origin: const ['Scaffold.body'],
+          width: const IrSizing.fill(),
+          height: const IrSizing.fill(),
+          children: [node],
+        );
+      }
+      children.add(node);
     }
+    if (nav != null) children.add(nav);
     final fab = w['floatingActionButton'];
     if (fab != null) {
+      // Above the bottom bar: its fixed height, or the 56 px minimum.
+      final navHeight = nav == null
+          ? 0.0
+          : nav.height.isFixed
+          ? nav.height.value!
+          : (nav is IrFrame ? nav.minHeight : null) ?? 56;
       children.add(
         _widget(fab, c.withBox(const _Box()))
-          ..position = const IrPosition(right: 16, bottom: 16),
+          ..position = IrPosition(right: 16, bottom: 16 + navHeight),
       );
     }
-    for (final slot in ['bottomNavigationBar', 'drawer', 'bottomSheet']) {
+    for (final slot in ['drawer', 'bottomSheet']) {
       if (w[slot] != null) _warn('Scaffold.$slot is not exported yet', w[slot]);
     }
     return IrFrame(
@@ -1387,6 +1435,47 @@ class FlutterCompiler {
     return frame;
   }
 
+  /// A horizontal `Wrap` is a wrapping auto-layout row. It needs a width to
+  /// wrap in, so it fills whenever its width is bounded.
+  IrFrame _wrap(ObjectValue w, _Ctx c) {
+    if (eval.enumName(w['direction']) == 'vertical') {
+      _warn(
+        'Vertical Wrap is exported as a Column without wrapping',
+        w,
+        severity: IrSeverity.info,
+      );
+      return _flex(w, c, IrLayoutDirection.vertical);
+    }
+    final frame = IrFrame(
+      name: w.type,
+      origin: [w.type],
+      direction: IrLayoutDirection.horizontal,
+      width: _hugOrFill(c.box.forceW || c.box.boundedW),
+      height: const IrSizing.hug(),
+      gap: eval.number(w['spacing']) ?? 0,
+      runGap: eval.number(w['runSpacing']) ?? 0,
+      mainAlign: switch (eval.enumName(w['alignment'])) {
+        'center' => IrMainAlign.center,
+        'end' => IrMainAlign.end,
+        'spaceBetween' ||
+        'spaceAround' ||
+        'spaceEvenly' => IrMainAlign.spaceBetween,
+        _ => IrMainAlign.start,
+      },
+      crossAlign: switch (eval.enumName(w['crossAxisAlignment'])) {
+        'center' => IrCrossAlign.center,
+        'end' => IrCrossAlign.end,
+        _ => IrCrossAlign.start,
+      },
+    );
+    frame.wrap = frame.width.isFill;
+    final childCtx = c.withBox(_Box(boundedW: frame.width.isFill));
+    for (final item in _items(w['children']) ?? const <DartValue>[]) {
+      frame.children.add(_widget(item, childCtx));
+    }
+    return frame;
+  }
+
   IrNode? _flexChild(
     DartValue item,
     _Ctx c,
@@ -1590,7 +1679,7 @@ class FlutterCompiler {
   }
 
   IrFrame _icon(ObjectValue w, _Ctx c) {
-    final size = eval.number(w['size']) ?? 24;
+    final size = eval.number(w['size']) ?? c.iconSize;
     final iconRef = w.arg(0);
     var named = iconRef;
     while (named is ConditionalValue) {
@@ -2293,6 +2382,518 @@ class FlutterCompiler {
     crossAlign: IrCrossAlign.center,
     children: [mark],
   );
+
+  /// A widget value built here rather than by the app, e.g. the `Icon` a
+  /// chip draws by default.
+  ObjectValue _synthetic(
+    String type, {
+    List<DartValue> positional = const [],
+    Map<String, DartValue> named = const {},
+  }) => ObjectValue(
+    type: type,
+    library: 'package:flutter/material.dart',
+    isWidget: true,
+    positional: positional,
+    named: named,
+  );
+
+  /// `Icon(Icons.<name>)` with a known code point.
+  ObjectValue _materialIcon(String name, int codePoint, {double? size}) =>
+      _synthetic(
+        'Icon',
+        positional: [
+          RefValue(
+            ['Icons', name],
+            resolved: ObjectValue(
+              type: 'IconData',
+              positional: [LiteralValue(codePoint)],
+              named: {'fontFamily': const LiteralValue('MaterialIcons')},
+            ),
+          ),
+        ],
+        named: {'size': ?(size == null ? null : LiteralValue(size))},
+      );
+
+  /// A widget argument, or a `String` argument shown as `Text`.
+  IrNode? _widgetOrLabel(DartValue? v, _Ctx c) {
+    if (v == null || _isLiteral(v, null)) return null;
+    final label = eval.deref(v);
+    if (label is LiteralValue && label.value is String) {
+      return _widget(_synthetic('Text', positional: [label]), c);
+    }
+    return _widget(v, c);
+  }
+
+  bool _flag(ObjectValue w, String arg, {bool fallback = false}) {
+    final v = eval.deref(w[arg]);
+    return v is LiteralValue && v.value is bool ? v.value as bool : fallback;
+  }
+
+  /// M3 `ListTile` (`_LisTileDefaultsM3`): 16/24 horizontal padding, a
+  /// 56/72/88 px tall row (48/64/76 dense) for one, two or three lines,
+  /// leading in at least 24 px, 16 px gaps. [leading] and [trailing]
+  /// replace the widget's own (list tiles with a control).
+  IrFrame _listTile(
+    ObjectValue w,
+    _Ctx c, {
+    IrNode? leading,
+    IrNode? trailing,
+    String? name,
+  }) {
+    final dense = _flag(w, 'dense');
+    final enabled = _flag(w, 'enabled', fallback: true);
+    final selected = _flag(w, 'selected');
+    final threeLine = _flag(w, 'isThreeLine');
+    final hasSubtitle =
+        w['subtitle'] != null && !_isLiteral(w['subtitle'], null);
+
+    IrColor stateColor(IrColor normal) => !enabled
+        ? theme.color('onSurface').withAlpha(0.38)
+        : selected
+        ? eval.color(w['selectedColor']) ?? theme.color('primary')
+        : normal;
+    final titleColor = stateColor(
+      eval.color(w['textColor']) ?? theme.color('onSurface'),
+    );
+    final subtitleColor = stateColor(theme.color('onSurfaceVariant'));
+    final iconColor = stateColor(
+      eval.color(w['iconColor']) ?? theme.color('onSurfaceVariant'),
+    );
+
+    TextStyleSpec style(String name, IrColor color, double? denseSize) => theme
+        .textStyle(name)!
+        .merge(TextStyleSpec(color: color, fontSize: dense ? denseSize : null));
+    final sideCtx = c
+        .withText(
+          style('labelSmall', theme.color('onSurfaceVariant'), null),
+          iconColor: iconColor,
+        )
+        .withBox(const _Box());
+    final textCtx = c.withBox(const _Box(forceW: true));
+
+    final title = _widgetOrLabel(
+      w['title'],
+      textCtx.withText(
+        style(
+          'bodyLarge',
+          titleColor,
+          13,
+        ).merge(eval.textStyle(w['titleTextStyle'])),
+      ),
+    );
+    final subtitle = hasSubtitle
+        ? _widgetOrLabel(
+            w['subtitle'],
+            textCtx.withText(
+              style(
+                'bodyMedium',
+                subtitleColor,
+                12,
+              ).merge(eval.textStyle(w['subtitleTextStyle'])),
+            ),
+          )
+        : null;
+    leading ??= _widgetOrLabel(w['leading'], sideCtx);
+    trailing ??= _widgetOrLabel(w['trailing'], sideCtx);
+
+    final padding =
+        eval.insets(w['contentPadding']) ?? const IrInsets(left: 16, right: 24);
+    final minHeight = threeLine
+        ? (dense ? 76.0 : 88.0)
+        : hasSubtitle
+        ? (dense ? 64.0 : 72.0)
+        : (dense ? 48.0 : 56.0);
+    final fill = selected
+        ? eval.color(w['selectedTileColor'])
+        : eval.color(w['tileColor']);
+    return IrFrame(
+      name: name ?? w.displayName,
+      role: 'list-tile',
+      origin: [w.type],
+      direction: IrLayoutDirection.horizontal,
+      width: const IrSizing.fill(),
+      height: const IrSizing.hug(),
+      minHeight: minHeight,
+      // minVerticalPadding: 8. Three-line tiles align to the top.
+      padding: IrInsets(
+        left: padding.left,
+        right: padding.right,
+        top: max(8, padding.top),
+        bottom: max(8, padding.bottom),
+      ),
+      gap: eval.number(w['horizontalTitleGap']) ?? 16,
+      crossAlign: threeLine ? IrCrossAlign.start : IrCrossAlign.center,
+      fill: fill,
+      children: [
+        if (leading != null)
+          IrFrame(
+            name: 'Leading',
+            origin: const ['ListTile.leading'],
+            minWidth: eval.number(w['minLeadingWidth']) ?? 24,
+            children: [leading],
+          ),
+        IrFrame(
+          name: 'Text',
+          origin: const ['ListTile.title'],
+          width: const IrSizing.fill(),
+          padding: threeLine ? const IrInsets(top: 2) : IrInsets.zero,
+          children: [?title, ?subtitle],
+        ),
+        ?trailing,
+      ],
+    );
+  }
+
+  /// `SwitchListTile`, `CheckboxListTile`, `RadioListTile`: a list tile with
+  /// the shrink-wrapped control trailing (leading for radios), and
+  /// `secondary` on the other side.
+  IrFrame _controlListTile(ObjectValue w, _Ctx c) {
+    final shrinkWrap = {
+      'materialTapTargetSize': RefValue(const [
+        'MaterialTapTargetSize',
+        'shrinkWrap',
+      ]),
+    };
+    final control = switch (w.type) {
+      'SwitchListTile' => _switch(
+        _synthetic('Switch', named: {...w.named, ...shrinkWrap}),
+      ),
+      'CheckboxListTile' => _checkbox(
+        _synthetic('Checkbox', named: {...w.named, ...shrinkWrap}),
+      ),
+      _ => _radio(_synthetic('Radio', named: {...w.named, ...shrinkWrap})),
+    };
+    final affinity = eval.enumName(w['controlAffinity']);
+    final controlLeading =
+        affinity == 'leading' ||
+        (w.type == 'RadioListTile' && affinity != 'trailing');
+    final secondary = _widgetOrLabel(
+      w['secondary'],
+      c.withText(null, iconColor: theme.color('onSurfaceVariant')),
+    );
+    return _listTile(
+      w,
+      c,
+      name: w.displayName,
+      leading: controlLeading ? control : secondary,
+      trailing: controlLeading ? secondary : control,
+    );
+  }
+
+  /// M3 chips (`_ChipDefaultsM3` and friends): 32 px tall, 8 px corners,
+  /// labelLarge. Measured against Flutter: 17 px from the edge to the
+  /// label, 10 px to an 18 px avatar or delete icon, 9 px between them.
+  IrNode _chip(ObjectValue w, _Ctx c) {
+    final kind = w.type;
+    final elevated = w.constructor == 'elevated';
+    final selectable =
+        kind == 'FilterChip' ||
+        kind == 'ChoiceChip' ||
+        kind == 'InputChip' ||
+        kind == 'RawChip';
+    final selected = selectable && _flag(w, 'selected');
+    final enabled = switch (kind) {
+      'ActionChip' =>
+        w['onPressed'] != null && !_isLiteral(w['onPressed'], null),
+      'FilterChip' || 'ChoiceChip' =>
+        w['onSelected'] != null && !_isLiteral(w['onSelected'], null),
+      'InputChip' || 'RawChip' => _flag(w, 'isEnabled', fallback: true),
+      _ => true,
+    };
+    final disabled = theme.color('onSurface');
+
+    final labelColor = !enabled
+        ? disabled.withAlpha(0.38)
+        : selected
+        ? theme.color('onSecondaryContainer')
+        : kind == 'ActionChip'
+        ? theme.color('onSurface')
+        : theme.color('onSurfaceVariant');
+    final iconColor = !enabled
+        ? disabled.withAlpha(0.38)
+        : selected
+        ? theme.color(kind == 'InputChip' ? 'primary' : 'onSecondaryContainer')
+        : kind == 'InputChip'
+        ? theme.color('onSurfaceVariant')
+        : theme.color('primary');
+    final deleteColor =
+        eval.color(w['deleteIconColor']) ??
+        (!enabled
+            ? disabled.withAlpha(0.38)
+            : selected
+            ? theme.color('onSecondaryContainer')
+            : theme.color('onSurfaceVariant'));
+
+    final background =
+        eval.color(selected ? w['selectedColor'] : w['backgroundColor']) ??
+        (selected
+            ? (enabled
+                  ? theme.color('secondaryContainer')
+                  : disabled.withAlpha(0.12))
+            : elevated
+            ? (enabled
+                  ? theme.color('surfaceContainerLow')
+                  : disabled.withAlpha(0.12))
+            : null);
+    final outlined = !selected && !elevated;
+    final side = eval.borderSide(w['side']);
+
+    final iconCtx = c
+        .withText(null, iconColor: iconColor, iconSize: 18)
+        .withBox(const _Box());
+    final showCheck = selected && _flag(w, 'showCheckmark', fallback: true);
+    final avatar = showCheck
+        ? _widget(
+            _materialIcon('check', 0xe156, size: 18),
+            iconCtx.withText(
+              null,
+              iconColor:
+                  eval.color(w['checkmarkColor']) ??
+                  (kind == 'InputChip'
+                      ? theme.color('primary')
+                      : theme.color('onSecondaryContainer')),
+            ),
+          )
+        : _widgetOrLabel(w['avatar'], iconCtx);
+    final deletable =
+        (kind == 'Chip' || kind == 'InputChip' || kind == 'RawChip') &&
+        w['onDeleted'] != null &&
+        !_isLiteral(w['onDeleted'], null);
+    final delete = !deletable
+        ? null
+        : _widget(
+            w['deleteIcon'] ??
+                (kind == 'InputChip'
+                    ? _materialIcon('clear', 0xe168, size: 18)
+                    : _materialIcon('cancel', 0xe139, size: 18)),
+            iconCtx.withText(null, iconColor: deleteColor),
+          );
+    final label = _widgetOrLabel(
+      w['label'],
+      c
+          .withText(
+            theme
+                .textStyle('labelLarge')!
+                .merge(TextStyleSpec(color: labelColor))
+                .merge(eval.textStyle(w['labelStyle'])),
+          )
+          .withBox(const _Box(boundedW: false)),
+    );
+
+    final chip = IrFrame(
+      name: w.displayName,
+      role: 'chip',
+      origin: [w.type],
+      direction: IrLayoutDirection.horizontal,
+      height: const IrSizing.fixed(32),
+      padding: IrInsets(
+        left: avatar != null ? 10 : 17,
+        right: delete != null ? 10 : 17,
+      ),
+      gap: 9,
+      crossAlign: IrCrossAlign.center,
+      fill: background,
+      stroke:
+          side ??
+          (outlined
+              ? IrStroke(
+                  color: enabled
+                      ? theme.color('outlineVariant')
+                      : disabled.withAlpha(0.12),
+                )
+              : null),
+      corners:
+          eval.borderRadius(
+            eval.deref(w['shape']) is ObjectValue
+                ? (eval.deref(w['shape']) as ObjectValue)['borderRadius']
+                : null,
+          ) ??
+          const IrCorners.all(8),
+      shadows: elevated && enabled ? theme.shadows(1) : const [],
+      children: [?avatar, ?label, ?delete],
+    );
+    return _tapTarget(
+      chip,
+      padded: _padded(eval.enumName(w['materialTapTargetSize'])),
+    );
+  }
+
+  /// M3 `NavigationBar` (`_NavigationBarDefaultsM3`): 80 px tall on
+  /// surfaceContainer; each destination centers a 64×32 stadium indicator
+  /// around its 24 px icon, with a labelMedium label 4 px below.
+  IrFrame _navigationBar(ObjectValue w, _Ctx c) {
+    final selectedIndex = eval.integer(w['selectedIndex']) ?? 0;
+    final behavior = eval.enumName(w['labelBehavior']) ?? 'alwaysShow';
+    final indicatorColor =
+        eval.color(w['indicatorColor']) ?? theme.color('secondaryContainer');
+    final destinations = _items(w['destinations']) ?? const <DartValue>[];
+    final children = <IrNode>[];
+    for (final (i, item) in destinations.indexed) {
+      final d = eval.deref(item);
+      if (d is! ObjectValue || d.type != 'NavigationDestination') {
+        children.add(_widget(item, c.withBox(const _Box(forceH: true))));
+        continue;
+      }
+      final selected = i == selectedIndex;
+      final enabled = _flag(d, 'enabled', fallback: true);
+      final iconColor = !enabled
+          ? theme.color('onSurfaceVariant').withAlpha(0.38)
+          : theme.color(selected ? 'onSecondaryContainer' : 'onSurfaceVariant');
+      final icon = _widget(
+        selected && d['selectedIcon'] != null ? d['selectedIcon'] : d['icon'],
+        c
+            .withText(null, iconColor: iconColor, iconSize: 24)
+            .withBox(const _Box()),
+      );
+      final showLabel =
+          behavior == 'alwaysShow' ||
+          (behavior == 'onlyShowSelected' && selected);
+      final label = eval.string(d['label']) ?? '';
+      children.add(
+        IrFrame(
+          name: label.isEmpty ? 'Destination' : label,
+          origin: const ['NavigationDestination'],
+          width: const IrSizing.fill(),
+          height: const IrSizing.fill(),
+          gap: 4,
+          mainAlign: IrMainAlign.center,
+          crossAlign: IrCrossAlign.center,
+          children: [
+            IrFrame(
+              name: 'Indicator',
+              origin: const ['NavigationIndicator'],
+              width: const IrSizing.fixed(64),
+              height: const IrSizing.fixed(32),
+              mainAlign: IrMainAlign.center,
+              crossAlign: IrCrossAlign.center,
+              fill: selected ? indicatorColor : null,
+              corners: const IrCorners.all(16),
+              children: [icon],
+            ),
+            if (showLabel)
+              _text(
+                d,
+                c
+                    .withText(
+                      theme
+                          .textStyle('labelMedium')!
+                          .merge(
+                            TextStyleSpec(
+                              color: !enabled
+                                  ? theme
+                                        .color('onSurfaceVariant')
+                                        .withAlpha(0.38)
+                                  : theme.color(
+                                      selected
+                                          ? 'onSurface'
+                                          : 'onSurfaceVariant',
+                                    ),
+                            ),
+                          ),
+                    )
+                    .withBox(const _Box()),
+                label,
+              ),
+          ],
+        ),
+      );
+    }
+    return IrFrame(
+      name: w.displayName,
+      role: 'navigation-bar',
+      origin: [w.type],
+      direction: IrLayoutDirection.horizontal,
+      width: const IrSizing.fill(),
+      height: IrSizing.fixed(eval.number(w['height']) ?? 80),
+      fill: eval.color(w['backgroundColor']) ?? theme.color('surfaceContainer'),
+      children: children,
+    );
+  }
+
+  /// `BottomNavigationBar`, fixed type: icons over labels (14 px selected,
+  /// 12 px otherwise), selected in primary, others in `unselectedWidgetColor`,
+  /// on the canvas color with elevation 8.
+  IrFrame _bottomNavigationBar(ObjectValue w, _Ctx c) {
+    final items = _items(w['items']) ?? const <DartValue>[];
+    final current = eval.integer(w['currentIndex']) ?? 0;
+    final type =
+        eval.enumName(w['type']) ?? (items.length <= 3 ? 'fixed' : 'shifting');
+    if (type == 'shifting') {
+      _warn(
+        'BottomNavigationBarType.shifting is drawn like fixed',
+        w,
+        severity: IrSeverity.info,
+      );
+    }
+    final selectedColor =
+        eval.color(w['selectedItemColor']) ??
+        eval.color(w['fixedColor']) ??
+        theme.color(theme.isDark ? 'secondary' : 'primary');
+    final unselectedColor =
+        eval.color(w['unselectedItemColor']) ??
+        (theme.isDark
+            ? const IrColor(1, 1, 1, 0.7)
+            : const IrColor(0, 0, 0, 0.54));
+    final selectedSize = eval.number(w['selectedFontSize']) ?? 14;
+    final unselectedSize = eval.number(w['unselectedFontSize']) ?? 12;
+    final showSelected = _flag(w, 'showSelectedLabels', fallback: true);
+    final showUnselected = _flag(
+      w,
+      'showUnselectedLabels',
+      fallback: type == 'fixed',
+    );
+
+    final children = <IrNode>[];
+    for (final (i, item) in items.indexed) {
+      final d = eval.deref(item);
+      if (d is! ObjectValue) continue;
+      final selected = i == current;
+      final color = selected ? selectedColor : unselectedColor;
+      final ctx = c
+          .withText(
+            TextStyleSpec(
+              color: color,
+              fontSize: selected ? selectedSize : unselectedSize,
+            ),
+            iconColor: color,
+            iconSize: eval.number(w['iconSize']) ?? 24,
+          )
+          .withBox(const _Box());
+      final label = eval.string(d['label']);
+      children.add(
+        IrFrame(
+          name: label ?? 'Item',
+          origin: const ['BottomNavigationBarItem'],
+          width: const IrSizing.fill(),
+          padding: IrInsets(top: selectedSize / 2, bottom: selectedSize / 2),
+          crossAlign: IrCrossAlign.center,
+          children: [
+            _widget(
+              selected && d['activeIcon'] != null ? d['activeIcon'] : d['icon'],
+              ctx,
+            ),
+            if (label != null && (selected ? showSelected : showUnselected))
+              _text(d, ctx, label),
+          ],
+        ),
+      );
+    }
+    return IrFrame(
+      name: w.displayName,
+      role: 'navigation-bar',
+      origin: [w.type],
+      direction: IrLayoutDirection.horizontal,
+      width: const IrSizing.fill(),
+      height: const IrSizing.hug(),
+      minHeight: 56,
+      fill:
+          eval.color(w['backgroundColor']) ??
+          theme.maybeColor('surface') ??
+          theme.color('surface'),
+      shadows: theme.shadows(eval.number(w['elevation']) ?? 8),
+      children: children,
+    );
+  }
 
   /// Grids become rows of equal cells. Cell height comes from the delegate's
   /// aspect ratio and an estimated width (the screen's, minus padding),

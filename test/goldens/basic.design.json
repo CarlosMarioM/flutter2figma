@@ -13,11 +13,11 @@
     },
     {
       "family": "Inter",
-      "style": "Bold"
+      "style": "Medium"
     },
     {
       "family": "Inter",
-      "style": "Medium"
+      "style": "Bold"
     },
     {
       "family": "Inter",
@@ -1356,6 +1356,1722 @@
   "screens": [
     {
       "type": "FRAME",
+      "name": "ContactsScreen",
+      "layoutMode": "VERTICAL",
+      "primaryAxisAlignItems": "MIN",
+      "counterAxisAlignItems": "MIN",
+      "itemSpacing": 0.0,
+      "paddingTop": 0.0,
+      "paddingRight": 0.0,
+      "paddingBottom": 0.0,
+      "paddingLeft": 0.0,
+      "fills": [
+        {
+          "type": "SOLID",
+          "color": {
+            "r": 0.9568627450980393,
+            "g": 0.9803921568627451,
+            "b": 0.9803921568627451
+          },
+          "opacity": 1.0,
+          "variable": "ColorScheme/surface"
+        }
+      ],
+      "clipsContent": true,
+      "children": [
+        {
+          "type": "FRAME",
+          "name": "AppBar",
+          "layoutMode": "HORIZONTAL",
+          "primaryAxisAlignItems": "MIN",
+          "counterAxisAlignItems": "CENTER",
+          "itemSpacing": 0.0,
+          "paddingTop": 0.0,
+          "paddingRight": 16.0,
+          "paddingBottom": 0.0,
+          "paddingLeft": 16.0,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": {
+                "r": 0.9568627450980393,
+                "g": 0.9803921568627451,
+                "b": 0.9803921568627451
+              },
+              "opacity": 1.0,
+              "variable": "ColorScheme/surface"
+            }
+          ],
+          "clipsContent": false,
+          "children": [
+            {
+              "type": "TEXT",
+              "name": "Contacts",
+              "characters": "Contacts",
+              "fontName": {
+                "family": "Inter",
+                "style": "Regular"
+              },
+              "fontSize": 22.0,
+              "lineHeight": {
+                "unit": "PIXELS",
+                "value": 27.94
+              },
+              "letterSpacing": {
+                "unit": "PIXELS",
+                "value": 0.0
+              },
+              "textStyle": "TextTheme/titleLarge",
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0.08627450980392157,
+                    "g": 0.11372549019607843,
+                    "b": 0.11372549019607843
+                  },
+                  "opacity": 1.0,
+                  "variable": "ColorScheme/onSurface"
+                }
+              ],
+              "textAlignHorizontal": "CENTER",
+              "textAutoResize": "HEIGHT",
+              "layoutSizingHorizontal": "FILL",
+              "layoutSizingVertical": "HUG",
+              "pluginData": {
+                "origin": [
+                  "Text"
+                ],
+                "source": "lib/contacts_screen.dart:10"
+              }
+            }
+          ],
+          "layoutSizingHorizontal": "FILL",
+          "layoutSizingVertical": "FIXED",
+          "height": 64.0,
+          "pluginData": {
+            "origin": [
+              "AppBar"
+            ],
+            "source": "lib/contacts_screen.dart:10",
+            "role": "app-bar"
+          }
+        },
+        {
+          "type": "FRAME",
+          "name": "ListView",
+          "layoutMode": "VERTICAL",
+          "primaryAxisAlignItems": "MIN",
+          "counterAxisAlignItems": "MIN",
+          "itemSpacing": 0.0,
+          "paddingTop": 0.0,
+          "paddingRight": 0.0,
+          "paddingBottom": 0.0,
+          "paddingLeft": 0.0,
+          "fills": [],
+          "clipsContent": true,
+          "children": [
+            {
+              "type": "FRAME",
+              "name": "Wrap",
+              "layoutMode": "HORIZONTAL",
+              "primaryAxisAlignItems": "MIN",
+              "counterAxisAlignItems": "MIN",
+              "itemSpacing": 8.0,
+              "layoutWrap": "WRAP",
+              "counterAxisSpacing": 0.0,
+              "paddingTop": 0.0,
+              "paddingRight": 16.0,
+              "paddingBottom": 0.0,
+              "paddingLeft": 16.0,
+              "fills": [],
+              "clipsContent": false,
+              "children": [
+                {
+                  "type": "FRAME",
+                  "name": "Tap target",
+                  "layoutMode": "VERTICAL",
+                  "primaryAxisAlignItems": "CENTER",
+                  "counterAxisAlignItems": "CENTER",
+                  "itemSpacing": 0.0,
+                  "paddingTop": 0.0,
+                  "paddingRight": 0.0,
+                  "paddingBottom": 0.0,
+                  "paddingLeft": 0.0,
+                  "minWidth": 48.0,
+                  "minHeight": 48.0,
+                  "fills": [],
+                  "clipsContent": false,
+                  "children": [
+                    {
+                      "type": "FRAME",
+                      "name": "Chip",
+                      "layoutMode": "HORIZONTAL",
+                      "primaryAxisAlignItems": "MIN",
+                      "counterAxisAlignItems": "CENTER",
+                      "itemSpacing": 9.0,
+                      "paddingTop": 0.0,
+                      "paddingRight": 17.0,
+                      "paddingBottom": 0.0,
+                      "paddingLeft": 10.0,
+                      "fills": [],
+                      "strokes": [
+                        {
+                          "type": "SOLID",
+                          "color": {
+                            "r": 0.7450980392156863,
+                            "g": 0.7843137254901961,
+                            "b": 0.788235294117647
+                          },
+                          "opacity": 1.0,
+                          "variable": "ColorScheme/outlineVariant"
+                        }
+                      ],
+                      "strokeWeight": 1.0,
+                      "strokeAlign": "INSIDE",
+                      "cornerRadius": 8.0,
+                      "clipsContent": false,
+                      "children": [
+                        {
+                          "type": "FRAME",
+                          "name": "Icon/person",
+                          "layoutMode": "NONE",
+                          "fills": [],
+                          "clipsContent": false,
+                          "children": [
+                            {
+                              "type": "VECTOR",
+                              "name": "person",
+                              "vectorPaths": [
+                                {
+                                  "windingRule": "NONZERO",
+                                  "data": "M 6.012 6.012 C 7.664 6.012 9 4.676 9 3.023 C 9 1.371 7.664 0 6.012 0 C 4.359 0 3.023 1.371 3.023 3.023 C 3.023 4.676 4.359 6.012 6.012 6.012 Z M 6.012 7.523 C 4.008 7.523 0 8.508 0 10.512 L 0 12.023 L 12.023 12.023 L 12.023 10.512 C 12.023 8.508 8.016 7.523 6.012 7.523 Z"
+                                }
+                              ],
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.0,
+                                    "g": 0.4117647058823529,
+                                    "b": 0.43137254901960786
+                                  },
+                                  "opacity": 1.0,
+                                  "variable": "ColorScheme/primary"
+                                }
+                              ],
+                              "position": {
+                                "left": 2.98828125,
+                                "top": 2.98828125
+                              },
+                              "layoutSizingHorizontal": "FIXED",
+                              "layoutSizingVertical": "FIXED",
+                              "width": 12.0234375,
+                              "height": 12.0234375,
+                              "pluginData": {}
+                            }
+                          ],
+                          "layoutSizingHorizontal": "FIXED",
+                          "layoutSizingVertical": "FIXED",
+                          "width": 18.0,
+                          "height": 18.0,
+                          "pluginData": {
+                            "origin": [
+                              "Icon"
+                            ],
+                            "source": "lib/contacts_screen.dart:18",
+                            "role": "icon"
+                          }
+                        },
+                        {
+                          "type": "TEXT",
+                          "name": "Friends",
+                          "characters": "Friends",
+                          "fontName": {
+                            "family": "Inter",
+                            "style": "Medium"
+                          },
+                          "fontSize": 14.0,
+                          "lineHeight": {
+                            "unit": "PIXELS",
+                            "value": 20.02
+                          },
+                          "letterSpacing": {
+                            "unit": "PIXELS",
+                            "value": 0.1
+                          },
+                          "textStyle": "TextTheme/labelLarge",
+                          "fills": [
+                            {
+                              "type": "SOLID",
+                              "color": {
+                                "r": 0.24705882352941178,
+                                "g": 0.28627450980392155,
+                                "b": 0.28627450980392155
+                              },
+                              "opacity": 1.0,
+                              "variable": "ColorScheme/onSurfaceVariant"
+                            }
+                          ],
+                          "textAlignHorizontal": "LEFT",
+                          "textAutoResize": "WIDTH_AND_HEIGHT",
+                          "layoutSizingHorizontal": "HUG",
+                          "layoutSizingVertical": "HUG",
+                          "pluginData": {
+                            "origin": [
+                              "Text"
+                            ],
+                            "source": "lib/contacts_screen.dart:18"
+                          }
+                        }
+                      ],
+                      "layoutSizingHorizontal": "HUG",
+                      "layoutSizingVertical": "FIXED",
+                      "height": 32.0,
+                      "pluginData": {
+                        "origin": [
+                          "Chip"
+                        ],
+                        "role": "chip"
+                      }
+                    }
+                  ],
+                  "layoutSizingHorizontal": "HUG",
+                  "layoutSizingVertical": "HUG",
+                  "pluginData": {
+                    "origin": [
+                      "MaterialTapTargetSize.padded"
+                    ],
+                    "source": "lib/contacts_screen.dart:18",
+                    "role": "tap-target"
+                  }
+                },
+                {
+                  "type": "FRAME",
+                  "name": "Tap target",
+                  "layoutMode": "VERTICAL",
+                  "primaryAxisAlignItems": "CENTER",
+                  "counterAxisAlignItems": "CENTER",
+                  "itemSpacing": 0.0,
+                  "paddingTop": 0.0,
+                  "paddingRight": 0.0,
+                  "paddingBottom": 0.0,
+                  "paddingLeft": 0.0,
+                  "minWidth": 48.0,
+                  "minHeight": 48.0,
+                  "fills": [],
+                  "clipsContent": false,
+                  "children": [
+                    {
+                      "type": "FRAME",
+                      "name": "FilterChip",
+                      "layoutMode": "HORIZONTAL",
+                      "primaryAxisAlignItems": "MIN",
+                      "counterAxisAlignItems": "CENTER",
+                      "itemSpacing": 9.0,
+                      "paddingTop": 0.0,
+                      "paddingRight": 17.0,
+                      "paddingBottom": 0.0,
+                      "paddingLeft": 10.0,
+                      "fills": [
+                        {
+                          "type": "SOLID",
+                          "color": {
+                            "r": 0.8,
+                            "g": 0.9098039215686274,
+                            "b": 0.9137254901960784
+                          },
+                          "opacity": 1.0,
+                          "variable": "ColorScheme/secondaryContainer"
+                        }
+                      ],
+                      "cornerRadius": 8.0,
+                      "clipsContent": false,
+                      "children": [
+                        {
+                          "type": "FRAME",
+                          "name": "Icon/check",
+                          "layoutMode": "NONE",
+                          "fills": [],
+                          "clipsContent": false,
+                          "children": [
+                            {
+                              "type": "VECTOR",
+                              "name": "check",
+                              "vectorPaths": [
+                                {
+                                  "windingRule": "NONZERO",
+                                  "data": "M 4.184 7.945 L 1.055 4.816 L 0 5.871 L 4.184 10.055 L 13.184 1.055 L 12.129 0 L 4.184 7.945 Z"
+                                }
+                              ],
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.19607843137254902,
+                                    "g": 0.29411764705882354,
+                                    "b": 0.30196078431372547
+                                  },
+                                  "opacity": 1.0,
+                                  "variable": "ColorScheme/onSecondaryContainer"
+                                }
+                              ],
+                              "position": {
+                                "left": 2.56640625,
+                                "top": 4.18359375
+                              },
+                              "layoutSizingHorizontal": "FIXED",
+                              "layoutSizingVertical": "FIXED",
+                              "width": 13.18359375,
+                              "height": 10.0546875,
+                              "pluginData": {}
+                            }
+                          ],
+                          "layoutSizingHorizontal": "FIXED",
+                          "layoutSizingVertical": "FIXED",
+                          "width": 18.0,
+                          "height": 18.0,
+                          "pluginData": {
+                            "origin": [
+                              "Icon"
+                            ],
+                            "role": "icon"
+                          }
+                        },
+                        {
+                          "type": "TEXT",
+                          "name": "Work",
+                          "characters": "Work",
+                          "fontName": {
+                            "family": "Inter",
+                            "style": "Medium"
+                          },
+                          "fontSize": 14.0,
+                          "lineHeight": {
+                            "unit": "PIXELS",
+                            "value": 20.02
+                          },
+                          "letterSpacing": {
+                            "unit": "PIXELS",
+                            "value": 0.1
+                          },
+                          "textStyle": "TextTheme/labelLarge",
+                          "fills": [
+                            {
+                              "type": "SOLID",
+                              "color": {
+                                "r": 0.19607843137254902,
+                                "g": 0.29411764705882354,
+                                "b": 0.30196078431372547
+                              },
+                              "opacity": 1.0,
+                              "variable": "ColorScheme/onSecondaryContainer"
+                            }
+                          ],
+                          "textAlignHorizontal": "LEFT",
+                          "textAutoResize": "WIDTH_AND_HEIGHT",
+                          "layoutSizingHorizontal": "HUG",
+                          "layoutSizingVertical": "HUG",
+                          "pluginData": {
+                            "origin": [
+                              "Text"
+                            ],
+                            "source": "lib/contacts_screen.dart:20"
+                          }
+                        }
+                      ],
+                      "layoutSizingHorizontal": "HUG",
+                      "layoutSizingVertical": "FIXED",
+                      "height": 32.0,
+                      "pluginData": {
+                        "origin": [
+                          "FilterChip"
+                        ],
+                        "role": "chip"
+                      }
+                    }
+                  ],
+                  "layoutSizingHorizontal": "HUG",
+                  "layoutSizingVertical": "HUG",
+                  "pluginData": {
+                    "origin": [
+                      "MaterialTapTargetSize.padded"
+                    ],
+                    "source": "lib/contacts_screen.dart:19",
+                    "role": "tap-target"
+                  }
+                },
+                {
+                  "type": "FRAME",
+                  "name": "Tap target",
+                  "layoutMode": "VERTICAL",
+                  "primaryAxisAlignItems": "CENTER",
+                  "counterAxisAlignItems": "CENTER",
+                  "itemSpacing": 0.0,
+                  "paddingTop": 0.0,
+                  "paddingRight": 0.0,
+                  "paddingBottom": 0.0,
+                  "paddingLeft": 0.0,
+                  "minWidth": 48.0,
+                  "minHeight": 48.0,
+                  "fills": [],
+                  "clipsContent": false,
+                  "children": [
+                    {
+                      "type": "FRAME",
+                      "name": "InputChip",
+                      "layoutMode": "HORIZONTAL",
+                      "primaryAxisAlignItems": "MIN",
+                      "counterAxisAlignItems": "CENTER",
+                      "itemSpacing": 9.0,
+                      "paddingTop": 0.0,
+                      "paddingRight": 10.0,
+                      "paddingBottom": 0.0,
+                      "paddingLeft": 17.0,
+                      "fills": [],
+                      "strokes": [
+                        {
+                          "type": "SOLID",
+                          "color": {
+                            "r": 0.7450980392156863,
+                            "g": 0.7843137254901961,
+                            "b": 0.788235294117647
+                          },
+                          "opacity": 1.0,
+                          "variable": "ColorScheme/outlineVariant"
+                        }
+                      ],
+                      "strokeWeight": 1.0,
+                      "strokeAlign": "INSIDE",
+                      "cornerRadius": 8.0,
+                      "clipsContent": false,
+                      "children": [
+                        {
+                          "type": "TEXT",
+                          "name": "Ada",
+                          "characters": "Ada",
+                          "fontName": {
+                            "family": "Inter",
+                            "style": "Medium"
+                          },
+                          "fontSize": 14.0,
+                          "lineHeight": {
+                            "unit": "PIXELS",
+                            "value": 20.02
+                          },
+                          "letterSpacing": {
+                            "unit": "PIXELS",
+                            "value": 0.1
+                          },
+                          "textStyle": "TextTheme/labelLarge",
+                          "fills": [
+                            {
+                              "type": "SOLID",
+                              "color": {
+                                "r": 0.24705882352941178,
+                                "g": 0.28627450980392155,
+                                "b": 0.28627450980392155
+                              },
+                              "opacity": 1.0,
+                              "variable": "ColorScheme/onSurfaceVariant"
+                            }
+                          ],
+                          "textAlignHorizontal": "LEFT",
+                          "textAutoResize": "WIDTH_AND_HEIGHT",
+                          "layoutSizingHorizontal": "HUG",
+                          "layoutSizingVertical": "HUG",
+                          "pluginData": {
+                            "origin": [
+                              "Text"
+                            ],
+                            "source": "lib/contacts_screen.dart:24"
+                          }
+                        },
+                        {
+                          "type": "FRAME",
+                          "name": "Icon/clear",
+                          "layoutMode": "NONE",
+                          "fills": [],
+                          "clipsContent": false,
+                          "children": [
+                            {
+                              "type": "VECTOR",
+                              "name": "clear",
+                              "vectorPaths": [
+                                {
+                                  "windingRule": "NONZERO",
+                                  "data": "M 10.477 1.055 L 9.422 0 L 5.238 4.184 L 1.055 0 L 0 1.055 L 4.184 5.238 L 0 9.422 L 1.055 10.477 L 5.238 6.293 L 9.422 10.477 L 10.477 9.422 L 6.293 5.238 L 10.477 1.055 Z"
+                                }
+                              ],
+                              "fills": [
+                                {
+                                  "type": "SOLID",
+                                  "color": {
+                                    "r": 0.24705882352941178,
+                                    "g": 0.28627450980392155,
+                                    "b": 0.28627450980392155
+                                  },
+                                  "opacity": 1.0,
+                                  "variable": "ColorScheme/onSurfaceVariant"
+                                }
+                              ],
+                              "position": {
+                                "left": 3.76171875,
+                                "top": 3.76171875
+                              },
+                              "layoutSizingHorizontal": "FIXED",
+                              "layoutSizingVertical": "FIXED",
+                              "width": 10.4765625,
+                              "height": 10.4765625,
+                              "pluginData": {}
+                            }
+                          ],
+                          "layoutSizingHorizontal": "FIXED",
+                          "layoutSizingVertical": "FIXED",
+                          "width": 18.0,
+                          "height": 18.0,
+                          "pluginData": {
+                            "origin": [
+                              "Icon"
+                            ],
+                            "role": "icon"
+                          }
+                        }
+                      ],
+                      "layoutSizingHorizontal": "HUG",
+                      "layoutSizingVertical": "FIXED",
+                      "height": 32.0,
+                      "pluginData": {
+                        "origin": [
+                          "InputChip"
+                        ],
+                        "role": "chip"
+                      }
+                    }
+                  ],
+                  "layoutSizingHorizontal": "HUG",
+                  "layoutSizingVertical": "HUG",
+                  "pluginData": {
+                    "origin": [
+                      "MaterialTapTargetSize.padded"
+                    ],
+                    "source": "lib/contacts_screen.dart:24",
+                    "role": "tap-target"
+                  }
+                }
+              ],
+              "layoutSizingHorizontal": "FILL",
+              "layoutSizingVertical": "HUG",
+              "pluginData": {
+                "origin": [
+                  "Padding",
+                  "Wrap"
+                ],
+                "source": "lib/contacts_screen.dart:15"
+              }
+            },
+            {
+              "type": "FRAME",
+              "name": "ListTile",
+              "layoutMode": "HORIZONTAL",
+              "primaryAxisAlignItems": "MIN",
+              "counterAxisAlignItems": "CENTER",
+              "itemSpacing": 16.0,
+              "paddingTop": 8.0,
+              "paddingRight": 24.0,
+              "paddingBottom": 8.0,
+              "paddingLeft": 16.0,
+              "minHeight": 56.0,
+              "fills": [],
+              "clipsContent": false,
+              "children": [
+                {
+                  "type": "FRAME",
+                  "name": "Leading",
+                  "layoutMode": "VERTICAL",
+                  "primaryAxisAlignItems": "MIN",
+                  "counterAxisAlignItems": "MIN",
+                  "itemSpacing": 0.0,
+                  "paddingTop": 0.0,
+                  "paddingRight": 0.0,
+                  "paddingBottom": 0.0,
+                  "paddingLeft": 0.0,
+                  "minWidth": 24.0,
+                  "fills": [],
+                  "clipsContent": false,
+                  "children": [
+                    {
+                      "type": "FRAME",
+                      "name": "Icon/person",
+                      "layoutMode": "NONE",
+                      "fills": [],
+                      "clipsContent": false,
+                      "children": [
+                        {
+                          "type": "VECTOR",
+                          "name": "person",
+                          "vectorPaths": [
+                            {
+                              "windingRule": "NONZERO",
+                              "data": "M 8.016 8.016 C 10.219 8.016 12 6.234 12 4.031 C 12 1.828 10.219 0 8.016 0 C 5.813 0 4.031 1.828 4.031 4.031 C 4.031 6.234 5.813 8.016 8.016 8.016 Z M 8.016 10.031 C 5.344 10.031 0 11.344 0 14.016 L 0 16.031 L 16.031 16.031 L 16.031 14.016 C 16.031 11.344 10.688 10.031 8.016 10.031 Z"
+                            }
+                          ],
+                          "fills": [
+                            {
+                              "type": "SOLID",
+                              "color": {
+                                "r": 0.24705882352941178,
+                                "g": 0.28627450980392155,
+                                "b": 0.28627450980392155
+                              },
+                              "opacity": 1.0,
+                              "variable": "ColorScheme/onSurfaceVariant"
+                            }
+                          ],
+                          "position": {
+                            "left": 3.984375,
+                            "top": 3.984375
+                          },
+                          "layoutSizingHorizontal": "FIXED",
+                          "layoutSizingVertical": "FIXED",
+                          "width": 16.03125,
+                          "height": 16.03125,
+                          "pluginData": {}
+                        }
+                      ],
+                      "layoutSizingHorizontal": "FIXED",
+                      "layoutSizingVertical": "FIXED",
+                      "width": 24.0,
+                      "height": 24.0,
+                      "pluginData": {
+                        "origin": [
+                          "Icon"
+                        ],
+                        "source": "lib/contacts_screen.dart:29",
+                        "role": "icon"
+                      }
+                    }
+                  ],
+                  "layoutSizingHorizontal": "HUG",
+                  "layoutSizingVertical": "HUG",
+                  "pluginData": {
+                    "origin": [
+                      "ListTile.leading"
+                    ]
+                  }
+                },
+                {
+                  "type": "FRAME",
+                  "name": "Text",
+                  "layoutMode": "VERTICAL",
+                  "primaryAxisAlignItems": "MIN",
+                  "counterAxisAlignItems": "MIN",
+                  "itemSpacing": 0.0,
+                  "paddingTop": 0.0,
+                  "paddingRight": 0.0,
+                  "paddingBottom": 0.0,
+                  "paddingLeft": 0.0,
+                  "fills": [],
+                  "clipsContent": false,
+                  "children": [
+                    {
+                      "type": "TEXT",
+                      "name": "Ada Lovelace",
+                      "characters": "Ada Lovelace",
+                      "fontName": {
+                        "family": "Inter",
+                        "style": "Regular"
+                      },
+                      "fontSize": 16.0,
+                      "lineHeight": {
+                        "unit": "PIXELS",
+                        "value": 24.0
+                      },
+                      "letterSpacing": {
+                        "unit": "PIXELS",
+                        "value": 0.2
+                      },
+                      "textStyle": "TextTheme/bodyLarge",
+                      "fills": [
+                        {
+                          "type": "SOLID",
+                          "color": {
+                            "r": 0.08627450980392157,
+                            "g": 0.11372549019607843,
+                            "b": 0.11372549019607843
+                          },
+                          "opacity": 1.0,
+                          "variable": "ColorScheme/onSurface"
+                        }
+                      ],
+                      "textAlignHorizontal": "LEFT",
+                      "textAutoResize": "HEIGHT",
+                      "layoutSizingHorizontal": "FILL",
+                      "layoutSizingVertical": "HUG",
+                      "pluginData": {
+                        "origin": [
+                          "Text"
+                        ],
+                        "source": "lib/contacts_screen.dart:30"
+                      }
+                    }
+                  ],
+                  "layoutSizingHorizontal": "FILL",
+                  "layoutSizingVertical": "HUG",
+                  "pluginData": {
+                    "origin": [
+                      "ListTile.title"
+                    ]
+                  }
+                },
+                {
+                  "type": "FRAME",
+                  "name": "Icon/chevron_right",
+                  "layoutMode": "NONE",
+                  "fills": [],
+                  "clipsContent": false,
+                  "children": [
+                    {
+                      "type": "VECTOR",
+                      "name": "chevron_right",
+                      "vectorPaths": [
+                        {
+                          "windingRule": "NONZERO",
+                          "data": "M 1.406 0 L 0 1.406 L 4.594 6 L 0 10.594 L 1.406 12 L 7.406 6 L 1.406 0 Z"
+                        }
+                      ],
+                      "fills": [
+                        {
+                          "type": "SOLID",
+                          "color": {
+                            "r": 0.24705882352941178,
+                            "g": 0.28627450980392155,
+                            "b": 0.28627450980392155
+                          },
+                          "opacity": 1.0,
+                          "variable": "ColorScheme/onSurfaceVariant"
+                        }
+                      ],
+                      "position": {
+                        "left": 8.578125,
+                        "top": 6.0
+                      },
+                      "layoutSizingHorizontal": "FIXED",
+                      "layoutSizingVertical": "FIXED",
+                      "width": 7.40625,
+                      "height": 12.0,
+                      "pluginData": {}
+                    }
+                  ],
+                  "layoutSizingHorizontal": "FIXED",
+                  "layoutSizingVertical": "FIXED",
+                  "width": 24.0,
+                  "height": 24.0,
+                  "pluginData": {
+                    "origin": [
+                      "Icon"
+                    ],
+                    "source": "lib/contacts_screen.dart:31",
+                    "role": "icon"
+                  }
+                }
+              ],
+              "layoutSizingHorizontal": "FILL",
+              "layoutSizingVertical": "HUG",
+              "pluginData": {
+                "origin": [
+                  "ListTile"
+                ],
+                "source": "lib/contacts_screen.dart:28",
+                "role": "list-tile"
+              }
+            },
+            {
+              "type": "FRAME",
+              "name": "ListTile",
+              "layoutMode": "HORIZONTAL",
+              "primaryAxisAlignItems": "MIN",
+              "counterAxisAlignItems": "CENTER",
+              "itemSpacing": 16.0,
+              "paddingTop": 8.0,
+              "paddingRight": 24.0,
+              "paddingBottom": 8.0,
+              "paddingLeft": 16.0,
+              "minHeight": 72.0,
+              "fills": [],
+              "clipsContent": false,
+              "children": [
+                {
+                  "type": "FRAME",
+                  "name": "Leading",
+                  "layoutMode": "VERTICAL",
+                  "primaryAxisAlignItems": "MIN",
+                  "counterAxisAlignItems": "MIN",
+                  "itemSpacing": 0.0,
+                  "paddingTop": 0.0,
+                  "paddingRight": 0.0,
+                  "paddingBottom": 0.0,
+                  "paddingLeft": 0.0,
+                  "minWidth": 24.0,
+                  "fills": [],
+                  "clipsContent": false,
+                  "children": [
+                    {
+                      "type": "FRAME",
+                      "name": "Icon/person",
+                      "layoutMode": "NONE",
+                      "fills": [],
+                      "clipsContent": false,
+                      "children": [
+                        {
+                          "type": "VECTOR",
+                          "name": "person",
+                          "vectorPaths": [
+                            {
+                              "windingRule": "NONZERO",
+                              "data": "M 8.016 8.016 C 10.219 8.016 12 6.234 12 4.031 C 12 1.828 10.219 0 8.016 0 C 5.813 0 4.031 1.828 4.031 4.031 C 4.031 6.234 5.813 8.016 8.016 8.016 Z M 8.016 10.031 C 5.344 10.031 0 11.344 0 14.016 L 0 16.031 L 16.031 16.031 L 16.031 14.016 C 16.031 11.344 10.688 10.031 8.016 10.031 Z"
+                            }
+                          ],
+                          "fills": [
+                            {
+                              "type": "SOLID",
+                              "color": {
+                                "r": 0.24705882352941178,
+                                "g": 0.28627450980392155,
+                                "b": 0.28627450980392155
+                              },
+                              "opacity": 1.0,
+                              "variable": "ColorScheme/onSurfaceVariant"
+                            }
+                          ],
+                          "position": {
+                            "left": 3.984375,
+                            "top": 3.984375
+                          },
+                          "layoutSizingHorizontal": "FIXED",
+                          "layoutSizingVertical": "FIXED",
+                          "width": 16.03125,
+                          "height": 16.03125,
+                          "pluginData": {}
+                        }
+                      ],
+                      "layoutSizingHorizontal": "FIXED",
+                      "layoutSizingVertical": "FIXED",
+                      "width": 24.0,
+                      "height": 24.0,
+                      "pluginData": {
+                        "origin": [
+                          "Icon"
+                        ],
+                        "source": "lib/contacts_screen.dart:34",
+                        "role": "icon"
+                      }
+                    }
+                  ],
+                  "layoutSizingHorizontal": "HUG",
+                  "layoutSizingVertical": "HUG",
+                  "pluginData": {
+                    "origin": [
+                      "ListTile.leading"
+                    ]
+                  }
+                },
+                {
+                  "type": "FRAME",
+                  "name": "Text",
+                  "layoutMode": "VERTICAL",
+                  "primaryAxisAlignItems": "MIN",
+                  "counterAxisAlignItems": "MIN",
+                  "itemSpacing": 0.0,
+                  "paddingTop": 0.0,
+                  "paddingRight": 0.0,
+                  "paddingBottom": 0.0,
+                  "paddingLeft": 0.0,
+                  "fills": [],
+                  "clipsContent": false,
+                  "children": [
+                    {
+                      "type": "TEXT",
+                      "name": "Grace Hopper",
+                      "characters": "Grace Hopper",
+                      "fontName": {
+                        "family": "Inter",
+                        "style": "Regular"
+                      },
+                      "fontSize": 16.0,
+                      "lineHeight": {
+                        "unit": "PIXELS",
+                        "value": 24.0
+                      },
+                      "letterSpacing": {
+                        "unit": "PIXELS",
+                        "value": 0.2
+                      },
+                      "textStyle": "TextTheme/bodyLarge",
+                      "fills": [
+                        {
+                          "type": "SOLID",
+                          "color": {
+                            "r": 0.08627450980392157,
+                            "g": 0.11372549019607843,
+                            "b": 0.11372549019607843
+                          },
+                          "opacity": 1.0,
+                          "variable": "ColorScheme/onSurface"
+                        }
+                      ],
+                      "textAlignHorizontal": "LEFT",
+                      "textAutoResize": "HEIGHT",
+                      "layoutSizingHorizontal": "FILL",
+                      "layoutSizingVertical": "HUG",
+                      "pluginData": {
+                        "origin": [
+                          "Text"
+                        ],
+                        "source": "lib/contacts_screen.dart:35"
+                      }
+                    },
+                    {
+                      "type": "TEXT",
+                      "name": "Compilers",
+                      "characters": "Compilers",
+                      "fontName": {
+                        "family": "Inter",
+                        "style": "Regular"
+                      },
+                      "fontSize": 14.0,
+                      "lineHeight": {
+                        "unit": "PIXELS",
+                        "value": 20.02
+                      },
+                      "letterSpacing": {
+                        "unit": "PIXELS",
+                        "value": 0.25
+                      },
+                      "textStyle": "TextTheme/bodyMedium",
+                      "fills": [
+                        {
+                          "type": "SOLID",
+                          "color": {
+                            "r": 0.24705882352941178,
+                            "g": 0.28627450980392155,
+                            "b": 0.28627450980392155
+                          },
+                          "opacity": 1.0,
+                          "variable": "ColorScheme/onSurfaceVariant"
+                        }
+                      ],
+                      "textAlignHorizontal": "LEFT",
+                      "textAutoResize": "HEIGHT",
+                      "layoutSizingHorizontal": "FILL",
+                      "layoutSizingVertical": "HUG",
+                      "pluginData": {
+                        "origin": [
+                          "Text"
+                        ],
+                        "source": "lib/contacts_screen.dart:36"
+                      }
+                    }
+                  ],
+                  "layoutSizingHorizontal": "FILL",
+                  "layoutSizingVertical": "HUG",
+                  "pluginData": {
+                    "origin": [
+                      "ListTile.title"
+                    ]
+                  }
+                }
+              ],
+              "layoutSizingHorizontal": "FILL",
+              "layoutSizingVertical": "HUG",
+              "pluginData": {
+                "origin": [
+                  "ListTile"
+                ],
+                "source": "lib/contacts_screen.dart:33",
+                "role": "list-tile"
+              }
+            },
+            {
+              "type": "FRAME",
+              "name": "SwitchListTile",
+              "layoutMode": "HORIZONTAL",
+              "primaryAxisAlignItems": "MIN",
+              "counterAxisAlignItems": "CENTER",
+              "itemSpacing": 16.0,
+              "paddingTop": 8.0,
+              "paddingRight": 24.0,
+              "paddingBottom": 8.0,
+              "paddingLeft": 16.0,
+              "minHeight": 56.0,
+              "fills": [],
+              "clipsContent": false,
+              "children": [
+                {
+                  "type": "FRAME",
+                  "name": "Text",
+                  "layoutMode": "VERTICAL",
+                  "primaryAxisAlignItems": "MIN",
+                  "counterAxisAlignItems": "MIN",
+                  "itemSpacing": 0.0,
+                  "paddingTop": 0.0,
+                  "paddingRight": 0.0,
+                  "paddingBottom": 0.0,
+                  "paddingLeft": 0.0,
+                  "fills": [],
+                  "clipsContent": false,
+                  "children": [
+                    {
+                      "type": "TEXT",
+                      "name": "Favorites only",
+                      "characters": "Favorites only",
+                      "fontName": {
+                        "family": "Inter",
+                        "style": "Regular"
+                      },
+                      "fontSize": 16.0,
+                      "lineHeight": {
+                        "unit": "PIXELS",
+                        "value": 24.0
+                      },
+                      "letterSpacing": {
+                        "unit": "PIXELS",
+                        "value": 0.2
+                      },
+                      "textStyle": "TextTheme/bodyLarge",
+                      "fills": [
+                        {
+                          "type": "SOLID",
+                          "color": {
+                            "r": 0.08627450980392157,
+                            "g": 0.11372549019607843,
+                            "b": 0.11372549019607843
+                          },
+                          "opacity": 1.0,
+                          "variable": "ColorScheme/onSurface"
+                        }
+                      ],
+                      "textAlignHorizontal": "LEFT",
+                      "textAutoResize": "HEIGHT",
+                      "layoutSizingHorizontal": "FILL",
+                      "layoutSizingVertical": "HUG",
+                      "pluginData": {
+                        "origin": [
+                          "Text"
+                        ],
+                        "source": "lib/contacts_screen.dart:39"
+                      }
+                    }
+                  ],
+                  "layoutSizingHorizontal": "FILL",
+                  "layoutSizingVertical": "HUG",
+                  "pluginData": {
+                    "origin": [
+                      "ListTile.title"
+                    ]
+                  }
+                },
+                {
+                  "type": "FRAME",
+                  "name": "Switch",
+                  "layoutMode": "VERTICAL",
+                  "primaryAxisAlignItems": "CENTER",
+                  "counterAxisAlignItems": "CENTER",
+                  "itemSpacing": 0.0,
+                  "paddingTop": 0.0,
+                  "paddingRight": 0.0,
+                  "paddingBottom": 0.0,
+                  "paddingLeft": 0.0,
+                  "fills": [],
+                  "clipsContent": false,
+                  "children": [
+                    {
+                      "type": "FRAME",
+                      "name": "Track",
+                      "layoutMode": "HORIZONTAL",
+                      "primaryAxisAlignItems": "MAX",
+                      "counterAxisAlignItems": "CENTER",
+                      "itemSpacing": 0.0,
+                      "paddingTop": 0.0,
+                      "paddingRight": 4.0,
+                      "paddingBottom": 0.0,
+                      "paddingLeft": 4.0,
+                      "fills": [
+                        {
+                          "type": "SOLID",
+                          "color": {
+                            "r": 0.0,
+                            "g": 0.4117647058823529,
+                            "b": 0.43137254901960786
+                          },
+                          "opacity": 1.0,
+                          "variable": "ColorScheme/primary"
+                        }
+                      ],
+                      "cornerRadius": 16.0,
+                      "clipsContent": false,
+                      "children": [
+                        {
+                          "type": "FRAME",
+                          "name": "Thumb",
+                          "layoutMode": "VERTICAL",
+                          "primaryAxisAlignItems": "MIN",
+                          "counterAxisAlignItems": "MIN",
+                          "itemSpacing": 0.0,
+                          "paddingTop": 0.0,
+                          "paddingRight": 0.0,
+                          "paddingBottom": 0.0,
+                          "paddingLeft": 0.0,
+                          "fills": [
+                            {
+                              "type": "SOLID",
+                              "color": {
+                                "r": 1.0,
+                                "g": 1.0,
+                                "b": 1.0
+                              },
+                              "opacity": 1.0,
+                              "variable": "ColorScheme/onPrimary"
+                            }
+                          ],
+                          "cornerRadius": 12.0,
+                          "clipsContent": false,
+                          "children": [],
+                          "layoutSizingHorizontal": "FIXED",
+                          "layoutSizingVertical": "FIXED",
+                          "width": 24.0,
+                          "height": 24.0,
+                          "pluginData": {}
+                        }
+                      ],
+                      "layoutSizingHorizontal": "FIXED",
+                      "layoutSizingVertical": "FIXED",
+                      "width": 52.0,
+                      "height": 32.0,
+                      "pluginData": {
+                        "origin": [
+                          "Switch"
+                        ],
+                        "role": "switch"
+                      }
+                    }
+                  ],
+                  "layoutSizingHorizontal": "FIXED",
+                  "layoutSizingVertical": "FIXED",
+                  "width": 60.0,
+                  "height": 40.0,
+                  "pluginData": {
+                    "origin": [
+                      "Switch"
+                    ]
+                  }
+                }
+              ],
+              "layoutSizingHorizontal": "FILL",
+              "layoutSizingVertical": "HUG",
+              "pluginData": {
+                "origin": [
+                  "SwitchListTile"
+                ],
+                "source": "lib/contacts_screen.dart:38",
+                "role": "list-tile"
+              }
+            }
+          ],
+          "layoutSizingHorizontal": "FILL",
+          "layoutSizingVertical": "FILL",
+          "pluginData": {
+            "origin": [
+              "ListView"
+            ],
+            "source": "lib/contacts_screen.dart:11"
+          }
+        },
+        {
+          "type": "FRAME",
+          "name": "NavigationBar",
+          "layoutMode": "HORIZONTAL",
+          "primaryAxisAlignItems": "MIN",
+          "counterAxisAlignItems": "MIN",
+          "itemSpacing": 0.0,
+          "paddingTop": 0.0,
+          "paddingRight": 0.0,
+          "paddingBottom": 0.0,
+          "paddingLeft": 0.0,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": {
+                "r": 0.9137254901960784,
+                "g": 0.9372549019607843,
+                "b": 0.9372549019607843
+              },
+              "opacity": 1.0,
+              "variable": "ColorScheme/surfaceContainer"
+            }
+          ],
+          "clipsContent": false,
+          "children": [
+            {
+              "type": "FRAME",
+              "name": "Home",
+              "layoutMode": "VERTICAL",
+              "primaryAxisAlignItems": "CENTER",
+              "counterAxisAlignItems": "CENTER",
+              "itemSpacing": 4.0,
+              "paddingTop": 0.0,
+              "paddingRight": 0.0,
+              "paddingBottom": 0.0,
+              "paddingLeft": 0.0,
+              "fills": [],
+              "clipsContent": false,
+              "children": [
+                {
+                  "type": "FRAME",
+                  "name": "Indicator",
+                  "layoutMode": "VERTICAL",
+                  "primaryAxisAlignItems": "CENTER",
+                  "counterAxisAlignItems": "CENTER",
+                  "itemSpacing": 0.0,
+                  "paddingTop": 0.0,
+                  "paddingRight": 0.0,
+                  "paddingBottom": 0.0,
+                  "paddingLeft": 0.0,
+                  "fills": [],
+                  "cornerRadius": 16.0,
+                  "clipsContent": false,
+                  "children": [
+                    {
+                      "type": "FRAME",
+                      "name": "Icon/home",
+                      "layoutMode": "NONE",
+                      "fills": [],
+                      "clipsContent": false,
+                      "children": [
+                        {
+                          "type": "VECTOR",
+                          "name": "home",
+                          "vectorPaths": [
+                            {
+                              "windingRule": "NONZERO",
+                              "data": "M 7.969 17.016 L 7.969 11.016 L 12 11.016 L 12 17.016 L 16.969 17.016 L 16.969 9 L 19.969 9 L 9.984 0 L 0 9 L 3 9 L 3 17.016 L 7.969 17.016 Z"
+                            }
+                          ],
+                          "fills": [
+                            {
+                              "type": "SOLID",
+                              "color": {
+                                "r": 0.24705882352941178,
+                                "g": 0.28627450980392155,
+                                "b": 0.28627450980392155
+                              },
+                              "opacity": 1.0,
+                              "variable": "ColorScheme/onSurfaceVariant"
+                            }
+                          ],
+                          "position": {
+                            "left": 2.015625,
+                            "top": 3.0
+                          },
+                          "layoutSizingHorizontal": "FIXED",
+                          "layoutSizingVertical": "FIXED",
+                          "width": 19.96875,
+                          "height": 17.015625,
+                          "pluginData": {}
+                        }
+                      ],
+                      "layoutSizingHorizontal": "FIXED",
+                      "layoutSizingVertical": "FIXED",
+                      "width": 24.0,
+                      "height": 24.0,
+                      "pluginData": {
+                        "origin": [
+                          "Icon"
+                        ],
+                        "source": "lib/contacts_screen.dart:48",
+                        "role": "icon"
+                      }
+                    }
+                  ],
+                  "layoutSizingHorizontal": "FIXED",
+                  "layoutSizingVertical": "FIXED",
+                  "width": 64.0,
+                  "height": 32.0,
+                  "pluginData": {
+                    "origin": [
+                      "NavigationIndicator"
+                    ]
+                  }
+                },
+                {
+                  "type": "TEXT",
+                  "name": "Home",
+                  "characters": "Home",
+                  "fontName": {
+                    "family": "Inter",
+                    "style": "Medium"
+                  },
+                  "fontSize": 12.0,
+                  "lineHeight": {
+                    "unit": "PIXELS",
+                    "value": 15.96
+                  },
+                  "letterSpacing": {
+                    "unit": "PIXELS",
+                    "value": 0.5
+                  },
+                  "textStyle": "TextTheme/labelMedium",
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": {
+                        "r": 0.24705882352941178,
+                        "g": 0.28627450980392155,
+                        "b": 0.28627450980392155
+                      },
+                      "opacity": 1.0,
+                      "variable": "ColorScheme/onSurfaceVariant"
+                    }
+                  ],
+                  "textAlignHorizontal": "LEFT",
+                  "textAutoResize": "WIDTH_AND_HEIGHT",
+                  "layoutSizingHorizontal": "HUG",
+                  "layoutSizingVertical": "HUG",
+                  "pluginData": {
+                    "origin": [
+                      "NavigationDestination"
+                    ]
+                  }
+                }
+              ],
+              "layoutSizingHorizontal": "FILL",
+              "layoutSizingVertical": "FILL",
+              "pluginData": {
+                "origin": [
+                  "NavigationDestination"
+                ]
+              }
+            },
+            {
+              "type": "FRAME",
+              "name": "Contacts",
+              "layoutMode": "VERTICAL",
+              "primaryAxisAlignItems": "CENTER",
+              "counterAxisAlignItems": "CENTER",
+              "itemSpacing": 4.0,
+              "paddingTop": 0.0,
+              "paddingRight": 0.0,
+              "paddingBottom": 0.0,
+              "paddingLeft": 0.0,
+              "fills": [],
+              "clipsContent": false,
+              "children": [
+                {
+                  "type": "FRAME",
+                  "name": "Indicator",
+                  "layoutMode": "VERTICAL",
+                  "primaryAxisAlignItems": "CENTER",
+                  "counterAxisAlignItems": "CENTER",
+                  "itemSpacing": 0.0,
+                  "paddingTop": 0.0,
+                  "paddingRight": 0.0,
+                  "paddingBottom": 0.0,
+                  "paddingLeft": 0.0,
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": {
+                        "r": 0.8,
+                        "g": 0.9098039215686274,
+                        "b": 0.9137254901960784
+                      },
+                      "opacity": 1.0,
+                      "variable": "ColorScheme/secondaryContainer"
+                    }
+                  ],
+                  "cornerRadius": 16.0,
+                  "clipsContent": false,
+                  "children": [
+                    {
+                      "type": "FRAME",
+                      "name": "Icon/people",
+                      "layoutMode": "NONE",
+                      "fills": [],
+                      "clipsContent": false,
+                      "children": [
+                        {
+                          "type": "VECTOR",
+                          "name": "people",
+                          "vectorPaths": [
+                            {
+                              "windingRule": "NONZERO",
+                              "data": "M 15 6 C 16.688 6 18 4.641 18 3 C 18 1.313 16.688 0 15 0 C 13.359 0 12 1.313 12 3 C 12 4.641 13.359 6 15 6 Z M 7.031 6 C 8.672 6 9.984 4.641 9.984 3 C 9.984 1.313 8.672 0 7.031 0 C 5.344 0 4.031 1.313 4.031 3 C 4.031 4.641 5.344 6 7.031 6 Z M 7.031 7.969 C 4.688 7.969 0 9.141 0 11.484 L 0 13.969 L 14.016 13.969 L 14.016 11.484 C 14.016 9.141 9.328 7.969 7.031 7.969 Z M 15 7.969 C 14.719 7.969 14.391 8.016 14.063 8.016 C 15.188 8.859 16.031 9.984 16.031 11.484 L 16.031 13.969 L 22.031 13.969 L 22.031 11.484 C 22.031 9.141 17.344 7.969 15 7.969 Z"
+                            }
+                          ],
+                          "fills": [
+                            {
+                              "type": "SOLID",
+                              "color": {
+                                "r": 0.19607843137254902,
+                                "g": 0.29411764705882354,
+                                "b": 0.30196078431372547
+                              },
+                              "opacity": 1.0,
+                              "variable": "ColorScheme/onSecondaryContainer"
+                            }
+                          ],
+                          "position": {
+                            "left": 0.984375,
+                            "top": 5.015625
+                          },
+                          "layoutSizingHorizontal": "FIXED",
+                          "layoutSizingVertical": "FIXED",
+                          "width": 22.03125,
+                          "height": 13.96875,
+                          "pluginData": {}
+                        }
+                      ],
+                      "layoutSizingHorizontal": "FIXED",
+                      "layoutSizingVertical": "FIXED",
+                      "width": 24.0,
+                      "height": 24.0,
+                      "pluginData": {
+                        "origin": [
+                          "Icon"
+                        ],
+                        "source": "lib/contacts_screen.dart:49",
+                        "role": "icon"
+                      }
+                    }
+                  ],
+                  "layoutSizingHorizontal": "FIXED",
+                  "layoutSizingVertical": "FIXED",
+                  "width": 64.0,
+                  "height": 32.0,
+                  "pluginData": {
+                    "origin": [
+                      "NavigationIndicator"
+                    ]
+                  }
+                },
+                {
+                  "type": "TEXT",
+                  "name": "Contacts",
+                  "characters": "Contacts",
+                  "fontName": {
+                    "family": "Inter",
+                    "style": "Medium"
+                  },
+                  "fontSize": 12.0,
+                  "lineHeight": {
+                    "unit": "PIXELS",
+                    "value": 15.96
+                  },
+                  "letterSpacing": {
+                    "unit": "PIXELS",
+                    "value": 0.5
+                  },
+                  "textStyle": "TextTheme/labelMedium",
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": {
+                        "r": 0.08627450980392157,
+                        "g": 0.11372549019607843,
+                        "b": 0.11372549019607843
+                      },
+                      "opacity": 1.0,
+                      "variable": "ColorScheme/onSurface"
+                    }
+                  ],
+                  "textAlignHorizontal": "LEFT",
+                  "textAutoResize": "WIDTH_AND_HEIGHT",
+                  "layoutSizingHorizontal": "HUG",
+                  "layoutSizingVertical": "HUG",
+                  "pluginData": {
+                    "origin": [
+                      "NavigationDestination"
+                    ]
+                  }
+                }
+              ],
+              "layoutSizingHorizontal": "FILL",
+              "layoutSizingVertical": "FILL",
+              "pluginData": {
+                "origin": [
+                  "NavigationDestination"
+                ]
+              }
+            },
+            {
+              "type": "FRAME",
+              "name": "Settings",
+              "layoutMode": "VERTICAL",
+              "primaryAxisAlignItems": "CENTER",
+              "counterAxisAlignItems": "CENTER",
+              "itemSpacing": 4.0,
+              "paddingTop": 0.0,
+              "paddingRight": 0.0,
+              "paddingBottom": 0.0,
+              "paddingLeft": 0.0,
+              "fills": [],
+              "clipsContent": false,
+              "children": [
+                {
+                  "type": "FRAME",
+                  "name": "Indicator",
+                  "layoutMode": "VERTICAL",
+                  "primaryAxisAlignItems": "CENTER",
+                  "counterAxisAlignItems": "CENTER",
+                  "itemSpacing": 0.0,
+                  "paddingTop": 0.0,
+                  "paddingRight": 0.0,
+                  "paddingBottom": 0.0,
+                  "paddingLeft": 0.0,
+                  "fills": [],
+                  "cornerRadius": 16.0,
+                  "clipsContent": false,
+                  "children": [
+                    {
+                      "type": "FRAME",
+                      "name": "Icon/settings",
+                      "layoutMode": "NONE",
+                      "fills": [],
+                      "clipsContent": false,
+                      "children": [
+                        {
+                          "type": "VECTOR",
+                          "name": "settings",
+                          "vectorPaths": [
+                            {
+                              "windingRule": "NONZERO",
+                              "data": "M 16.453 10.547 C 16.5 10.266 16.547 9.938 16.547 9.609 C 16.547 9.281 16.5 8.953 16.453 8.672 L 18.469 7.078 C 18.656 6.938 18.703 6.656 18.609 6.469 L 16.688 3.141 C 16.547 2.953 16.313 2.859 16.078 2.953 L 13.688 3.891 C 13.219 3.516 12.656 3.188 12.094 2.953 L 11.719 0.422 C 11.672 0.188 11.484 0 11.25 0 L 7.406 0 C 7.172 0 6.984 0.188 6.938 0.422 L 6.563 2.953 C 6 3.188 5.438 3.516 4.969 3.891 L 2.578 2.953 C 2.344 2.859 2.109 2.953 1.969 3.141 L 0.047 6.469 C -0.047 6.703 0 6.938 0.188 7.078 L 2.203 8.672 C 2.156 8.953 2.109 9.281 2.109 9.609 C 2.109 9.938 2.156 10.266 2.203 10.547 L 0.188 12.141 C 0 12.281 -0.047 12.563 0.047 12.75 L 1.969 16.078 C 2.109 16.266 2.344 16.359 2.578 16.266 L 4.969 15.328 C 5.438 15.703 6 16.031 6.563 16.266 L 6.938 18.797 C 6.984 19.031 7.172 19.219 7.406 19.219 L 11.25 19.219 C 11.484 19.219 11.672 19.031 11.719 18.797 L 12.094 16.266 C 12.656 16.031 13.219 15.703 13.688 15.328 L 16.078 16.266 C 16.313 16.359 16.547 16.266 16.688 16.078 L 18.609 12.75 C 18.703 12.516 18.656 12.281 18.469 12.141 L 16.453 10.547 Z M 9.328 13.219 C 7.359 13.219 5.719 11.578 5.719 9.609 C 5.719 7.641 7.359 6 9.328 6 C 11.297 6 12.938 7.641 12.938 9.609 C 12.938 11.578 11.297 13.219 9.328 13.219 Z"
+                            }
+                          ],
+                          "fills": [
+                            {
+                              "type": "SOLID",
+                              "color": {
+                                "r": 0.24705882352941178,
+                                "g": 0.28627450980392155,
+                                "b": 0.28627450980392155
+                              },
+                              "opacity": 1.0,
+                              "variable": "ColorScheme/onSurfaceVariant"
+                            }
+                          ],
+                          "position": {
+                            "left": 2.6718749999999996,
+                            "top": 2.390625
+                          },
+                          "layoutSizingHorizontal": "FIXED",
+                          "layoutSizingVertical": "FIXED",
+                          "width": 18.65625,
+                          "height": 19.21875,
+                          "pluginData": {}
+                        }
+                      ],
+                      "layoutSizingHorizontal": "FIXED",
+                      "layoutSizingVertical": "FIXED",
+                      "width": 24.0,
+                      "height": 24.0,
+                      "pluginData": {
+                        "origin": [
+                          "Icon"
+                        ],
+                        "source": "lib/contacts_screen.dart:50",
+                        "role": "icon"
+                      }
+                    }
+                  ],
+                  "layoutSizingHorizontal": "FIXED",
+                  "layoutSizingVertical": "FIXED",
+                  "width": 64.0,
+                  "height": 32.0,
+                  "pluginData": {
+                    "origin": [
+                      "NavigationIndicator"
+                    ]
+                  }
+                },
+                {
+                  "type": "TEXT",
+                  "name": "Settings",
+                  "characters": "Settings",
+                  "fontName": {
+                    "family": "Inter",
+                    "style": "Medium"
+                  },
+                  "fontSize": 12.0,
+                  "lineHeight": {
+                    "unit": "PIXELS",
+                    "value": 15.96
+                  },
+                  "letterSpacing": {
+                    "unit": "PIXELS",
+                    "value": 0.5
+                  },
+                  "textStyle": "TextTheme/labelMedium",
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": {
+                        "r": 0.24705882352941178,
+                        "g": 0.28627450980392155,
+                        "b": 0.28627450980392155
+                      },
+                      "opacity": 1.0,
+                      "variable": "ColorScheme/onSurfaceVariant"
+                    }
+                  ],
+                  "textAlignHorizontal": "LEFT",
+                  "textAutoResize": "WIDTH_AND_HEIGHT",
+                  "layoutSizingHorizontal": "HUG",
+                  "layoutSizingVertical": "HUG",
+                  "pluginData": {
+                    "origin": [
+                      "NavigationDestination"
+                    ]
+                  }
+                }
+              ],
+              "layoutSizingHorizontal": "FILL",
+              "layoutSizingVertical": "FILL",
+              "pluginData": {
+                "origin": [
+                  "NavigationDestination"
+                ]
+              }
+            }
+          ],
+          "layoutSizingHorizontal": "FILL",
+          "layoutSizingVertical": "FIXED",
+          "height": 80.0,
+          "pluginData": {
+            "origin": [
+              "NavigationBar"
+            ],
+            "source": "lib/contacts_screen.dart:45",
+            "role": "navigation-bar"
+          }
+        }
+      ],
+      "layoutSizingHorizontal": "FIXED",
+      "layoutSizingVertical": "FIXED",
+      "width": 390.0,
+      "height": 844.0,
+      "pluginData": {
+        "origin": [
+          "Scaffold"
+        ],
+        "source": "lib/contacts_screen.dart:4",
+        "role": "screen"
+      },
+      "x": 0.0,
+      "y": 0
+    },
+    {
+      "type": "FRAME",
       "name": "HomeScreen",
       "layoutMode": "VERTICAL",
       "primaryAxisAlignItems": "MIN",
@@ -1761,7 +3477,7 @@
         "source": "lib/home_screen.dart:4",
         "role": "screen"
       },
-      "x": 0.0,
+      "x": 510.0,
       "y": 0
     },
     {
@@ -2726,7 +4442,7 @@
         "source": "lib/profile_screen.dart:5",
         "role": "screen"
       },
-      "x": 510.0,
+      "x": 1020.0,
       "y": 0
     },
     {
@@ -3794,7 +5510,7 @@
         "source": "lib/scoreboard_screen.dart:6",
         "role": "screen"
       },
-      "x": 1020.0,
+      "x": 1530.0,
       "y": 0
     },
     {
@@ -4527,7 +6243,7 @@
         "source": "lib/settings_screen.dart:18",
         "role": "screen"
       },
-      "x": 1530.0,
+      "x": 2040.0,
       "y": 0
     },
     {
@@ -4939,7 +6655,7 @@
         "source": "lib/stack_layout_screen.dart:7",
         "role": "screen"
       },
-      "x": 2040.0,
+      "x": 2550.0,
       "y": 0
     }
   ],

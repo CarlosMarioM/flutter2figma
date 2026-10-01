@@ -26,5 +26,33 @@
   "ScoreboardScreen/Checkbox": [
     48.0,
     48.0
+  ],
+  "ContactsScreen/ListTile 1": [
+    390.0,
+    56.0
+  ],
+  "ContactsScreen/ListTile 2": [
+    390.0,
+    72.0
+  ],
+  "ContactsScreen/SwitchListTile": [
+    390.0,
+    56.0
+  ],
+  "ContactsScreen/Chip": [
+    152.6999969482422,
+    48.0
+  ],
+  "ContactsScreen/FilterChip": [
+    110.4000015258789,
+    48.0
+  ],
+  "ContactsScreen/InputChip": [
+    96.29999923706055,
+    48.0
+  ],
+  "ContactsScreen/NavigationBar": [
+    390.0,
+    80.0
   ]
 }

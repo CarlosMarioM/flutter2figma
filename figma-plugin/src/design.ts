@@ -112,6 +112,9 @@ export interface FrameSpec extends BaseSpec {
   primaryAxisAlignItems?: 'MIN' | 'MAX' | 'CENTER' | 'SPACE_BETWEEN';
   counterAxisAlignItems?: 'MIN' | 'MAX' | 'CENTER' | 'BASELINE';
   itemSpacing?: number;
+  /** Horizontal frames that wrap onto new rows, `counterAxisSpacing` apart. */
+  layoutWrap?: 'WRAP';
+  counterAxisSpacing?: number;
   paddingTop?: number;
   paddingRight?: number;
   paddingBottom?: number;

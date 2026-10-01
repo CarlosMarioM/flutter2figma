@@ -204,6 +204,10 @@ export async function importDesign(api: PluginAPI, doc: DesignDocument): Promise
       frame.primaryAxisAlignItems = spec.primaryAxisAlignItems ?? 'MIN';
       frame.counterAxisAlignItems = spec.counterAxisAlignItems ?? 'MIN';
       frame.itemSpacing = spec.itemSpacing ?? 0;
+      if (spec.layoutWrap === 'WRAP' && spec.layoutMode === 'HORIZONTAL') {
+        frame.layoutWrap = 'WRAP';
+        frame.counterAxisSpacing = spec.counterAxisSpacing ?? 0;
+      }
       frame.paddingTop = spec.paddingTop ?? 0;
       frame.paddingRight = spec.paddingRight ?? 0;
       frame.paddingBottom = spec.paddingBottom ?? 0;

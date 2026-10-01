@@ -66,7 +66,9 @@ reused across imports: variables and styles are updated in place.
 | From Flutter | In Figma |
 | --- | --- |
 | Screens (classes whose `build` leads to a `Scaffold`, through providers, bloc builders, auth gates, …) | Frames, one per screen, with auto layout |
-| `Row`, `Column`, `Padding`, `SizedBox`, `Expanded`, `Stack`, … | Auto layout: direction, gap, padding, alignment, fixed / hug / fill |
+| `Row`, `Column`, `Padding`, `SizedBox`, `Expanded`, `Stack`, `Wrap`, … | Auto layout: direction, gap, padding, alignment, wrapping, fixed / hug / fill |
+| Material widgets: buttons, `ListTile` (and switch/checkbox/radio tiles), chips, `NavigationBar`, `BottomNavigationBar`, switches, text fields, … | Frames sized and colored with Material 3 defaults, measured against Flutter |
+| `Icons.*`, `CupertinoIcons`, asset images and SVGs | Vector icons and image fills |
 | `ColorScheme` roles for `theme` and `darkTheme` | Color variables with **Light/Dark modes**; switching the mode recolors the screens |
 | Painted project constants such as `AppColors.brand` | Color variables |
 | `textTheme` entries | Text styles (`TextTheme/bodyMedium`, …) |
@@ -148,9 +150,9 @@ diagnostic, and anything it can't draw becomes a magenta `⚠` placeholder.
   icons from other fonts are placeholders. Gradients use their first color.
   `GridView` cell heights are estimated from the screen width.
 - **Not supported yet:**
-  - `ListTile`, chips, navigation and tab bars, dialogs and sheets;
-  - Cupertino widgets, Material 2 themes, and input/chip/list tile component
-    themes.
+  - tab bars, navigation rails and drawers, dialogs and sheets;
+  - Cupertino widgets, Material 2 themes, and input/chip/list tile/navigation
+    bar component themes.
 - **Fonts** are exported by family name; the plugin substitutes any font
   that isn't installed in Figma.
 

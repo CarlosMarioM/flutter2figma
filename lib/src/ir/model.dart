@@ -586,6 +586,8 @@ class IrFrame extends IrNode {
     super.instance,
     this.direction = IrLayoutDirection.vertical,
     this.gap = 0,
+    this.wrap = false,
+    this.runGap = 0,
     this.padding = IrInsets.zero,
     this.mainAlign = IrMainAlign.start,
     this.crossAlign = IrCrossAlign.start,
@@ -604,6 +606,11 @@ class IrFrame extends IrNode {
 
   IrLayoutDirection direction;
   double gap;
+
+  /// Horizontal frames only: children flow onto new rows (Flutter's `Wrap`),
+  /// [runGap] apart.
+  bool wrap;
+  double runGap;
   IrInsets padding;
   IrMainAlign mainAlign;
   IrCrossAlign crossAlign;
@@ -642,6 +649,8 @@ class IrFrame extends IrNode {
     'layout': {
       'direction': direction.name,
       if (gap != 0) 'gap': gap,
+      if (wrap) 'wrap': true,
+      if (runGap != 0) 'runGap': runGap,
       'mainAlign': mainAlign.name,
       'crossAlign': crossAlign.name,
     },
@@ -669,6 +678,8 @@ class IrFrame extends IrNode {
         layout['direction'] as String? ?? 'vertical',
       ),
       gap: _d(layout['gap']) ?? 0,
+      wrap: layout['wrap'] as bool? ?? false,
+      runGap: _d(layout['runGap']) ?? 0,
       mainAlign: IrMainAlign.values.byName(
         layout['mainAlign'] as String? ?? 'start',
       ),

@@ -16,6 +16,16 @@
   maps to Figma's scale modes, and images over Figma's 4096 px limit are
   scaled down (other formats such as WebP become PNG). Network, file and
   memory images stay placeholders.
+- `ListTile`, `SwitchListTile`, `CheckboxListTile` and `RadioListTile`:
+  Material 3 padding, heights (one, two and three lines, dense), leading
+  slot, text styles and selected/disabled colors.
+- Chips (`Chip`, `InputChip`, `FilterChip`, `ChoiceChip`, `ActionChip`,
+  elevated variants): outline or tonal fill, avatar, checkmark when selected,
+  delete icon, tap target.
+- `NavigationBar` and `BottomNavigationBar` in `Scaffold.bottomNavigationBar`:
+  the body fills the space above the bar and a floating action button sits
+  above it.
+- `Wrap` wraps (Figma auto layout wrap) instead of exporting as a row.
 - New dependency: `image`, to scale and convert images.
 - `design.json` version 3 (adds `VECTOR` nodes, `images` and image paints)
   and IR version 3. Update the Figma plugin to import them.

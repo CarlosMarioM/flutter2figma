@@ -10,6 +10,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter2figma_example/contacts_screen.dart';
 import 'package:flutter2figma_example/home_screen.dart';
 import 'package:flutter2figma_example/profile_screen.dart';
 import 'package:flutter2figma_example/scoreboard_screen.dart';
@@ -76,6 +77,31 @@ void main() {
     await show(const ScoreboardScreen());
     sizes['ScoreboardScreen/Switch'] = sizeOf(tester, find.byType(Switch));
     sizes['ScoreboardScreen/Checkbox'] = sizeOf(tester, find.byType(Checkbox));
+
+    await show(const ContactsScreen());
+    sizes['ContactsScreen/ListTile 1'] = sizeOf(
+      tester,
+      find.byType(ListTile).at(0),
+    );
+    sizes['ContactsScreen/ListTile 2'] = sizeOf(
+      tester,
+      find.byType(ListTile).at(1),
+    );
+    sizes['ContactsScreen/SwitchListTile'] = sizeOf(
+      tester,
+      find.byType(SwitchListTile),
+    );
+    // Chips are measured with their tap target, like buttons.
+    sizes['ContactsScreen/Chip'] = sizeOf(tester, find.byType(Chip));
+    sizes['ContactsScreen/FilterChip'] = sizeOf(
+      tester,
+      find.byType(FilterChip),
+    );
+    sizes['ContactsScreen/InputChip'] = sizeOf(tester, find.byType(InputChip));
+    sizes['ContactsScreen/NavigationBar'] = sizeOf(
+      tester,
+      find.byType(NavigationBar),
+    );
 
     final actual = '${const JsonEncoder.withIndent('  ').convert(sizes)}\n';
     final fixture = File(fixturePath);

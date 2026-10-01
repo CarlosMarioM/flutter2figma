@@ -176,6 +176,8 @@ class FigmaRenderer {
             f.direction == IrLayoutDirection.horizontal ? 'BASELINE' : 'MIN',
         },
         'itemSpacing': f.gap,
+        if (f.wrap) 'layoutWrap': 'WRAP',
+        if (f.wrap) 'counterAxisSpacing': f.runGap,
         'paddingTop': f.padding.top,
         'paddingRight': f.padding.right,
         'paddingBottom': f.padding.bottom,
