@@ -53,7 +53,10 @@ export interface ImagePaintSpec {
   scaleMode: ScaleMode;
 }
 
-export type PaintSpec = SolidPaintSpec | ImagePaintSpec;
+/** A gradient, already in Figma's shape (transform and RGBA stops). */
+export type GradientPaintSpec = GradientPaint;
+
+export type PaintSpec = SolidPaintSpec | ImagePaintSpec | GradientPaintSpec;
 
 export interface DesignSystemSpec {
   /** Variable collection name. */

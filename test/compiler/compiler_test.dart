@@ -308,6 +308,46 @@ void main() {
     expect(t.style.lineHeight, 24);
   });
 
+  test('gradients keep their colors, stops and direction', () {
+    final box =
+        body(
+              w(
+                'Container',
+                named: {
+                  'width': lit(100),
+                  'height': lit(50),
+                  'decoration': v(
+                    'BoxDecoration',
+                    named: {
+                      'gradient': v(
+                        'LinearGradient',
+                        named: {
+                          'colors': list([
+                            v('Color', positional: [lit(0xFFFF0000)]),
+                            v('Color', positional: [lit(0xFF0000FF)]),
+                          ]),
+                          'stops': list([lit(0.2), lit(0.9)]),
+                          'begin': ref('Alignment.topCenter'),
+                          'end': ref('Alignment.bottomCenter'),
+                        },
+                      ),
+                    },
+                  ),
+                },
+              ),
+            )
+            as IrFrame;
+    final g = box.gradient!;
+    expect(box.fill, isNull);
+    expect(g.radial, isFalse);
+    expect(
+      [g.colors.first.toHex(), g.colors.last.toHex()],
+      ['#FF0000', '#0000FF'],
+    );
+    expect(g.stops, [0.2, 0.9]);
+    expect([g.begin, g.end], [(0.5, 0.0), (0.5, 1.0)]);
+  });
+
   test('disabled buttons use disabled colors', () {
     final button = unwrap(
       body(

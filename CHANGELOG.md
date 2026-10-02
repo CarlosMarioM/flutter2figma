@@ -14,6 +14,13 @@ flutter2figma is now labeled **beta**.
   `flutter_secure_storage` get in-memory fakes. `test/flutter2figma_setup.dart`
   can add `setUp`, `wrapScreen` and `buildScreen`.
 - Screens that can't run fall back to static export, with the reason.
+- Children are recorded in the order they are painted, and what a widget
+  paints itself is split into what goes under and over its children, so
+  backgrounds, outlines and borders stack as in the app.
+- Layout overflows in the app are reported with their `file:line` (the
+  screen is still exported).
+- `--screenshots <dir>` saves Flutter's own render of every screen, to
+  compare with the Figma import.
 
 ### Export
 - Tap targets: buttons, icon buttons, switches, checkboxes and radios take the
@@ -41,6 +48,13 @@ flutter2figma is now labeled **beta**.
   the body fills the space above the bar and a floating action button sits
   above it.
 - `Wrap` wraps (Figma auto layout wrap) instead of exporting as a row.
+- Gradients: `LinearGradient` and `RadialGradient` become Figma gradient
+  fills (colors, stops, direction, center and radius) in both modes,
+  instead of their first color.
+- `CircleAvatar` (color, child, background image).
+- A frame downgraded from fill to hug no longer leaves filling children
+  inside it, which Figma rejected; a decorated `Container` with a margin
+  grows with a filling child, as in Flutter.
 - `a ?? b` is evaluated: a known `a` decides, and an `a` only known at
   runtime is assumed null as on the first frame, so the fallback shows
   (`Text(icon ?? '')` on an empty board) instead of `{icon ?? ''}`.
@@ -51,6 +65,8 @@ flutter2figma is now labeled **beta**.
   and IR version 3. Update the Figma plugin to import them.
 
 ### Tests
+- `showcase/`, a dense multi-screen app, and `tool/stress.sh`, which exports
+  it both ways and imports both through the Figma mock. CI exports it too.
 - The example app measures real Flutter layout sizes
   (`test/goldens/basic_layout.json`), and the plugin test checks Figma
   produces the same ones.

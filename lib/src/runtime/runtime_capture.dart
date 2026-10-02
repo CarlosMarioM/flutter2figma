@@ -43,8 +43,13 @@ class CaptureResult {
     required this.screens,
     required this.errors,
     required this.skipped,
+    this.warnings = const [],
     this.log = '',
   });
+
+  /// Problems in the app itself that didn't stop a screen (layout
+  /// overflows).
+  final List<String> warnings;
 
   final List<CapturedScreen> screens;
 
@@ -74,7 +79,11 @@ class RuntimeCapture {
     this.width = 390,
     this.height = 844,
     this.timeout = const Duration(minutes: 10),
+    this.screenshotsDir,
   });
+
+  /// Where to save Flutter's own render of each screen (PNG), if anywhere.
+  final String? screenshotsDir;
 
   /// The whole `flutter test` run is stopped after this.
   final Duration timeout;
@@ -162,6 +171,8 @@ class RuntimeCapture {
             '--dart-define=F2F_FLUTTER_ROOT=$flutterRoot',
           '--dart-define=F2F_WIDTH=$width',
           '--dart-define=F2F_HEIGHT=$height',
+          if (screenshotsDir != null)
+            '--dart-define=F2F_SCREENSHOTS=${p.absolute(screenshotsDir!)}',
         ],
         workingDirectory: root,
         runInShell: Platform.isWindows,
@@ -214,6 +225,7 @@ class RuntimeCapture {
             'flutter test: ${_firstError(log)}',
         ],
         skipped: skipped,
+        warnings: ((json['warnings'] as List?) ?? const []).cast<String>(),
         log: log,
       );
     } finally {

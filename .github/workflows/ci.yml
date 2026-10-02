@@ -30,6 +30,7 @@ jobs:
         run: |
           dart pub get
           (cd example && flutter pub get)
+          (cd showcase && flutter pub get)
 
       - name: Format
         run: dart format --output=none --set-exit-if-changed lib bin test
@@ -43,6 +44,15 @@ jobs:
       - name: Theme ground truth (Flutter resolves the example's theme)
         working-directory: example
         run: flutter test
+
+      - name: Showcase app compiles
+        working-directory: showcase
+        run: flutter analyze
+
+      - name: Showcase exports (static and runtime)
+        run: |
+          dart run bin/flutter2figma.dart export showcase -o build/showcase/static
+          dart run bin/flutter2figma.dart export showcase --runtime -o build/showcase/runtime
 
       - name: Publish dry run
         run: dart pub publish --dry-run

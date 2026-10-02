@@ -652,6 +652,8 @@ class FlutterCompiler {
         return _chip(w, c);
       case 'NavigationBar':
         return _navigationBar(w, c);
+      case 'CircleAvatar':
+        return _circleAvatar(w, c);
       case 'BottomNavigationBar':
         return _bottomNavigationBar(w, c);
       case 'Switch' || 'Switch.adaptive':
@@ -1238,15 +1240,10 @@ class FlutterCompiler {
       }
       final gradient = eval.deref(d['gradient']);
       if (gradient is ObjectValue) {
-        final colors = eval.deref(gradient['colors']);
-        if (colors is ListValue && colors.items.isNotEmpty) {
-          frame.fill ??= eval.color(colors.items.first);
+        frame.gradient = _gradient(gradient);
+        if (frame.gradient == null) {
+          _warn('Gradient colors are only known at runtime', gradient);
         }
-        _warn(
-          'Gradients are exported as a solid fill',
-          gradient,
-          severity: IrSeverity.info,
-        );
       }
       final image = eval.deref(d['image']);
       if (image is ObjectValue && image.type == 'DecorationImage') {
@@ -1269,10 +1266,43 @@ class FlutterCompiler {
     return frame;
   }
 
+  /// `LinearGradient` / `RadialGradient` with statically known colors.
+  IrGradient? _gradient(ObjectValue g) {
+    final items = eval.deref(g['colors']);
+    if (items is! ListValue || items.items.isEmpty) return null;
+    final colors = [for (final c in items.items) eval.color(c)];
+    if (colors.contains(null)) return null;
+    final stopItems = eval.deref(g['stops']);
+    final stops = stopItems is ListValue
+        ? [for (final s in stopItems.items) eval.number(s)]
+        : null;
+    // Alignment (-1..1) to the unit square (0..1).
+    (double, double) unit(DartValue? v, (double, double) fallback) {
+      final a = eval.alignment(v);
+      return a == null ? fallback : ((a.$1 + 1) / 2, (a.$2 + 1) / 2);
+    }
+
+    return IrGradient(
+      colors: colors.cast<IrColor>(),
+      stops:
+          stops == null || stops.contains(null) || stops.length != colors.length
+          ? null
+          : stops.cast<double>(),
+      radial: g.type == 'RadialGradient',
+      begin: unit(g['begin'], (0, 0.5)),
+      end: unit(g['end'], (1, 0.5)),
+      center: unit(g['center'], (0.5, 0.5)),
+      radius: eval.number(g['radius']) ?? 0.5,
+    );
+  }
+
   /// Wraps [inner] in a transparent frame carrying the margin. The wrapper
   /// takes the widget's name, since it is what the widget occupies.
   IrNode _withMargin(IrFrame inner, IrInsets? margin) {
     if (margin == null || margin.isZero) return inner;
+    // The surface grows with a filling child before the margin frame
+    // decides its own size from it.
+    _adoptChildFill(inner);
     final name = inner.name;
     inner.name = '$name · surface';
     return IrFrame(
@@ -2723,6 +2753,49 @@ class FlutterCompiler {
       chip,
       padded: _padded(eval.enumName(w['materialTapTargetSize'])),
     );
+  }
+
+  /// M3 `CircleAvatar`: a 40 px circle (2 × radius) in primaryContainer,
+  /// with its image covering it, or its child centered in titleMedium.
+  IrFrame _circleAvatar(ObjectValue w, _Ctx c) {
+    final radius = eval.number(w['radius']) ?? 20;
+    final foreground =
+        eval.color(w['foregroundColor']) ?? theme.color('onPrimaryContainer');
+    final frame = IrFrame(
+      name: w.displayName,
+      origin: [w.type],
+      width: IrSizing.fixed(radius * 2),
+      height: IrSizing.fixed(radius * 2),
+      mainAlign: IrMainAlign.center,
+      crossAlign: IrCrossAlign.center,
+      corners: IrCorners.all(radius),
+      clip: true,
+      fill: eval.color(w['backgroundColor']) ?? theme.color('primaryContainer'),
+    );
+    final image = w['backgroundImage'] ?? w['foregroundImage'];
+    if (image != null) {
+      final (asset, _) = _imageProvider(image, w);
+      if (asset != null) {
+        frame.image = IrImagePaint(asset.key, fit: IrBoxFit.cover);
+      }
+    }
+    final child = w['child'];
+    if (child != null) {
+      frame.children.add(
+        _widget(
+          child,
+          c
+              .withText(
+                theme
+                    .textStyle('titleMedium')!
+                    .merge(TextStyleSpec(color: foreground)),
+                iconColor: foreground,
+              )
+              .withBox(const _Box()),
+        ),
+      );
+    }
+    return frame;
   }
 
   /// M3 `NavigationBar` (`_NavigationBarDefaultsM3`): 80 px tall on

@@ -23,6 +23,7 @@ Future<RuntimeScreens> renderScreens(
   int width = 390,
   int height = 844,
   Duration timeout = const Duration(minutes: 10),
+  String? screenshotsDir,
 }) async {
   final capture = await RuntimeCapture(
     analysis.root,
@@ -30,6 +31,7 @@ Future<RuntimeScreens> renderScreens(
     width: width,
     height: height,
     timeout: timeout,
+    screenshotsDir: screenshotsDir,
   ).run(analysis);
   final converter = CaptureConverter(
     iconFonts: projectIconFonts(analysis.root),
@@ -48,6 +50,8 @@ Future<RuntimeScreens> renderScreens(
     ),
     for (final e in capture.errors)
       IrDiagnostic(IrSeverity.warning, 'Runtime capture: $e'),
+    for (final w in capture.warnings)
+      IrDiagnostic(IrSeverity.warning, 'In the app: $w'),
     for (final name in capture.skipped)
       IrDiagnostic(
         IrSeverity.info,

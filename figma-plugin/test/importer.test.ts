@@ -335,6 +335,31 @@ test('SVG assets are drawn inside their frame, fitted', async () => {
   assert.deepEqual(drawn.constraints, { horizontal: 'SCALE', vertical: 'SCALE' });
 });
 
+test('gradient fills pass through as Figma gradients', async () => {
+  const gradient: GradientPaint = {
+    type: 'GRADIENT_LINEAR',
+    gradientTransform: [
+      [0, 1, 0],
+      [-1, 0, 1],
+    ],
+    gradientStops: [
+      { color: { r: 1, g: 0, b: 0, a: 1 }, position: 0 },
+      { color: { r: 0, g: 0, b: 1, a: 1 }, position: 1 },
+    ],
+  };
+  const doc: DesignDocument = {
+    format: 'flutter2figma/design',
+    version: 3,
+    name: 'gradient',
+    fonts: [],
+    diagnostics: [],
+    screens: [frame('Screen', 'VERTICAL', { children: [frame('Cover', 'NONE', { width: 100, height: 50, fills: [gradient] })] })],
+  };
+  const { result } = await run(doc);
+  const cover = find(result.screens[0] as unknown as MockFrame, 'Cover') as MockFrame;
+  assert.equal(cover.fills[0].type, 'GRADIENT_LINEAR');
+});
+
 test('Wrap frames wrap onto new rows', async () => {
   const chip = (name: string) => frame(name, 'HORIZONTAL', { width: 100, height: 32 });
   const doc: DesignDocument = {

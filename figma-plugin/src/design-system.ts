@@ -103,6 +103,7 @@ export function toPaints(api: PluginAPI, specs: PaintSpec[], ds: DesignSystem | 
       // CROP with the identity transform stretches the image to the node.
       return spec.scaleMode === 'CROP' ? { ...paint, imageTransform: [[1, 0, 0], [0, 1, 0]] } : paint;
     }
+    if (spec.type !== 'SOLID') return spec;
     const { variable, ...paint } = spec;
     const bound = variable ? ds?.variables.get(variable) : undefined;
     return bound ? api.variables.setBoundVariableForPaint(paint, 'color', bound) : paint;

@@ -317,6 +317,14 @@ Example: layer opacity from `Opacity(opacity: 0.5)`.
 If the change breaks old files, bump `irVersion` or `designVersion`. The
 plugin rejects files newer than it knows (`parseDesign`).
 
+## Stress test
+
+`tool/stress.sh` exports `showcase/` (a dense multi-screen app) statically
+and with `--runtime`, saves Flutter's render of every screen to
+`build/showcase/screenshots/`, and imports both designs through the Figma
+mock. Run it after layout or capture changes, and compare the screenshots
+with the imports.
+
 ## Plugin development
 
 1. `npm run watch` in `figma-plugin/`.

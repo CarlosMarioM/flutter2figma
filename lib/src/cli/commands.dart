@@ -179,6 +179,12 @@ class ExportCommand extends _ProjectCommand {
             'Flutter command for --runtime, e.g. "fvm flutter". Detected '
             'when omitted (FVM if the project pins a version).',
       )
+      ..addOption(
+        'screenshots',
+        help:
+            'With --runtime: also save Flutter\'s own render of each screen '
+            'as PNG in this directory, to compare with the Figma import.',
+      )
       ..addFlag('verbose', abbr: 'v', help: 'Show info diagnostics.');
   }
 
@@ -213,6 +219,7 @@ class ExportCommand extends _ProjectCommand {
         flutterCommand: argResults!.option('flutter')?.split(' '),
         width: double.parse(size.group(1)!).round(),
         height: double.parse(size.group(2)!).round(),
+        screenshotsDir: argResults!.option('screenshots'),
       );
     }
     final compiled =

@@ -281,4 +281,80 @@ void main() {
       },
     ]);
   });
+
+  test('gradients become Figma gradient paints', () {
+    List<List<double>> transformOf(IrGradient g) {
+      final frame = screenOf(
+        render(
+          IrFrame(
+            name: 'S',
+            width: const IrSizing.fixed(200),
+            height: const IrSizing.fixed(100),
+            gradient: g,
+          ),
+        ),
+      );
+      final paint = (frame['fills'] as List).single as Map<String, Object?>;
+      return [
+        for (final row in paint['gradientTransform'] as List)
+          (row as List).cast<double>(),
+      ];
+    }
+
+    // Maps a node point (unit square) to gradient space.
+    (double, double) apply(List<List<double>> t, double x, double y) => (
+      t[0][0] * x + t[0][1] * y + t[0][2],
+      t[1][0] * x + t[1][1] * y + t[1][2],
+    );
+
+    final red = IrColor.fromHex('#FF0000');
+    final blue = IrColor.fromHex('#0000FF');
+    // Top to bottom: the top edge is the gradient's start, the bottom its end.
+    final vertical = transformOf(
+      IrGradient(colors: [red, blue], begin: (0.5, 0), end: (0.5, 1)),
+    );
+    expect(apply(vertical, 0.5, 0).$1, closeTo(0, 1e-9));
+    expect(apply(vertical, 0.5, 1).$1, closeTo(1, 1e-9));
+    expect(apply(vertical, 0.5, 0).$2, closeTo(0.5, 1e-9));
+    // Diagonal.
+    final diagonal = transformOf(
+      IrGradient(colors: [red, blue], begin: (0, 0), end: (1, 1)),
+    );
+    expect(apply(diagonal, 1, 1).$1, closeTo(1, 1e-9));
+    expect(apply(diagonal, 0.5, 0.5).$1, closeTo(0.5, 1e-9));
+
+    // Radial: radius 0.5 of the shortest side (100) on a 200×100 frame.
+    final radial = transformOf(IrGradient(colors: [red, blue], radial: true));
+    expect(apply(radial, 0.5, 0.5), (0.5, 0.5));
+    expect(
+      apply(radial, 0.75, 0.5).$1,
+      closeTo(1, 1e-9),
+      reason: '50 px right is the edge',
+    );
+    expect(
+      apply(radial, 0.5, 1).$2,
+      closeTo(1, 1e-9),
+      reason: '50 px down is the edge',
+    );
+
+    final paint =
+        (screenOf(
+                      render(
+                        IrFrame(
+                          name: 'S',
+                          gradient: IrGradient(
+                            colors: [red, blue],
+                            stops: [0, 0.6],
+                          ),
+                        ),
+                      ),
+                    )['fills']
+                    as List)
+                .single
+            as Map<String, Object?>;
+    expect(paint['type'], 'GRADIENT_LINEAR');
+    final stops = (paint['gradientStops'] as List).cast<Map<String, Object?>>();
+    expect(stops.last['position'], 0.6);
+    expect((stops.first['color'] as Map)['a'], 1.0);
+  });
 }

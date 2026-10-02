@@ -121,6 +121,65 @@ class IrImageAsset {
 /// How an image is fitted into its box, as Flutter's `BoxFit`.
 enum IrBoxFit { fill, contain, cover, fitWidth, fitHeight, none, scaleDown }
 
+/// A linear or radial gradient. Points are in the frame's unit square
+/// ((0, 0) top left, (1, 1) bottom right).
+class IrGradient {
+  IrGradient({
+    required this.colors,
+    List<double>? stops,
+    this.radial = false,
+    this.begin = (0, 0.5),
+    this.end = (1, 0.5),
+    this.center = (0.5, 0.5),
+    this.radius = 0.5,
+  }) : stops =
+           stops ??
+           [
+             for (var i = 0; i < colors.length; i++)
+               colors.length == 1 ? 0 : i / (colors.length - 1),
+           ];
+
+  final List<IrColor> colors;
+  final List<double> stops;
+  final bool radial;
+
+  /// Linear: from [begin] to [end].
+  final (double, double) begin, end;
+
+  /// Radial: [radius] as a fraction of the frame's shortest side.
+  final (double, double) center;
+  final double radius;
+
+  Map<String, Object?> toJson() => {
+    'type': radial ? 'radial' : 'linear',
+    'colors': [for (final c in colors) c.toJson()],
+    'stops': stops,
+    if (!radial) 'begin': [begin.$1, begin.$2],
+    if (!radial) 'end': [end.$1, end.$2],
+    if (radial) 'center': [center.$1, center.$2],
+    if (radial) 'radius': radius,
+  };
+
+  static IrGradient? fromJson(Object? json) {
+    if (json == null) return null;
+    final m = json as Map<String, Object?>;
+    (double, double) point(Object? v, (double, double) fallback) {
+      final l = (v as List?)?.cast<num>();
+      return l == null ? fallback : (l[0].toDouble(), l[1].toDouble());
+    }
+
+    return IrGradient(
+      colors: [for (final c in m['colors'] as List) IrColor.fromJson(c)],
+      stops: [for (final s in (m['stops'] as List)) (s as num).toDouble()],
+      radial: m['type'] == 'radial',
+      begin: point(m['begin'], (0, 0.5)),
+      end: point(m['end'], (1, 0.5)),
+      center: point(m['center'], (0.5, 0.5)),
+      radius: _d(m['radius']) ?? 0.5,
+    );
+  }
+}
+
 /// An image painted over a frame's fill.
 class IrImagePaint {
   const IrImagePaint(this.asset, {this.fit = IrBoxFit.scaleDown});
@@ -592,6 +651,7 @@ class IrFrame extends IrNode {
     this.mainAlign = IrMainAlign.start,
     this.crossAlign = IrCrossAlign.start,
     this.fill,
+    this.gradient,
     this.image,
     this.corners = IrCorners.zero,
     this.stroke,
@@ -617,6 +677,9 @@ class IrFrame extends IrNode {
   IrColor? fill;
 
   /// Painted over [fill].
+  IrGradient? gradient;
+
+  /// Painted over [fill] and [gradient].
   IrImagePaint? image;
   IrCorners corners;
   IrStroke? stroke;
@@ -658,6 +721,7 @@ class IrFrame extends IrNode {
     if (minWidth != null) 'minWidth': minWidth,
     if (minHeight != null) 'minHeight': minHeight,
     if (fill != null) 'fill': fill!.toJson(),
+    if (gradient != null) 'gradient': gradient!.toJson(),
     if (image != null) 'image': image!.toJson(),
     if (!corners.isZero) 'corners': corners.toJson(),
     if (stroke != null) 'stroke': stroke!.toJson(),
@@ -690,6 +754,7 @@ class IrFrame extends IrNode {
       minWidth: _d(json['minWidth']),
       minHeight: _d(json['minHeight']),
       fill: json['fill'] == null ? null : IrColor.fromJson(json['fill']),
+      gradient: IrGradient.fromJson(json['gradient']),
       image: IrImagePaint.fromJson(json['image']),
       corners: IrCorners.fromJson(json['corners']),
       stroke: IrStroke.fromJson(json['stroke']),

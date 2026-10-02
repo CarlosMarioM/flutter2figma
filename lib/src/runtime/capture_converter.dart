@@ -50,7 +50,10 @@ class CaptureConverter {
       width: IrSizing.fixed(screen.width),
       height: IrSizing.fixed(screen.height),
       clip: true,
-      children: [for (final n in screen.tree) ..._node(n, 0, 0, 1)],
+      children: [
+        for (final n in screen.tree)
+          ..._node(n, 0, 0, 1, (0, 0, screen.width, screen.height)),
+      ],
     );
     return IrScreen(
       name: screen.name,
@@ -61,23 +64,39 @@ class CaptureConverter {
     );
   }
 
+  /// [visible] is the area not clipped away by ancestors (x, y, w, h):
+  /// nodes entirely outside it (items a scroll view keeps laid out past
+  /// its edge) are dropped.
   List<IrNode> _node(
     Map<String, Object?> n,
     double px,
     double py,
     double opacity,
+    (double, double, double, double) visible,
   ) {
     final rect = (n['rect'] as List)
         .cast<num>()
         .map((v) => v.toDouble())
         .toList();
     final [x, y, w, h] = rect;
+    final (vx, vy, vw, vh) = visible;
+    if (x >= vx + vw || y >= vy + vh || x + w <= vx || y + h <= vy) {
+      return const [];
+    }
+    final inner = n['clip'] == true
+        ? (
+            max(x, vx),
+            max(y, vy),
+            min(x + w, vx + vw) - max(x, vx),
+            min(y + h, vy + vh) - max(y, vy),
+          )
+        : visible;
     final position = IrPosition(left: _r(x - px), top: _r(y - py));
     final name = n['name'] as String? ?? n['type'] as String;
     List<IrNode> kids(double alpha) => [
       for (final c
           in (n['children'] as List? ?? const []).cast<Map<String, Object?>>())
-        ..._node(c, x, y, alpha),
+        ..._node(c, x, y, alpha, inner),
     ];
 
     switch (n['type']) {
@@ -129,6 +148,9 @@ class CaptureConverter {
           }
         }
         frame.shadows = _shadows(n);
+        if (n['gradient'] case final Map gradient) {
+          frame.gradient = _gradient(gradient.cast<String, Object?>(), opacity);
+        }
         if (n['image'] case final String id when _image(id) != null) {
           frame.image = IrImagePaint(_image(id)!, fit: _fit(n['fit']));
         }
@@ -137,6 +159,8 @@ class CaptureConverter {
       case 'text':
         final style = (n['style'] as Map).cast<String, Object?>();
         final text = n['text'] as String? ?? '';
+        // An empty text field's input: nothing to draw.
+        if (text.isEmpty) return const [];
         final label = text.length > 40 ? '${text.substring(0, 40)}…' : text;
         return [
           IrText(
@@ -236,6 +260,30 @@ class CaptureConverter {
       );
     });
     return key;
+  }
+
+  IrGradient? _gradient(Map<String, Object?> g, double opacity) {
+    final colors = [
+      for (final c in (g['colors'] as List? ?? const [])) _color(c, opacity),
+    ];
+    if (colors.isEmpty || colors.contains(null)) return null;
+    (double, double) point(Object? v, (double, double) fallback) {
+      final l = (v as List?)?.cast<num>();
+      return l == null ? fallback : (l[0].toDouble(), l[1].toDouble());
+    }
+
+    final stops = (g['stops'] as List?)?.cast<num>();
+    return IrGradient(
+      colors: colors.cast<IrColor>(),
+      stops: stops?.length == colors.length
+          ? [for (final s in stops!) s.toDouble()]
+          : null,
+      radial: g['type'] == 'radial',
+      begin: point(g['begin'], (0, 0.5)),
+      end: point(g['end'], (1, 0.5)),
+      center: point(g['center'], (0.5, 0.5)),
+      radius: (g['radius'] as num?)?.toDouble() ?? 0.5,
+    );
   }
 
   IrBoxFit _fit(Object? fit) =>

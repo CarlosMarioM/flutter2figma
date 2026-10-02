@@ -91,10 +91,12 @@ import 'package:flutter/material.dart' as f;
 import 'package:flutter/rendering.dart' as r;
 import 'package:flutter/services.dart' as s;
 import 'package:flutter_test/flutter_test.dart' as t;
+import 'package:flutter_test/flutter_test.dart' show addTearDown;
 
 /*IMPORTS*/
 
 const _out = String.fromEnvironment('F2F_OUT');
+const _shots = String.fromEnvironment('F2F_SCREENSHOTS');
 const _flutterRoot = String.fromEnvironment('F2F_FLUTTER_ROOT');
 const _width = int.fromEnvironment('F2F_WIDTH', defaultValue: 390);
 const _height = int.fromEnvironment('F2F_HEIGHT', defaultValue: 844);
@@ -191,12 +193,36 @@ String? _hex(ui.Color? c) =>
 
 List<double> _rect(ui.Rect r) => [r.left, r.top, r.width, r.height];
 
-/// Paints one render object without its children.
+/// Paints one render object without its children, recording the children
+/// it would have painted, in paint order. Layer contexts it opens (clips,
+/// opacity, transforms) are recording contexts too, so no child ever paints.
 class _AloneContext extends r.PaintingContext {
-  _AloneContext(super.containerLayer, super.estimatedBounds);
+  _AloneContext(super.containerLayer, super.estimatedBounds, this.painted, [this.root]);
+
+  final List<r.RenderObject> painted;
+
+  /// The top-level layer of the replay, and how many of its children were
+  /// painted before the first child: what comes after is painted on top of
+  /// the children (outlines, borders).
+  final r.ContainerLayer? root;
+  int? layersBeforeChildren;
 
   @override
-  void paintChild(r.RenderObject child, ui.Offset offset) {}
+  void paintChild(r.RenderObject child, ui.Offset offset) {
+    if (painted.isEmpty) {
+      stopRecordingIfNeeded();
+      var count = 0;
+      for (var l = root?.firstChild; l != null; l = l.nextSibling) {
+        count++;
+      }
+      layersBeforeChildren = count;
+    }
+    painted.add(child);
+  }
+
+  @override
+  r.PaintingContext createChildContext(r.ContainerLayer childLayer, ui.Rect bounds) =>
+      _AloneContext(childLayer, bounds, painted, root);
 
   void finish() => stopRecordingIfNeeded();
 }
@@ -252,22 +278,46 @@ class _Recorder {
     return id;
   }
 
-  /// What [o] paints itself, without its children.
-  String? _paintAlone(r.RenderBox o) {
-    if (o.size.isEmpty) return null;
+  /// What [o] paints itself, without its children: the part painted
+  /// before its children, and the part painted after (on top of them).
+  (String?, String?) _paintAlone(r.RenderBox o) {
+    if (o.size.isEmpty) return (null, null);
     final layer = r.OffsetLayer();
     final bounds = ui.Offset.zero & o.size;
+    final _AloneContext context;
     try {
-      final context = _AloneContext(layer, bounds);
+      context = _AloneContext(layer, bounds, [], layer);
       o.paint(context, ui.Offset.zero);
       context.finish();
     } catch (_) {
-      return null;
+      return (null, null);
     }
-    final id = _id();
-    _maybeEmpty.add(id);
-    _pending[id] = layer.toImage(bounds, pixelRatio: _scale);
-    return id;
+    final split = context.layersBeforeChildren;
+    final front = r.OffsetLayer();
+    if (split != null) {
+      // Move the layers painted after the first child to their own image.
+      final after = <r.Layer>[];
+      var i = 0;
+      for (var l = layer.firstChild; l != null; l = l.nextSibling) {
+        if (i++ >= split) after.add(l);
+      }
+      for (final l in after) {
+        // A handle keeps the layer alive while it has no parent.
+        final handle = r.LayerHandle<r.Layer>(l);
+        l.remove();
+        front.append(l);
+        handle.layer = null;
+      }
+    }
+    String? image(r.OffsetLayer l) {
+      if (l.firstChild == null) return null;
+      final id = _id();
+      _maybeEmpty.add(id);
+      _pending[id] = l.toImage(bounds, pixelRatio: _scale);
+      return id;
+    }
+
+    return (image(layer), image(front));
   }
 
   /// A region of the screenshot.
@@ -385,26 +435,26 @@ class _Recorder {
   ui.Rect _bounds(r.RenderBox box) =>
       r.MatrixUtils.transformRect(box.getTransformTo(null), ui.Offset.zero & box.size);
 
-  /// Children that are painted: offstage routes and widgets are skipped.
-  List<r.RenderObject> _paintedChildren(r.RenderObject o) {
-    final children = <r.RenderObject>[];
-    if (o is r.RenderOffstage && o.offstage) return children;
-    if (o is r.RenderIndexedStack) {
-      final index = o.index;
-      var i = 0;
-      o.visitChildren((c) {
-        if (i++ == index) children.add(c);
-      });
-      return children;
+  final _paintOrder = <r.RenderObject, List<r.RenderObject>>{};
+
+  /// The children [o] paints, in the order it paints them: offstage routes
+  /// and widgets, and hidden IndexedStack children, are left out, and a
+  /// text field's background comes before its text even though it is its
+  /// last child. Found by replaying [o]'s paint into a recording context.
+  List<r.RenderObject> _paintedChildren(r.RenderObject o) => _paintOrder.putIfAbsent(o, () {
+    final painted = <r.RenderObject>[];
+    final layer = r.OffsetLayer();
+    try {
+      final context = _AloneContext(layer, o.paintBounds, painted, layer);
+      o.paint(context, ui.Offset.zero);
+      context.finish();
+    } catch (_) {
+      painted.clear();
+      if (!(o is r.RenderOffstage && o.offstage)) o.visitChildren(painted.add);
     }
-    final name = o.runtimeType.toString();
-    if (name == '_RenderTheater' || name.contains('Offstage')) {
-      o.visitChildrenForSemantics(children.add);
-    } else {
-      o.visitChildren(children.add);
-    }
-    return children;
-  }
+    final seen = <r.RenderObject>{};
+    return [for (final c in painted) if (seen.add(c)) c];
+  });
 
   List<Map<String, Object?>> children(r.RenderObject o) => [
     for (final c in _paintedChildren(o)) ...record(c),
@@ -551,11 +601,15 @@ class _Recorder {
     if (!isLeaf && !_silent.contains(type) && !_noPaint.contains(type)) {
       // A container we don't model may paint too (a chip's checkmark):
       // keep what it paints itself, under its children.
-      final id = _paintAlone(o);
-      if (id != null) {
+      final (back, front) = _paintAlone(o);
+      if (back != null || front != null) {
         return [
           node('group', {
-            'children': [node('image', {'image': id, 'fit': 'fill', 'crop': type}), ...inner],
+            'children': [
+              if (back != null) node('image', {'image': back, 'fit': 'fill', 'crop': type}),
+              ...inner,
+              if (front != null) node('image', {'image': front, 'fit': 'fill', 'crop': type}),
+            ],
           }),
         ];
       }
@@ -641,8 +695,8 @@ class _Recorder {
           ? size.shortestSide / 2
           : decoration.borderRadius?.resolve(ui.TextDirection.ltr).topLeft.x;
       return {
-        'fill': _hex(decoration.color ?? (gradient != null && gradient.colors.isNotEmpty ? gradient.colors.first : null)),
-        if (gradient != null) 'gradient': [for (final c in gradient.colors) _hex(c)],
+        'fill': _hex(decoration.color),
+        if (gradient != null) 'gradient': _gradient(gradient),
         'radius': radius,
         'stroke': stroke,
         'shadows': [
@@ -664,6 +718,23 @@ class _Recorder {
       };
     }
     return null;
+  }
+
+  Map<String, Object?> _gradient(f.Gradient g) {
+    List<double> point(f.AlignmentGeometry a) {
+      final r = a.resolve(ui.TextDirection.ltr);
+      return [(r.x + 1) / 2, (r.y + 1) / 2];
+    }
+
+    return {
+      'type': g is f.RadialGradient ? 'radial' : 'linear',
+      'colors': [for (final c in g.colors) _hex(c)],
+      'stops': g.stops,
+      if (g is f.LinearGradient) 'begin': point(g.begin),
+      if (g is f.LinearGradient) 'end': point(g.end),
+      if (g is f.RadialGradient) 'center': point(g.center),
+      if (g is f.RadialGradient) 'radius': g.radius,
+    };
   }
 
   Map<String, Object?> _shape(f.ShapeBorder shape, ui.Size size) {
@@ -770,9 +841,12 @@ Future<void> _decodeImages(t.WidgetTester tester) async {
   await _settle(tester);
 }
 
-String _describe(Object error) {
-  final text = error.toString().split('\n').firstWhere((l) => l.trim().isNotEmpty, orElse: () => '$error');
-  return text.length > 300 ? '${text.substring(0, 300)}…' : text;
+String _describe(Object error, [StackTrace? stack]) {
+  var text = error.toString().split('\n').firstWhere((l) => l.trim().isNotEmpty, orElse: () => '$error');
+  if (text.length > 300) text = '${text.substring(0, 300)}…';
+  // Where in the harness it failed, for errors that are ours.
+  final frame = stack?.toString().split('\n').where((l) => l.contains('capture_test.dart')).firstOrNull;
+  return frame == null ? text : '$text [${frame.replaceAll(RegExp(r'\s+'), ' ').trim()}]';
 }
 
 void main() {
@@ -780,8 +854,31 @@ void main() {
     tester.view.physicalSize = ui.Size(_width.toDouble(), _height.toDouble());
     tester.view.devicePixelRatio = 1;
     f.WidgetsApp.debugAllowBannerOverride = false;
-    final result = <String, Object?>{'screens': <Object?>[], 'errors': <String>[]};
+    final result = <String, Object?>{
+      'screens': <Object?>[],
+      'errors': <String>[],
+      'warnings': <String>[],
+    };
     final errors = result['errors'] as List<String>;
+    final warnings = result['warnings'] as List<String>;
+
+    // Flutter's errors, per screen. Layout overflows are the app's own
+    // (reported, the screen is still exported); anything else means the
+    // screen didn't build.
+    var current = 'main()';
+    final failures = <String>[];
+    final originalOnError = f.FlutterError.onError;
+    f.FlutterError.onError = (details) {
+      final message = details.exceptionAsString().split('\n').first.trim();
+      final where = RegExp(r'/(lib/[^\s:]+\.dart:\d+)').firstMatch(details.toString())?.group(1);
+      final text = '$current: $message${where == null ? '' : ' ($where)'}';
+      if (message.contains('overflowed')) {
+        if (!warnings.contains(text)) warnings.add(text);
+      } else {
+        failures.add(text);
+      }
+    };
+    addTearDown(() => f.FlutterError.onError = originalOnError);
     void save() => File(_out).writeAsStringSync(jsonEncode(result));
     save();
 
@@ -811,6 +908,8 @@ void main() {
     }
     final startup = tester.takeException();
     if (startup != null) errors.add('main(): ${_describe(startup)}');
+    errors.addAll(failures);
+    failures.clear();
 
     if (navigators.evaluate().isEmpty) {
       errors.add('The app has no Navigator to push screens onto');
@@ -825,15 +924,32 @@ void main() {
       if (loaded == true) await _settle(tester);
       // Images are encoded in real time: their futures would never
       // complete in the test's fake-async zone.
+      Object? failure;
+      StackTrace? failureStack;
       final captured = await tester.runAsync(() async {
+       try {
         final layer = view.debugLayer! as r.OffsetLayer;
         final screenshot = await layer.toImage(view.paintBounds, pixelRatio: _scale);
+        if (_shots.isNotEmpty) {
+          final png = await screenshot.toByteData(format: ui.ImageByteFormat.png);
+          File('$_shots/$name.png')
+            ..createSync(recursive: true)
+            ..writeAsBytesSync(png!.buffer.asUint8List());
+        }
         final recorder = _Recorder(screenshot);
         final tree = recorder.children(view);
         await recorder.finish().timeout(const Duration(seconds: 60));
         return (recorder.prune(tree), recorder);
+       } catch (e, stack) {
+        failure = e;
+        failureStack = stack;
+        return null;
+       }
       });
-      final (tree, recorder) = captured!;
+      if (captured == null) {
+        throw StateError(_describe(failure ?? 'recording failed', failureStack));
+      }
+      final (tree, recorder) = captured;
       final context = tester.element(t.find.byType(f.Navigator).first);
       (result['screens'] as List).add({
         'name': name,
@@ -854,11 +970,12 @@ void main() {
     for (final name in _screens.keys) {
       final shown = t.find.byWidgetPredicate((w) => w.runtimeType.toString() == name);
       if (shown.evaluate().isEmpty) continue;
+      current = name;
       try {
         await record(name);
         done.add(name);
-      } catch (e) {
-        errors.add('$name: ${_describe(e)}');
+      } catch (e, stack) {
+        errors.add('$name: ${_describe(e, stack)}');
       }
       break;
     }
@@ -866,6 +983,8 @@ void main() {
 
     for (final MapEntry(key: name, value: build) in _screens.entries) {
       if (done.contains(name)) continue;
+      current = name;
+      failures.clear();
       final navigator = tester.state<f.NavigatorState>(navigators.first);
       try {
         // Replace the whole stack, as if the screen were the app's first:
@@ -881,13 +1000,13 @@ void main() {
         await _settle(tester);
         await _decodeImages(tester);
         final failure = tester.takeException();
-        if (failure != null) {
-          errors.add('$name: ${_describe(failure)}');
+        if (failure != null || failures.isNotEmpty) {
+          errors.add(failures.isNotEmpty ? failures.first : '$name: ${_describe(failure!)}');
           continue;
         }
         await record(name);
-      } catch (e) {
-        errors.add('$name: ${_describe(e)}');
+      } catch (e, stack) {
+        errors.add('$name: ${_describe(e, stack)}');
         tester.takeException();
       }
     }

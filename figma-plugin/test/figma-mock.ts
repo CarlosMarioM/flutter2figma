@@ -20,15 +20,28 @@ let nextId = 1;
 const newId = (prefix: string) => `${prefix}:${nextId++}`;
 
 const PAINT_KEYS = new Set(['type', 'color', 'opacity', 'visible', 'blendMode', 'boundVariables']);
+const GRADIENT_PAINT_KEYS = new Set(['type', 'gradientTransform', 'gradientStops', 'opacity', 'visible', 'blendMode']);
 const IMAGE_PAINT_KEYS = new Set(['type', 'imageHash', 'scaleMode', 'imageTransform', 'opacity', 'visible', 'blendMode']);
 const images = new Map<string, Uint8Array>();
 
 /** Figma rejects paints with unknown keys or RGBA in a solid paint's color. */
 function checkPaints(paints: readonly Paint[]): void {
   for (const p of paints) {
-    const allowed = p.type === 'IMAGE' ? IMAGE_PAINT_KEYS : PAINT_KEYS;
+    const gradient = p.type === 'GRADIENT_LINEAR' || p.type === 'GRADIENT_RADIAL';
+    const allowed = p.type === 'IMAGE' ? IMAGE_PAINT_KEYS : gradient ? GRADIENT_PAINT_KEYS : PAINT_KEYS;
     for (const k of Object.keys(p)) {
       if (!allowed.has(k)) throw new Error(`Unrecognized key "${k}" in paint`);
+    }
+    if (gradient) {
+      const t = p.gradientTransform;
+      if (!Array.isArray(t) || t.length !== 2 || t.some((row) => row.length !== 3 || row.some((v) => !Number.isFinite(v)))) {
+        throw new Error('gradientTransform must be a finite 2x3 matrix');
+      }
+      if (p.gradientStops.length < 2 && p.gradientStops.length !== 1) throw new Error('Gradient needs stops');
+      for (const stop of p.gradientStops) {
+        if (!('a' in stop.color)) throw new Error('Gradient stop colors must be RGBA');
+        if (stop.position < 0 || stop.position > 1) throw new Error('Gradient stop position must be in 0..1');
+      }
     }
     if (p.type === 'IMAGE') {
       if (!p.imageHash || !images.has(p.imageHash)) throw new Error('Image paint needs the hash of a created image');
@@ -184,7 +197,7 @@ export class MockNode {
       if (parentAxis === 'HUG') {
         // Real Figma silently converts the parent to FIXED; treat it as an
         // exporter bug so it is caught.
-        throw new Error(`${this.name}: FILL ${axis.toLowerCase()} inside a parent that hugs`);
+        throw new Error(`${this.name}: FILL ${axis.toLowerCase()} inside a parent that hugs (${this.parent.name})`);
       }
     }
     this.sizing[axis] = v;

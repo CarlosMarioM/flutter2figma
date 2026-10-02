@@ -23,6 +23,7 @@ class FigmaRenderer {
 
   Map<String, Object?> render(IrDocument doc) {
     _doc = doc;
+    _rendered.clear();
     _fonts.clear();
     _diagnostics.clear();
     var x = 0.0;
@@ -66,7 +67,15 @@ class FigmaRenderer {
     };
   }
 
+  /// Sizing as rendered, which can differ from the IR after a downgrade:
+  /// children decide FILL against what their parent really became.
+  final _rendered = <IrNode, (String, String)>{};
+
   Map<String, Object?> _node(IrNode node, {required IrFrame? parent}) {
+    // Sizing first, so children see this node's rendered sizing.
+    final horizontal = _sizing(node.width, node, parent, horizontal: true);
+    final vertical = _sizing(node.height, node, parent, horizontal: false);
+    _rendered[node] = (horizontal, vertical);
     final json = switch (node) {
       IrFrame() => _frame(node),
       IrText() => _text(node),
@@ -81,18 +90,8 @@ class FigmaRenderer {
       json['position'] = node.position!.toJson();
     }
 
-    json['layoutSizingHorizontal'] = _sizing(
-      node.width,
-      node,
-      parent,
-      horizontal: true,
-    );
-    json['layoutSizingVertical'] = _sizing(
-      node.height,
-      node,
-      parent,
-      horizontal: false,
-    );
+    json['layoutSizingHorizontal'] = horizontal;
+    json['layoutSizingVertical'] = vertical;
     if (node.width.isFixed) json['width'] = node.width.value;
     if (node.height.isFixed) json['height'] = node.height.value;
 
@@ -138,8 +137,11 @@ class FigmaRenderer {
         if (parent == null) return 'FIXED';
         // Stack children stretch via constraints; the plugin sizes them.
         if (parent.direction == IrLayoutDirection.stack) return 'FILL';
-        final parentAxis = horizontal ? parent.width : parent.height;
-        if (parentAxis.isHug) {
+        final rendered = _rendered[parent];
+        final parentHugs = rendered == null
+            ? (horizontal ? parent.width : parent.height).isHug
+            : (horizontal ? rendered.$1 : rendered.$2) == 'HUG';
+        if (parentHugs) {
           _warn(
             '${node.name}: fills a parent that hugs its content; using hug',
             node,
@@ -190,6 +192,8 @@ class FigmaRenderer {
     final svg = image != null && (_doc?.images[image.asset]?.isSvg ?? false);
     json['fills'] = [
       if (f.fill != null) _paint(f.fill!),
+      if (f.gradient != null)
+        _gradient(f.gradient!, f.width.value, f.height.value),
       if (image != null && !svg)
         {
           'type': 'IMAGE',
@@ -272,6 +276,50 @@ class FigmaRenderer {
           ? {'unit': 'AUTO'}
           : {'unit': 'PIXELS', 'value': s.lineHeight},
       'letterSpacing': {'unit': 'PIXELS', 'value': s.letterSpacing},
+    };
+  }
+
+  /// A Figma gradient paint. `gradientTransform` maps the node's unit
+  /// square to gradient space, where a linear gradient runs from (0, 0.5)
+  /// to (1, 0.5) and a radial one is the circle around (0.5, 0.5) of
+  /// radius 0.5.
+  Map<String, Object?> _gradient(IrGradient g, double? width, double? height) {
+    List<List<double>> transform;
+    if (g.radial) {
+      final (cx, cy) = g.center;
+      // The radius is a fraction of the shortest side; in the unit square
+      // that is a different fraction per axis (unknown sizes: square).
+      final shortest = width != null && height != null
+          ? (width < height ? width : height)
+          : null;
+      final rx = shortest == null ? g.radius : g.radius * shortest / width!;
+      final ry = shortest == null ? g.radius : g.radius * shortest / height!;
+      transform = [
+        [1 / (2 * rx), 0, 0.5 - cx / (2 * rx)],
+        [0, 1 / (2 * ry), 0.5 - cy / (2 * ry)],
+      ];
+    } else {
+      final (x0, y0) = g.begin;
+      final (x1, y1) = g.end;
+      final dx = x1 - x0, dy = y1 - y0;
+      final len2 = dx * dx + dy * dy;
+      transform = len2 == 0
+          ? [
+              [1, 0, 0],
+              [0, 1, 0],
+            ]
+          : [
+              [dx / len2, dy / len2, -(x0 * dx + y0 * dy) / len2],
+              [-dy / len2, dx / len2, 0.5 - (-x0 * dy + y0 * dx) / len2],
+            ];
+    }
+    return {
+      'type': g.radial ? 'GRADIENT_RADIAL' : 'GRADIENT_LINEAR',
+      'gradientTransform': transform,
+      'gradientStops': [
+        for (var i = 0; i < g.colors.length; i++)
+          {'color': _rgba(g.colors[i]), 'position': g.stops[i]},
+      ],
     };
   }
 

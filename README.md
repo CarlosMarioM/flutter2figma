@@ -142,7 +142,8 @@ Widget? buildScreen(String name) => switch (name) {
 ```
 
 The export lists every screen it couldn't render and why (`-v` shows the
-rest).
+rest). Add `--screenshots shots/` to also save Flutter's own render of each
+screen, to compare with the Figma import.
 
 ## Commands
 
@@ -210,7 +211,7 @@ diagnostic, and anything it can't draw becomes a magenta `⚠` placeholder.
   `SvgPicture.asset`) are embedded in `design.json`; network, file and
   in-memory images are placeholders. Icons from Material icons (`Icons.*`)
   and `CupertinoIcons` are exact vectors read from the fonts the app ships;
-  icons from other fonts are placeholders. Gradients use their first color.
+  icons from other fonts are placeholders.
   `GridView` cell heights are estimated from the screen width.
 - **Runtime mode** positions everything absolutely (no auto layout), records
   each screen in the state it starts in, and keeps only the visible part of

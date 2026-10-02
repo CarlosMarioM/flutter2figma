@@ -294,6 +294,27 @@ void main() {
     );
   });
 
+  test('CircleAvatar: a clipped circle in primaryContainer', () {
+    final avatar =
+        bodyOf(
+              w(
+                'CircleAvatar',
+                named: {'radius': lit(24), 'child': text('AL')},
+              ),
+            )
+            as IrFrame;
+    expect(
+      [avatar.width, avatar.height],
+      [const IrSizing.fixed(48), const IrSizing.fixed(48)],
+    );
+    expect(avatar.corners.topLeft, 24);
+    expect(avatar.clip, isTrue);
+    expect(avatar.fill!.token, 'ColorScheme/primaryContainer');
+    final label = avatar.children.single as IrText;
+    expect(label.style.token, 'TextTheme/titleMedium');
+    expect(label.style.color.token, 'ColorScheme/onPrimaryContainer');
+  });
+
   test('Wrap wraps in the available width', () {
     final wrap =
         bodyOf(
