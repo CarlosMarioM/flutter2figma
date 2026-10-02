@@ -163,6 +163,13 @@ export class MockNode {
   }
 
   private setSizing(axis: 'Horizontal' | 'Vertical', v: Sizing) {
+    if (!this.isAutoLayout && !(this.parent && this.parent.isAutoLayout)) {
+      // Figma's exact error, from setting layoutSizing* on a NONE frame (or
+      // text) whose parent isn't auto layout either.
+      throw new Error(
+        `in set_layoutSizing${axis}: node must be an auto-layout frame or a child of an auto-layout frame`,
+      );
+    }
     if (v === 'HUG' && !(this.type === 'TEXT' || this.isAutoLayout)) {
       throw new Error(`${this.name}: HUG is only valid on auto-layout frames and text`);
     }

@@ -314,6 +314,9 @@ function layout(node: Built, spec: NodeSpec, parent: BaseNode): void {
   }
   if (spec.x !== undefined) node.x = spec.x;
   if (spec.y !== undefined) node.y = spec.y;
+  // Figma only takes layoutSizing* on auto-layout frames and children of
+  // auto-layout frames. Anything else keeps the size resize() gave it.
+  if (!parentIsAutoLayout && !isAutoLayout(node)) return;
   const canFill = parentIsAutoLayout && spec.layoutPositioning !== 'ABSOLUTE';
   for (const axis of ['Horizontal', 'Vertical'] as const) {
     const mode = spec[`layoutSizing${axis}`];
