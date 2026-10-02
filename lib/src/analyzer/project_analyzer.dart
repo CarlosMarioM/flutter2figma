@@ -644,6 +644,23 @@ class _Expander {
         return folded != null
             ? LiteralValue(folded, source: loc)
             : BinaryValue(e.operator.lexeme, left, right, source: loc);
+      case BinaryExpression(operator: Token(lexeme: '??')):
+        // `a ?? b`: a known `a` decides. An unknown one is assumed null, as
+        // it usually is on the first frame (`Text(icon ?? '')` on an empty
+        // board): the fallback is shown.
+        final left = value(e.leftOperand, s);
+        final right = value(e.rightOperand, s);
+        final known = _known(left);
+        if (known is LiteralValue) return known.value == null ? right : left;
+        if (known is ObjectValue || known is ListValue || known is MapValue) {
+          return left;
+        }
+        return ConditionalValue(
+          '${e.leftOperand.toSource()} == null',
+          right,
+          left,
+          source: loc,
+        );
       case AsExpression():
         return value(e.expression, s);
       case PostfixExpression(operator: Token(lexeme: '!')):
@@ -916,6 +933,21 @@ class _Expander {
       ..._defaults(e, s),
     };
     final isWidget = _isWidgetType(e.staticType);
+    // Project values (states, enum constants such as `cross('Cross', '❌')`)
+    // also expose positional arguments by parameter name, so a later
+    // `DrawnElement.cross.icon` can read them.
+    if (!isWidget && _inProject(classElement)) {
+      final formals = e.constructorName.element?.formalParameters ?? const [];
+      final positionalFormals = formals.where((p) => p.isPositional).toList();
+      for (
+        var i = 0;
+        i < positional.length && i < positionalFormals.length;
+        i++
+      ) {
+        final name = positionalFormals[i].name;
+        if (name != null) named.putIfAbsent(name, () => positional[i]);
+      }
+    }
 
     // BlocBuilder<MyBloc, MyState>(builder: (context, state) => ...): the
     // builder sees the bloc's initial state.

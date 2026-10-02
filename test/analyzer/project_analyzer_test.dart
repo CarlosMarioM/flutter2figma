@@ -239,4 +239,22 @@ void main() {
       expect(scaffold['appBar'], isNotNull);
     });
   });
+
+  test('reads enum constant fields and evaluates ??', () {
+    final row = widget('PlayerBadge').tree as ObjectValue;
+    final texts = (row['children'] as ListValue).items.cast<ObjectValue>();
+
+    // `Player.circle.symbol`: positional arguments are readable by name.
+    final symbol = texts[0].arg(0) as AccessValue;
+    final circle = (symbol.target as RefValue).resolved as ObjectValue;
+    expect((circle['symbol'] as LiteralValue).value, '⭕️');
+
+    // An unknown left side is assumed null (the first frame): the fallback
+    // is the `then` branch, the value kept as the `else`.
+    final mark = texts[1].arg(0) as ConditionalValue;
+    expect((mark.then as LiteralValue).value, '-');
+    expect(mark.otherwise, isA<UnknownValue>());
+    final lookup = texts[2].arg(0) as ConditionalValue;
+    expect((lookup.then as LiteralValue).value, 'none');
+  });
 }

@@ -26,6 +26,11 @@
   the body fills the space above the bar and a floating action button sits
   above it.
 - `Wrap` wraps (Figma auto layout wrap) instead of exporting as a row.
+- `a ?? b` is evaluated: a known `a` decides, and an `a` only known at
+  runtime is assumed null as on the first frame, so the fallback shows
+  (`Text(icon ?? '')` on an empty board) instead of `{icon ?? ''}`.
+- Fields of project enum constants and other project values passed
+  positionally are readable: `DrawnElement.cross.icon` gives `❌`.
 - New dependency: `image`, to scale and convert images.
 - `design.json` version 3 (adds `VECTOR` nodes, `images` and image paints)
   and IR version 3. Update the Figma plugin to import them.
