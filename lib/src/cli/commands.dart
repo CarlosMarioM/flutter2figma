@@ -9,6 +9,7 @@ import 'package:flutter2figma/figma.dart';
 import 'package:flutter2figma/ir.dart';
 import 'package:path/path.dart' as p;
 
+import '../runtime/runtime_export.dart';
 import '../version.dart';
 
 CommandRunner<int> buildRunner() => _Runner()
@@ -165,6 +166,19 @@ class ExportCommand extends _ProjectCommand {
         help: 'Uses before a project widget becomes a component.',
         defaultsTo: '2',
       )
+      ..addFlag(
+        'runtime',
+        help:
+            'Render the screens with Flutter (flutter test) and export exactly '
+            'what it draws. Runs the app\'s main(): use on trusted code. '
+            'Screens that cannot run are exported statically.',
+      )
+      ..addOption(
+        'flutter',
+        help:
+            'Flutter command for --runtime, e.g. "fvm flutter". Detected '
+            'when omitted (FVM if the project pins a version).',
+      )
       ..addFlag('verbose', abbr: 'v', help: 'Show info diagnostics.');
   }
 
@@ -191,18 +205,40 @@ class ExportCommand extends _ProjectCommand {
     if (minUses == null || minUses < 1) {
       usageException('--min-component-uses must be a positive integer');
     }
-    final ir = FlutterCompiler(
-      designSystem: argResults!.flag('design-system'),
-      minComponentUses: minUses,
-      brightness: switch (argResults!.option('brightness')) {
-        'light' => ThemeBrightness.light,
-        'dark' => ThemeBrightness.dark,
-        _ => null,
-      },
-      screenWidth: double.parse(size.group(1)!),
-      screenHeight: double.parse(size.group(2)!),
-      iconFonts: projectIconFonts(analysis.root),
-    ).compile(analysis);
+    RuntimeScreens? rendered;
+    if (argResults!.flag('runtime')) {
+      stdout.writeln('Rendering screens with Flutter...');
+      rendered = await renderScreens(
+        analysis,
+        flutterCommand: argResults!.option('flutter')?.split(' '),
+        width: double.parse(size.group(1)!).round(),
+        height: double.parse(size.group(2)!).round(),
+      );
+    }
+    final compiled =
+        FlutterCompiler(
+          designSystem: argResults!.flag('design-system'),
+          minComponentUses: minUses,
+          brightness: switch (argResults!.option('brightness')) {
+            'light' => ThemeBrightness.light,
+            'dark' => ThemeBrightness.dark,
+            _ => null,
+          },
+          screenWidth: double.parse(size.group(1)!),
+          screenHeight: double.parse(size.group(2)!),
+          iconFonts: projectIconFonts(analysis.root),
+        ).compile(
+          analysis,
+          rendered: rendered?.screens ?? const {},
+          renderedImages: rendered?.images ?? const {},
+        );
+    final ir = IrDocument(
+      project: compiled.project,
+      screens: compiled.screens,
+      designSystem: compiled.designSystem,
+      images: compiled.images,
+      diagnostics: [...?rendered?.diagnostics, ...compiled.diagnostics],
+    );
 
     stdout.writeln('Generating Figma document...');
     final design = FigmaRenderer().render(ir);

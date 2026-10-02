@@ -101,6 +101,7 @@ npm test
 | Compiler | `test/compiler` | – | handlers, sizing, folding, theme behavior (`theme_test.dart`). Inputs are hand-built `DartValue`s (`w()`, `v()`, `lit()`, `ref()` helpers), so no SDK is needed |
 | Renderer | `test/figma` | – | Figma enums, font style names, downgrades |
 | Golden | `test/cli` | `example` pub get | full pipeline → `basic.design.json` |
+| Runtime | `test/runtime` | `example` pub get, Flutter | converter on hand-written captures; harness generation; an end-to-end `--runtime` export of the example (runs `flutter test`, ~15 s) |
 | Plugin | `figma-plugin/test` | the golden | imports the golden into the strict mock; fonts, stack/absolute placement |
 
 The analyzer and golden tests resolve a real Flutter project. The first run

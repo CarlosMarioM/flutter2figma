@@ -14,21 +14,25 @@ Turn your Flutter app's UI into editable Figma designs
 
 ## Description
 
-Flutter2Figma rebuilds an existing Flutter UI in Figma: real auto-layout
-frames, text layers, color variables, text styles and components. It does
-not take screenshots.
+Flutter2Figma rebuilds an existing Flutter UI in Figma: frames, text
+layers, vector icons, color variables, text styles and components.
+
+Beta: it works on real apps, but not every widget or app setup is covered
+yet. Please report what doesn't come out right.
 
 **How it works**
 
 1. Install the exporter: `dart pub global activate flutter2figma`
 2. In your Flutter project, run `flutter2figma export`. It reads your code
-   (it never runs your app) and writes `design.json`.
+   and writes `design.json`. Add `--runtime` to have Flutter render each
+   screen and export exactly what it draws.
 3. Open this plugin and drop `design.json` on it.
 
 **What you get**
 
-- One frame per screen, with auto layout that follows Flutter's own sizing
-  rules: padding, gaps, alignment, fill and hug.
+- One frame per screen: with auto layout that follows Flutter's own sizing
+  rules (padding, gaps, alignment, fill and hug), or Flutter's exact
+  layout with `--runtime`.
 - Your app's theme as **color variables with Light and Dark modes**.
   Switch a frame's mode and it recolors.
 - Text styles from your text theme, and effect styles for elevation.
@@ -41,7 +45,7 @@ not take screenshots.
 - Each import creates a new page. Variables and styles are reused and
   updated, not duplicated.
 - UI that depends on runtime state is exported in its initial state, and
-  anything that can't be drawn statically is clearly marked.
+  anything that can't be drawn is clearly marked.
 - Fonts are matched by name. Fonts that aren't installed are substituted,
   and the plugin tells you which.
 

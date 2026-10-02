@@ -221,7 +221,14 @@ class FlutterCompiler {
 
   final _diagnostics = <String, IrDiagnostic>{};
 
-  IrDocument compile(ProjectAnalysis analysis) {
+  /// Compiles every screen of [analysis]. Screens in [rendered] (by name,
+  /// e.g. captured at runtime) are used as they are instead, and their
+  /// [renderedImages] are embedded too.
+  IrDocument compile(
+    ProjectAnalysis analysis, {
+    Map<String, IrScreen> rendered = const {},
+    Map<String, IrImageAsset> renderedImages = const {},
+  }) {
     _diagnostics.clear();
     _images.clear();
     assets ??= ProjectAssets(analysis.root);
@@ -232,7 +239,7 @@ class FlutterCompiler {
     }
     final screens = [
       for (final w in analysis.screens)
-        compileScreen(w.name, w.tree!, w.source),
+        rendered[w.name] ?? compileScreen(w.name, w.tree!, w.source),
     ];
 
     IrDesignSystem? system;
@@ -261,7 +268,7 @@ class FlutterCompiler {
       project: analysis.name,
       screens: screens,
       designSystem: system,
-      images: Map.of(_images),
+      images: {..._images, ...renderedImages},
       diagnostics: [
         for (final d in analysis.diagnostics) IrDiagnostic(IrSeverity.error, d),
         ..._diagnostics.values,

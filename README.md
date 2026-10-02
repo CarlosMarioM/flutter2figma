@@ -4,18 +4,31 @@
 [![CI](https://github.com/CarlosMarioM/flutter2figma/actions/workflows/ci.yml/badge.svg)](https://github.com/CarlosMarioM/flutter2figma/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
+> **Beta.** flutter2figma works on real apps, but not every widget or app
+> setup is covered yet. Expect gaps, and please
+> [report them](https://github.com/CarlosMarioM/flutter2figma/issues) with the
+> widget or screen that didn't come out right.
+
 Convert a Flutter UI that already exists into an **editable** Figma design.
-You get real frames with auto layout, text layers, color variables with
-light/dark modes, text styles, and components. It doesn't take screenshots.
+You get frames, text layers, vector icons, color variables with light/dark
+modes, text styles, and components.
 
 ```
-Flutter project ──► static analysis ──► intermediate representation ──► design.json ──► Figma plugin
+Flutter project ──► static analysis ─┐
+                ──► runtime capture ─┴► intermediate representation ──► design.json ──► Figma plugin
 ```
 
-flutter2figma reads your code and never runs the app. It resolves your theme
-the way Flutter does, including `ColorScheme.fromSeed`, custom fonts and
-component themes, and maps widgets to Figma auto layout following Flutter's
-own sizing rules.
+There are two ways to read the app:
+
+| | Static (default) | Runtime (`--runtime`) |
+| --- | --- | --- |
+| How | Reads your code; the app never runs | Renders each screen with Flutter (`flutter test`) and records what it draws |
+| Layout | Figma **auto layout**, rebuilt from Flutter's sizing rules | Flutter's **exact** positions (absolute layout) |
+| Widgets | Those it has rules for; others become placeholders | All of them, including custom painters and packages |
+| Needs | Nothing to run | The app must start in a test: see [Runtime mode](#runtime-mode) |
+
+Both resolve your theme into color variables and text styles. Screens that
+can't run fall back to static export, so `--runtime` never exports less.
 
 ## Install
 
@@ -82,6 +95,55 @@ Values bind to tokens only when they came from them. `colorScheme.primary`
 becomes the `ColorScheme/primary` variable, but a hard-coded `Color` with the
 same value stays a hard-coded color.
 
+## Runtime mode
+
+```sh
+flutter2figma export --runtime
+```
+
+flutter2figma writes a test into `.dart_tool/flutter2figma/` (deleted
+afterwards), starts the app through its own `main()`, and shows each screen
+in turn. Your project's files are not changed.
+
+**It runs your app's code.** Only use it on code you trust.
+
+What it handles by itself:
+
+- **Startup and providers.** The real `main()` runs, so dependency injection
+  and app-level providers are set up. Providers that the app's first route
+  puts around its screen are also given to every other screen, and screens
+  wrapped by another widget class (`MenuScreen` providing blocs to `MenuPage`)
+  are shown through that wrapper.
+- **Constructor arguments.** Screens are built with placeholder values for
+  simple required parameters (`String` gets its parameter name, numbers `0`,
+  nullables `null`, ...).
+- **Common plugins.** `shared_preferences` and `flutter_secure_storage` get
+  in-memory fakes.
+- **Fonts.** Real fonts are loaded so text measures as on a device. Families
+  the app names but doesn't bundle fall back to Roboto, as on Android.
+
+When a screen still can't start, add `test/flutter2figma_setup.dart` to the
+app. Every function is optional:
+
+```dart
+import 'package:flutter/widgets.dart';
+
+/// Runs before main(): mocks, fake repositories, dependency injection.
+Future<void> setUp() async {}
+
+/// Wraps every screen, e.g. with the providers a route gives it.
+Widget wrapScreen(String name, Widget screen) => screen;
+
+/// Builds screens that need real arguments; return null for the rest.
+Widget? buildScreen(String name) => switch (name) {
+  'ProductScreen' => ProductScreen(product: Product.sample()),
+  _ => null,
+};
+```
+
+The export lists every screen it couldn't render and why (`-v` shows the
+rest).
+
 ## Commands
 
 | Command | Does |
@@ -111,7 +173,8 @@ import 'dart:io';
 import 'package:flutter2figma/flutter2figma.dart';
 
 Future<void> main() async {
-  final result = await exportProject('path/to/app');
+  // runtime: true renders the screens with Flutter (see Runtime mode).
+  final result = await exportProject('path/to/app', runtime: true);
   File('design.json').writeAsStringSync(jsonEncode(result.design));
   for (final d in result.diagnostics) {
     print(d);
@@ -149,6 +212,9 @@ diagnostic, and anything it can't draw becomes a magenta `⚠` placeholder.
   and `CupertinoIcons` are exact vectors read from the fonts the app ships;
   icons from other fonts are placeholders. Gradients use their first color.
   `GridView` cell heights are estimated from the screen width.
+- **Runtime mode** positions everything absolutely (no auto layout), records
+  each screen in the state it starts in, and keeps only the visible part of
+  scrolling content. Pixels from custom painters are images, not vectors.
 - **Not supported yet:**
   - tab bars, navigation rails and drawers, dialogs and sheets;
   - Cupertino widgets, Material 2 themes, and input/chip/list tile/navigation

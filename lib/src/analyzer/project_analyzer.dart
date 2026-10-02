@@ -6,6 +6,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/diagnostic/diagnostic.dart';
 import 'package:path/path.dart' as p;
@@ -52,10 +53,32 @@ class ProjectAnalysis {
 
 /// A `StatelessWidget` / `StatefulWidget` subclass declared in the project.
 class WidgetClass {
-  WidgetClass({required this.name, required this.source, required this.tree});
+  WidgetClass({
+    required this.name,
+    required this.source,
+    required this.tree,
+    this.library,
+    this.buildableWithoutArguments = false,
+    this.placeholderArguments,
+  });
 
   final String name;
   final String source;
+
+  /// URI of the library declaring the class (the owner of a `part` file),
+  /// e.g. `package:my_app/home_screen.dart`.
+  final String? library;
+
+  /// `Name()` compiles: the class is public and concrete, and its unnamed
+  /// constructor has no required parameters.
+  final bool buildableWithoutArguments;
+
+  /// Source of arguments that build the class with placeholder values,
+  /// e.g. `roomCode: 'roomCode', count: 0`: strings get their parameter
+  /// name, numbers 0, booleans false, nullables null, collections empty.
+  /// `''` when none are needed; null when a required parameter has a type
+  /// that can't be made up (an object, a callback returning a value, ...).
+  final String? placeholderArguments;
 
   /// What `build` returns, analyzed with no constructor arguments bound.
   final DartValue? tree;
@@ -205,6 +228,17 @@ class FlutterProjectAnalyzer {
             offset: decl.namePart.typeName.offset,
           )!,
           tree: expander.expandClass(decl, const {}, const {}),
+          library: element.library.uri.toString(),
+          buildableWithoutArguments:
+              element.isPublic &&
+              !element.isAbstract &&
+              (element.unnamedConstructor?.formalParameters.every(
+                    (p) => !p.isRequired,
+                  ) ??
+                  false),
+          placeholderArguments: element.isPublic && !element.isAbstract
+              ? _placeholderArguments(element.unnamedConstructor)
+              : null,
         ),
       );
     }
@@ -267,6 +301,39 @@ bool _isInstanceMember(Element? element) {
 
 bool _isFlutterClass(InterfaceType t, String name) =>
     t.element.name == name && t.element.library.uri.toString() == _frameworkUri;
+
+String? _placeholderArguments(ConstructorElement? ctor) {
+  if (ctor == null) return null;
+  final args = <String>[];
+  for (final param in ctor.formalParameters) {
+    if (!param.isRequired) continue;
+    final value = _placeholder(param.type, param.name ?? 'value');
+    if (value == null) return null;
+    args.add(param.isNamed ? '${param.name}: $value' : value);
+  }
+  return args.join(', ');
+}
+
+String? _placeholder(DartType type, String name) {
+  if (type.nullabilitySuffix == NullabilitySuffix.question) return 'null';
+  if (type is FunctionType) {
+    if (type.returnType is! VoidType) return null;
+    final params = [
+      for (var i = 0; i < type.formalParameters.length; i++) '_$i',
+    ];
+    return '(${params.join(', ')}) {}';
+  }
+  if (type is! InterfaceType) return null;
+  return switch (type.element.name) {
+    'String' => "'${name.replaceAll("'", '')}'",
+    'int' || 'num' => '0',
+    'double' => '0.0',
+    'bool' => 'false',
+    'List' || 'Iterable' => 'const []',
+    'Map' => 'const {}',
+    _ => null,
+  };
+}
 
 bool _isWidgetClass(InterfaceElement e) => e.allSupertypes.any(
   (t) =>

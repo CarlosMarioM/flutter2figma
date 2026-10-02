@@ -1,5 +1,20 @@
 ## Unreleased
 
+flutter2figma is now labeled **beta**.
+
+### Runtime mode
+- `flutter2figma export --runtime` (and `exportProject(runtime: true)`)
+  renders each screen with Flutter in a `flutter test` and exports exactly
+  what it draws: Flutter's positions, text with its real styles, icons as
+  vectors, images, and anything custom-painted as images. Colors and text
+  styles are bound to the theme's variables and styles.
+- The app starts through its own `main()`. Route-level providers are carried
+  to every screen, wrapper classes are used, simple required constructor
+  arguments get placeholders, and `shared_preferences` /
+  `flutter_secure_storage` get in-memory fakes. `test/flutter2figma_setup.dart`
+  can add `setUp`, `wrapScreen` and `buildScreen`.
+- Screens that can't run fall back to static export, with the reason.
+
 ### Export
 - Tap targets: buttons, icon buttons, switches, checkboxes and radios take the
   48 px space Flutter lays them out in (`MaterialTapTargetSize.padded`), so

@@ -1,0 +1,58 @@
+import 'package:flutter2figma/ir.dart';
+
+import '../analyzer/project_analyzer.dart';
+import '../compiler/icon_font.dart';
+import 'capture_converter.dart';
+import 'runtime_capture.dart';
+
+/// Screens Flutter rendered, ready to replace their static versions.
+class RuntimeScreens {
+  RuntimeScreens(this.screens, this.images, this.diagnostics);
+
+  final Map<String, IrScreen> screens;
+  final Map<String, IrImageAsset> images;
+  final List<IrDiagnostic> diagnostics;
+}
+
+/// Renders [analysis]'s screens with Flutter and converts them. Screens
+/// that can't be rendered are left out (and reported), so the caller can
+/// export them statically.
+Future<RuntimeScreens> renderScreens(
+  ProjectAnalysis analysis, {
+  List<String>? flutterCommand,
+  int width = 390,
+  int height = 844,
+  Duration timeout = const Duration(minutes: 10),
+}) async {
+  final capture = await RuntimeCapture(
+    analysis.root,
+    flutterCommand: flutterCommand,
+    width: width,
+    height: height,
+    timeout: timeout,
+  ).run(analysis);
+  final converter = CaptureConverter(
+    iconFonts: projectIconFonts(analysis.root),
+  );
+  final sources = {for (final w in analysis.screens) w.name: w.source};
+  final screens = {
+    for (final s in capture.screens)
+      s.name: converter.convert(s, source: sources[s.name]),
+  };
+  final total = analysis.screens.length;
+  return RuntimeScreens(screens, converter.images, [
+    IrDiagnostic(
+      IrSeverity.info,
+      'Runtime: ${screens.length} of $total screens rendered by Flutter'
+      '${screens.length < total ? '; the others are exported statically' : ''}',
+    ),
+    for (final e in capture.errors)
+      IrDiagnostic(IrSeverity.warning, 'Runtime capture: $e'),
+    for (final name in capture.skipped)
+      IrDiagnostic(
+        IrSeverity.info,
+        'Runtime: $name needs constructor arguments that can\'t be made up; '
+        'exported statically (build it in test/flutter2figma_setup.dart)',
+      ),
+  ]);
+}

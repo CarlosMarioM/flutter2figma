@@ -7,10 +7,55 @@
 | analyzer → compiler | `DartValue` tree (in-memory; `analyze --json` prints it) | `lib/src/analyzer/values.dart` |
 | compiler → renderer | IR, `flutter2figma/ir` v3 (`ir.json`) | `lib/src/ir/model.dart` |
 | renderer → plugin | `flutter2figma/design` v3 (`design.json`, spec in [design-json.md](design-json.md)) | `lib/src/figma/renderer.dart`, `figma-plugin/src/design.ts` |
+| harness → converter (`--runtime`) | capture JSON: recorded render tree, theme, PNGs | `lib/src/runtime/harness.dart`, `capture_converter.dart` |
 
 The IR is the stable centre. Adding an HTML/React backend means writing another
-renderer over `IrDocument`. Runtime inspection (`--runtime`) would be another
-IR producer next to the static compiler.
+renderer over `IrDocument`. Runtime capture is a second IR producer next to
+the static compiler: its screens replace the static ones by name, and the
+compiler still builds the design system around them.
+
+## Runtime capture
+
+`RuntimeCapture` (`lib/src/runtime/runtime_capture.dart`) writes the test
+from `harness.dart` into the app's `.dart_tool/flutter2figma/`, runs it with
+the Flutter SDK the app resolves against (from `package_config.json`), reads
+the JSON it writes and deletes the test.
+
+**The harness** (a `flutter_test` widget test):
+
+1. Loads real fonts: Roboto from the SDK, the app's `FontManifest`, and
+   Roboto under any family the app names without bundling (the device
+   fallback; the test default would be a box font).
+2. Runs plugin fakes and the app's `test/flutter2figma_setup.dart` `setUp`,
+   then the app's own `main()` in real time (`runAsync`), and waits for a
+   Navigator.
+3. Records the screen the app starts on, if it is one of the screens. Then
+   collects the provider widgets (`nested` `SingleChildWidget`s) on that
+   route, and shows every other screen with `pushAndRemoveUntil` wrapped in
+   them (and in `wrapScreen`), built through its outermost wrapper class or
+   with placeholder arguments (`WidgetClass.placeholderArguments`).
+4. Decodes images for real (`precacheImage`; the fake clock never finishes
+   them), screenshots the view, and walks the render tree (`_Recorder`).
+
+**Recording**, per render object, painted children only (offstage routes
+and `IndexedStack` siblings are skipped):
+
+| Render object | Recorded as |
+| --- | --- |
+| `RenderParagraph`, `RenderEditable` | text with its resolved style; a single glyph in `MaterialIcons` / `CupertinoIcons` → icon |
+| `RenderDecoratedBox`, `RenderPhysicalModel`/`Shape`, `ColoredBox`, `Ink` decorations | box: fill, corners, border, shadows or elevation, decoration image |
+| `RenderClip*`, `RenderOpacity` | group with clip / opacity |
+| `RenderImage` | image (decoded pixels, ≤ 4096 px) |
+| `RenderCustomPaint` | its painters run alone into images, under/over its children |
+| any other container | painted alone (children suppressed) into an image, dropped if transparent: the chip checkmark, text field outlines |
+| any other leaf | cropped from the screenshot |
+| `RenderFlex` | group, for structure |
+
+**`CaptureConverter`** turns the tree into absolute IR frames (`stack`
+direction, positions relative to the parent), flattens single-child groups,
+multiplies opacity into colors, makes icons vectors through `IconFont`, and
+binds colors and text to tokens by value against the theme the screen
+rendered with (a translucent role color keeps its token and alpha).
 
 ## Analyzer: values, not execution
 
