@@ -231,7 +231,8 @@ diagnostic, and anything it can't draw becomes a magenta `⚠` placeholder.
 | [doc/architecture.md](doc/architecture.md) | How the pipeline works: analysis, theme, layout model, design system |
 | [doc/development.md](doc/development.md) | Setup, tests, adding widget support, debugging |
 | [figma-plugin/README.md](figma-plugin/README.md) | The Figma plugin: install, develop, release |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Checks and the release process |
+| [doc/releasing.md](doc/releasing.md) | How to cut a release: versions, tag, pub.dev, Figma plugin |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Checks before a pull request |
 | [SECURITY.md](SECURITY.md) | Reporting vulnerabilities; what the tool can and can't do |
 
 Bugs and wrong exports:

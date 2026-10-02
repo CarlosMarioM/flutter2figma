@@ -69,7 +69,7 @@ https://github.com/CarlosMarioM/flutter2figma/issues
 ## Data security answers
 
 For Figma's plugin data-security questions. These are facts about the code
-as of 0.1.0, checked in `manifest.json` and `src/`:
+as of 0.2.0, checked in `manifest.json` and `src/`:
 
 | Question | Answer |
 | --- | --- |

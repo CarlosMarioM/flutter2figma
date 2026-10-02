@@ -1,4 +1,4 @@
-## Unreleased
+## 0.2.0
 
 flutter2figma is now labeled **beta**.
 

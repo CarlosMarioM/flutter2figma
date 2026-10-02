@@ -40,30 +40,9 @@ tool/validate_app.sh path/to/app lib/file_with_material_app.dart
 
 ## Releasing
 
-1. Bump `version` in `pubspec.yaml` and `packageVersion` in
-   `lib/src/version.dart`. `test/version_test.dart` fails if they differ.
-2. Add a `## <version>` section at the top of `CHANGELOG.md`, with
-   Added / Changed / Fixed entries. The version test checks this too.
-3. Refresh the goldens (they record the generator version), then run
-   `dart pub publish --dry-run`.
-4. Commit, push, and push the tag `v<version>`. The *Release Figma plugin*
-   workflow (`.github/workflows/release-plugin.yml`) then:
-   - typechecks and tests the plugin;
-   - builds `flutter2figma-figma-plugin-<version>.zip`;
-   - creates the GitHub Release, with the CHANGELOG section as its notes.
-
-   To release a tag that already exists, run the workflow from the Actions
-   tab with that tag. `cd figma-plugin && npm run package` builds the same
-   zip locally.
-5. The same tag runs *Publish to pub.dev* (`publish.yml`). It reruns CI,
-   then publishes through pub.dev's automated publishing, with no tokens
-   involved.
-   - pub.dev only accepts the tag `v<pubspec version>`.
-   - The very first version is published by hand (`dart pub publish`),
-     because automated publishing can only be enabled for a package that
-     already exists. After that, enable it once in the package's pub.dev
-     Admin tab: repository `CarlosMarioM/flutter2figma`, tag pattern
-     `v{{version}}`.
+See [doc/releasing.md](doc/releasing.md): versioning, the step-by-step
+checklist (versions, changelog, goldens, tag), how the tag publishes the
+package and the plugin, and how to fix a bad release.
 
 CI (`ci.yml`) runs on every push to `main` and on pull requests:
 - format, analyze, `dart test`, the Flutter theme ground truth, and a publish

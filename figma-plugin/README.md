@@ -58,3 +58,5 @@ F2F_DESIGNS=/path/a/design.json:/path/b/design.json npm test
 
 Pushing a `v*` tag runs `.github/workflows/release-plugin.yml`. It
 typechecks and tests, builds the zip, and attaches it to the GitHub Release.
+The full checklist, including Figma Community, is in
+[doc/releasing.md](../doc/releasing.md).

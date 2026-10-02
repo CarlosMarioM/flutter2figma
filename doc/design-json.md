@@ -32,7 +32,7 @@ plugin still imports both.
 {
   "format": "flutter2figma/design",
   "version": 3,
-  "generator": { "name": "flutter2figma", "version": "0.1.0" },
+  "generator": { "name": "flutter2figma", "version": "0.2.0" },
   "name": "my_app",                     // the Flutter package name
   "fonts": [{ "family": "Inter", "style": "Bold" }, …],  // every font used, to load first
   "designSystem": { … },                // optional; see below

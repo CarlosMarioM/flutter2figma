@@ -18,8 +18,26 @@ jobs:
   checks:
     uses: ./.github/workflows/ci.yml
 
+  # Automated publishing only works once the package exists on pub.dev and
+  # has it enabled. Until the first, manual `dart pub publish`, skip cleanly.
+  published:
+    runs-on: ubuntu-latest
+    outputs:
+      exists: ${{ steps.check.outputs.exists }}
+    steps:
+      - id: check
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' https://pub.dev/api/packages/flutter2figma)
+          if [ "$code" = 200 ]; then
+            echo "exists=true" >>"$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >>"$GITHUB_OUTPUT"
+            echo "::notice::flutter2figma is not on pub.dev yet: publish this version with 'dart pub publish' (see doc/releasing.md)."
+          fi
+
   publish:
-    needs: checks
+    needs: [checks, published]
+    if: needs.published.outputs.exists == 'true'
     permissions:
       id-token: write # OIDC token pub.dev verifies
     uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1

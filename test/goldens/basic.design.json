@@ -3,7 +3,7 @@
   "version": 3,
   "generator": {
     "name": "flutter2figma",
-    "version": "0.1.0"
+    "version": "0.2.0"
   },
   "name": "flutter2figma_example",
   "fonts": [
