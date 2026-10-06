@@ -1,4 +1,4 @@
-## Unreleased
+## 0.4.0
 
 **`flutter2figma export` now runs the app by default** (runtime mode) and
 writes `preview.html`. It used to only read the code, which leaves

@@ -1,6 +1,6 @@
 /** The plugin's version: the flutter2figma release it ships with. Kept
  * equal to package.json and the Dart package by test/version_test.dart. */
-export const PLUGIN_VERSION = '0.3.0';
+export const PLUGIN_VERSION = '0.4.0';
 
 /** Where people get a newer plugin. */
 export const RELEASES_URL = 'https://github.com/CarlosMarioM/flutter2figma/releases/latest';
