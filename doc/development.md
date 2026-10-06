@@ -71,7 +71,7 @@ SECURITY.md, CONTRIBUTING.md
 # Run the tool
 dart run flutter2figma analyze example
 dart run flutter2figma analyze example --json      # dump DartValue trees
-dart run flutter2figma export  example -o build/flutter2figma -v
+dart run flutter2figma export example --static -o build/flutter2figma -v
 
 # Dart checks
 dart analyze

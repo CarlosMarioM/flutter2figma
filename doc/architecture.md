@@ -7,7 +7,7 @@
 | analyzer → compiler | `DartValue` tree (in-memory; `analyze --json` prints it) | `lib/src/analyzer/values.dart` |
 | compiler → renderer | IR, `flutter2figma/ir` v3 (`ir.json`) | `lib/src/ir/model.dart` |
 | renderer → plugin | `flutter2figma/design` v3 (`design.json`, spec in [design-json.md](design-json.md)) | `lib/src/figma/renderer.dart`, `figma-plugin/src/design.ts` |
-| harness → converter (`--runtime`) | capture JSON: recorded render tree, theme, PNGs | `lib/src/runtime/harness.dart`, `capture_converter.dart` |
+| harness → converter (runtime mode, the default) | capture JSON: recorded render tree, theme, PNGs | `lib/src/runtime/harness.dart`, `capture_converter.dart` |
 
 The IR is the stable centre. Adding an HTML/React backend means writing another
 renderer over `IrDocument`. Runtime capture is a second IR producer next to

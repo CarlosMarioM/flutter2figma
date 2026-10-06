@@ -1,6 +1,6 @@
 import type { ComponentSpec, DesignDocument, FrameSpec, NodeSpec, TextSpec, VectorSpec } from './design';
 import { DesignSystem, setupDesignSystem, toPaints } from './design-system';
-import { updateNote } from './version';
+import { staticNote, updateNote } from './version';
 
 export const PLUGIN_DATA_KEY = 'flutter2figma';
 
@@ -302,7 +302,7 @@ export async function importDesign(api: PluginAPI, doc: DesignDocument): Promise
     effectStyles: ds?.effectStyles.size ?? 0,
     components: masters.size,
     instances,
-    notes: [update, ...(ds?.notes ?? [])].filter((n): n is string => n !== undefined),
+    notes: [update, staticNote(doc.screens), ...(ds?.notes ?? [])].filter((n): n is string => n !== undefined),
   };
 }
 

@@ -1,6 +1,23 @@
 ## Unreleased
 
+**`flutter2figma export` now runs the app by default** (runtime mode) and
+writes `preview.html`. It used to only read the code, which leaves
+placeholders wherever the app decides things at runtime. For the old
+behavior, use `--static` (for example on CI machines without Flutter).
+
+### Export
+- In a Flutter app, plain `flutter2figma` runs the export (export options
+  work too: `flutter2figma --static`).
+- The export ends with a summary: how many screens Flutter rendered, which
+  ones came from the code alone and why, how to fix them, and the next
+  steps (check the preview, import in Figma, where to get the plugin).
+- Runtime mode falls back to static instead of failing when Flutter isn't
+  installed or the project isn't a resolved Flutter app.
+- `--[no-]preview` is on by default.
+
 ### Figma plugin
+- After an import, the plugin names the screens exported from the code
+  alone, which may show placeholders, and how to export them exactly.
 - Importing a `design.json` from a newer flutter2figma says so and links to
   the latest plugin; the import still goes ahead. The plugin stays offline:
   it compares its version with the one that wrote the file.

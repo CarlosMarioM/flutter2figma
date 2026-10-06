@@ -19,7 +19,7 @@ if [ -f "$root/.fvmrc" ] && command -v fvm >/dev/null; then flutter=(fvm flutter
 
 cd "$root"
 echo "== Static export"
-dart run bin/flutter2figma.dart export showcase -o "$out/static" | tail -8
+dart run bin/flutter2figma.dart export showcase --static -o "$out/static" | tail -8
 echo "== Runtime export"
 dart run bin/flutter2figma.dart export showcase --runtime \
   --screenshots "$out/screenshots" -o "$out/runtime" | tail -8

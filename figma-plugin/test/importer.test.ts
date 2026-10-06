@@ -5,7 +5,7 @@ import { test } from 'node:test';
 
 import { DesignDocument, FrameSpec, parseDesign } from '../src/design';
 import { importDesign, PLUGIN_DATA_KEY } from '../src/importer';
-import { compareVersions, PLUGIN_VERSION } from '../src/version';
+import { compareVersions, PLUGIN_VERSION, staticNote } from '../src/version';
 import { createMockFigma, MockFrame, MockInstance, MockNode, MockText, MockVector } from './figma-mock';
 
 // The same golden the Dart CLI test checks, so both sides share one contract.
@@ -568,4 +568,17 @@ test('versions compare by number, a pre-release before its release', () => {
   assert.equal(compareVersions('0.3.0', '0.3.0'), 0);
   assert.equal(compareVersions('0.3.0-dev.1', '0.3.0'), -1);
   assert.equal(compareVersions('1.0.0', '0.99.99'), 1);
+});
+
+test('screens exported from the code alone are named after the import', async () => {
+  // The golden is a static export: every screen comes from the code.
+  const { result } = await run(golden());
+  assert.ok(result.notes.some((n) => n.startsWith('All screens were exported from the code alone')));
+
+  const screen = (name: string, origin: string[]) => ({ name, pluginData: { origin } });
+  assert.equal(staticNote([screen('Home', ['runtime']), screen('Cart', ['runtime'])]), undefined);
+  assert.match(
+    staticNote([screen('Home', ['runtime']), screen('Profile', ['Scaffold'])])!,
+    /^Profile: exported from the code alone/,
+  );
 });

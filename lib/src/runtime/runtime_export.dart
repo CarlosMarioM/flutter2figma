@@ -7,11 +7,20 @@ import 'runtime_capture.dart';
 
 /// Screens Flutter rendered, ready to replace their static versions.
 class RuntimeScreens {
-  RuntimeScreens(this.screens, this.images, this.diagnostics);
+  RuntimeScreens(
+    this.screens,
+    this.images,
+    this.diagnostics, {
+    this.fallbacks = const {},
+  });
 
   final Map<String, IrScreen> screens;
   final Map<String, IrImageAsset> images;
   final List<IrDiagnostic> diagnostics;
+
+  /// Screens Flutter didn't render, and why: they are exported from the
+  /// code alone.
+  final Map<String, String> fallbacks;
 }
 
 /// Renders [analysis]'s screens with Flutter and converts them. Screens
@@ -44,7 +53,26 @@ Future<RuntimeScreens> renderScreens(
       s.name: converter.convert(s, source: sources[s.name]),
   };
   final total = analysis.screens.length;
-  return RuntimeScreens(screens, converter.images, [
+  final names = {for (final s in analysis.screens) s.name};
+  // Errors about one screen start with its name; the rest (main() threw,
+  // flutter test didn't start) concern them all.
+  final general = [
+    for (final e in capture.errors)
+      if (!names.any((n) => e.startsWith('$n: '))) e,
+  ];
+  final fallbacks = {
+    for (final name in names)
+      if (!screens.containsKey(name))
+        name: capture.skipped.contains(name)
+            ? 'it needs constructor arguments'
+            : capture.errors
+                      .where((e) => e.startsWith('$name: '))
+                      .map((e) => e.substring(name.length + 2))
+                      .firstOrNull ??
+                  general.firstOrNull ??
+                  'Flutter didn\'t render it',
+  };
+  return RuntimeScreens(screens, converter.images, fallbacks: fallbacks, [
     IrDiagnostic(
       IrSeverity.info,
       'Runtime: ${screens.length} of $total screens rendered by Flutter'

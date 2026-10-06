@@ -5,6 +5,21 @@ export const PLUGIN_VERSION = '0.3.0';
 /** Where people get a newer plugin. */
 export const RELEASES_URL = 'https://github.com/CarlosMarioM/flutter2figma/releases/latest';
 
+/**
+ * A note naming the screens exported from the code alone (not rendered by
+ * Flutter): they may show placeholders where the app decides things at
+ * runtime. Rendered screens carry the origin `runtime`.
+ */
+export function staticNote(screens: { name: string; pluginData?: { origin?: string[] } }[]): string | undefined {
+  const fromCode = screens.filter((s) => !(s.pluginData?.origin ?? []).includes('runtime')).map((s) => s.name);
+  if (fromCode.length === 0) return undefined;
+  const which = fromCode.length === screens.length ? 'All screens were' : `${fromCode.join(', ')}:`;
+  return (
+    `${which} exported from the code alone, so they may show placeholders where the app decides things at runtime. ` +
+    'Export with `flutter2figma` (it runs the app) for exact screens; see its summary for why a screen fell back.'
+  );
+}
+
 /** Compares `X.Y.Z` versions (a `-pre` suffix sorts before its release). */
 export function compareVersions(a: string, b: string): number {
   const parse = (v: string) => {

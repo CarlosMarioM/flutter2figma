@@ -20,15 +20,17 @@ Flutter project ──► static analysis ─┐
 
 There are two ways to read the app:
 
-| | Static (default) | Runtime (`--runtime`) |
+| | Runtime (default) | Static (`--static`) |
 | --- | --- | --- |
-| How | Reads your code; the app never runs | Renders each screen with Flutter (`flutter test`) and records what it draws |
-| Layout | Figma **auto layout**, rebuilt from Flutter's sizing rules | Flutter's **exact** positions (absolute layout) |
-| Widgets | Those it has rules for; others become placeholders | All of them, including custom painters and packages |
-| Needs | Nothing to run | The app must start in a test: see [Runtime mode](#runtime-mode) |
+| How | Runs the app in a Flutter test and records what each screen draws | Reads your code; the app never runs |
+| Layout | Flutter's **exact** positions, as **auto layout** wherever that keeps them | Figma **auto layout**, rebuilt from Flutter's sizing rules |
+| Widgets | All of them, including custom painters (as vectors) and packages | Those it has rules for; others become placeholders |
+| State, translations, data | As the screen first shows them | Placeholders where only the running app knows |
+| Needs | The app must start in a test: see [Runtime mode](#runtime-mode) | Nothing to run |
 
-Both resolve your theme into color variables and text styles. Screens that
-can't run fall back to static export, so `--runtime` never exports less.
+Both resolve your theme into color variables and text styles. A screen that
+can't run is exported from the code instead, and the summary at the end of
+the export says which screens and why.
 
 ## Install
 
@@ -44,34 +46,43 @@ Requires Dart 3.11 or later. The Flutter project you export must be resolved
 ```sh
 cd path/to/your_app
 flutter pub get
-flutter2figma export
+flutter2figma
 ```
 
+That's all: in a Flutter app, `flutter2figma` runs the export. It starts the
+app in a test, records every screen, and ends with what you got and what to
+do next:
+
 ```
-✓ Export complete
+✓ Exported 12 screens, 333 layers
+  46 color variables (Light / Dark), 15 text styles, 5 effect styles, 0 components (0 variants)
 
-  6 screens
-  165 nodes
-  51 color variables (Light / Dark)
-  15 text styles
-  5 effect styles
-  5 components (12 variants)
+  11 of 12 screens rendered by Flutter.
+! Exported from the code alone (may show placeholders):
+    AiInsightsScreen: it needs constructor arguments
+  Build screens that need arguments in
+  test/flutter2figma_setup.dart (buildScreen): see
+  "Runtime mode" in the README.
 
-  build/flutter2figma/design.json   ← import with the Figma plugin
-  build/flutter2figma/ir.json
+Next:
+  Check:   open build/flutter2figma/preview.html   (each screen beside the app, in the browser)
+  Import:  in Figma, Plugins → Flutter2Figma, then drop build/flutter2figma/design.json
 ```
 
-Then, in the Figma desktop app, open the **Flutter2Figma** plugin and drop
-`design.json` on it. Each export creates a new page. The design system is
-reused across imports: variables and styles are updated in place.
+1. **Check** the [preview](#preview) in your browser: each screen as Flutter
+   draws it beside the export.
+2. **Import** in the Figma desktop app: open the
+   [Flutter2Figma plugin](https://www.figma.com/community/plugin/1687559887675755742)
+   and drop `design.json` on it. Each export creates a new page. The design
+   system is reused across imports: variables and styles are updated in
+   place.
 
-> **Installing the Figma plugin.** Until it is published on Figma Community:
-> 1. Download `flutter2figma-figma-plugin-<version>.zip` from the
->    [latest release](https://github.com/CarlosMarioM/flutter2figma/releases/latest)
->    and unzip it.
-> 2. In the Figma desktop app, choose **Plugins → Development → Import plugin
->    from manifest…** and pick its `manifest.json`. This is only needed once.
->
+> **The Figma plugin** is on
+> [Figma Community](https://www.figma.com/community/plugin/1687559887675755742).
+> Each [release](https://github.com/CarlosMarioM/flutter2figma/releases/latest)
+> also has it as a zip (`flutter2figma-figma-plugin-<version>.zip`): unzip
+> it and choose **Plugins → Development → Import plugin from manifest…** in
+> the Figma desktop app. If a file needs a newer plugin, the plugin says so.
 > The source is in [`figma-plugin/`](figma-plugin/).
 
 ## What you get in Figma
@@ -97,13 +108,15 @@ same value stays a hard-coded color.
 
 ## Runtime mode
 
-```sh
-flutter2figma export --runtime
-```
-
+Runtime mode is the default (`flutter2figma`, or `flutter2figma export`).
 flutter2figma writes a test into `.dart_tool/flutter2figma/` (deleted
 afterwards), starts the app through its own `main()`, and shows each screen
-in turn. Your project's files are not changed.
+in turn. Your project's files are not changed, except that an asset the
+pubspec lists but that is missing (a gitignored `.env`) is stood in for
+during the run and removed after it.
+
+Use `--static` to only read the code: for CI machines without Flutter, or
+code you don't want to run.
 
 **It runs your app's code.** Only use it on code you trust.
 
@@ -147,22 +160,20 @@ screen, to compare with the Figma import.
 
 ### Preview
 
-```sh
-flutter2figma export --runtime --preview
-```
-
-also writes `preview.html` next to `design.json`: every screen drawn from
+Every export also writes `preview.html` next to `design.json`: every screen drawn from
 `design.json` in the browser, beside Flutter's own render, with a wipe slider
 between the two and a toggle that outlines what each Figma layer will be
 (vector, text or image). The app's fonts are embedded, so it opens offline.
 It is a quick check of an export before importing it; the browser and Figma
-can still differ in details. Without `--runtime`, it shows the export alone.
+can still differ in details. With `--static`, it shows the export alone.
+`--no-preview` skips it.
 
 ## Commands
 
 | Command | Does |
 | --- | --- |
-| `flutter2figma export [project]` | Writes `design.json` and `ir.json` |
+| `flutter2figma [options]` | In a Flutter app: the same as `export` |
+| `flutter2figma export [project]` | Writes `design.json`, `preview.html` and `ir.json` |
 | `flutter2figma analyze [project]` | Lists screens, widgets and analysis problems (`--json` for the widget trees) |
 | `flutter2figma theme [project]` | Prints the resolved Material theme as JSON |
 | `flutter2figma --version` | Prints the version |
@@ -176,11 +187,11 @@ can still differ in details. Without `--runtime`, it shows the export alone.
 | `--screen-size` | `390x844` | Frame size for screens |
 | `--[no-]design-system` | on | Variables, styles and components |
 | `--min-component-uses` | `2` | Uses before one of your widgets becomes a component |
-| `--runtime` | off | Render the screens with Flutter (see [Runtime mode](#runtime-mode)) |
-| `--[no-]auto-layout` | on | With `--runtime`: rows and columns become auto layout where it keeps Flutter's positions |
-| `--screenshots` | | With `--runtime`: save Flutter's render of each screen (PNG) in this directory |
-| `--preview` | off | Also write `preview.html` (see [Preview](#preview)) |
-| `--flutter` | detected | Flutter command for `--runtime`, e.g. `"fvm flutter"` |
+| `--static` | off | Only read the code; don't run the app (same as `--no-runtime`) |
+| `--[no-]auto-layout` | on | Rows and columns Flutter rendered become auto layout where it keeps their positions |
+| `--[no-]preview` | on | Write `preview.html` (see [Preview](#preview)) |
+| `--screenshots` | | Also save Flutter's render of each screen (PNG) in this directory |
+| `--flutter` | detected | Flutter command for runtime mode, e.g. `"fvm flutter"` |
 | `-v, --verbose` | off | Also show info diagnostics |
 
 ## Dart API

@@ -5,7 +5,7 @@
 #
 # 1. Theme: copies the app to a temp dir, runs a Flutter test there that
 #    dumps the theme Flutter resolves, and diffs it with `flutter2figma theme`.
-# 2. Export: runs `flutter2figma export` and summarizes screens, nodes,
+# 2. Export: runs `flutter2figma export --static` and summarizes screens, nodes,
 #    placeholders and diagnostics.
 # 3. Figma: imports the design.json through the plugin's strict Figma mock.
 #
@@ -63,7 +63,7 @@ print('\n'.join(diffs[:40]))
 EOF
 
 echo "== Export"
-(cd "$root" && dart run flutter2figma export "$app" -o "$out" -v >"$out/export.log" 2>&1)
+(cd "$root" && dart run flutter2figma export "$app" --static -o "$out" -v >"$out/export.log" 2>&1)
 python3 - "$out/ir.json" "$out/export.log" <<'EOF'
 import json, re, sys
 doc = json.load(open(sys.argv[1]))

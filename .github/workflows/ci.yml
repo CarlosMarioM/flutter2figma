@@ -51,7 +51,7 @@ jobs:
 
       - name: Showcase exports (static and runtime)
         run: |
-          dart run bin/flutter2figma.dart export showcase -o build/showcase/static
+          dart run bin/flutter2figma.dart export showcase --static -o build/showcase/static
           dart run bin/flutter2figma.dart export showcase --runtime -o build/showcase/runtime
 
       - name: Publish dry run

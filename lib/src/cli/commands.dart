@@ -13,6 +13,9 @@ import '../preview/preview.dart';
 import '../runtime/runtime_export.dart';
 import '../version.dart';
 
+/// Where people get the Figma plugin.
+const pluginUrl = 'https://www.figma.com/community/plugin/1687559887675755742';
+
 CommandRunner<int> buildRunner() => _Runner()
   ..addCommand(AnalyzeCommand())
   ..addCommand(ExportCommand())
@@ -22,7 +25,8 @@ class _Runner extends CommandRunner<int> {
   _Runner()
     : super(
         'flutter2figma',
-        'Convert Flutter UIs into editable Figma designs.',
+        'Convert Flutter UIs into editable Figma designs.\n\n'
+            'Run it with no command in a Flutter app to export it.',
       ) {
     argParser.addFlag(
       'version',
@@ -38,6 +42,29 @@ class _Runner extends CommandRunner<int> {
       return 0;
     }
     return super.runCommand(topLevelResults);
+  }
+
+  /// Plain `flutter2figma` in a Flutter app exports it, export options
+  /// included (`flutter2figma --static`).
+  @override
+  Future<int?> run(Iterable<String> args) {
+    final list = args.toList();
+    final first = list.firstOrNull;
+    final exports =
+        (first == null ||
+            (first.startsWith('-') &&
+                !const {'-h', '--help', '--version'}.contains(first))) &&
+        _isFlutterApp(Directory.current.path);
+    return super.run(exports ? ['export', ...list] : list);
+  }
+
+  static bool _isFlutterApp(String dir) {
+    final pubspec = File(p.join(dir, 'pubspec.yaml'));
+    return pubspec.existsSync() &&
+        RegExp(
+          r'^\s+flutter:\s*\n\s+sdk:\s*flutter',
+          multiLine: true,
+        ).hasMatch(pubspec.readAsStringSync());
   }
 }
 
@@ -170,9 +197,18 @@ class ExportCommand extends _ProjectCommand {
       ..addFlag(
         'runtime',
         help:
-            'Render the screens with Flutter (flutter test) and export exactly '
-            'what it draws. Runs the app\'s main(): use on trusted code. '
-            'Screens that cannot run are exported statically.',
+            'Run the app in a Flutter test (flutter test) and export exactly '
+            'what each screen draws. Screens that can\'t run are exported '
+            'from the code alone. This runs the app\'s main().',
+        defaultsTo: true,
+      )
+      ..addFlag(
+        'static',
+        negatable: false,
+        help:
+            'Only read the code; don\'t run the app (same as --no-runtime). '
+            'Needs no Flutter, but what the app decides at runtime shows as '
+            'placeholders.',
       )
       ..addOption(
         'flutter',
@@ -183,21 +219,22 @@ class ExportCommand extends _ProjectCommand {
       ..addFlag(
         'auto-layout',
         help:
-            'With --runtime: turn rows and columns into Figma auto layout '
+            'Turn rows and columns Flutter rendered into Figma auto layout '
             'where it keeps Flutter\'s positions. Off: everything absolute.',
         defaultsTo: true,
       )
       ..addOption(
         'screenshots',
         help:
-            'With --runtime: also save Flutter\'s own render of each screen '
-            'as PNG in this directory, to compare with the Figma import.',
+            'Also save Flutter\'s own render of each screen as PNG in this '
+            'directory, to compare with the Figma import.',
       )
       ..addFlag(
         'preview',
         help:
-            'Also write preview.html: every screen drawn from design.json in '
-            'the browser, beside Flutter\'s own render with --runtime.',
+            'Write preview.html: every screen drawn from design.json in the '
+            'browser, beside Flutter\'s own render.',
+        defaultsTo: true,
       )
       ..addFlag('verbose', abbr: 'v', help: 'Show info diagnostics.');
   }
@@ -226,16 +263,20 @@ class ExportCommand extends _ProjectCommand {
       usageException('--min-component-uses must be a positive integer');
     }
     RuntimeScreens? rendered;
+    final runtime = argResults!.flag('runtime') && !argResults!.flag('static');
     final preview = argResults!.flag('preview');
     // The preview shows Flutter's renders beside the export.
     var shots = argResults!.option('screenshots');
     Directory? tempShots;
-    if (preview && shots == null && argResults!.flag('runtime')) {
+    if (preview && shots == null && runtime) {
       tempShots = Directory.systemTemp.createTempSync('flutter2figma_shots');
       shots = tempShots.path;
     }
-    if (argResults!.flag('runtime')) {
-      stdout.writeln('Rendering screens with Flutter...');
+    if (runtime) {
+      stdout.writeln(
+        'Running the app in a Flutter test to record each screen '
+        '(--static to only read the code)...',
+      );
       rendered = await renderScreens(
         analysis,
         flutterCommand: argResults!.option('flutter')?.split(' '),
@@ -276,8 +317,9 @@ class ExportCommand extends _ProjectCommand {
     final out = Directory(argResults!.option('output')!)
       ..createSync(recursive: true);
     const encoder = JsonEncoder.withIndent('  ');
-    final irFile = File(p.join(out.path, 'ir.json'))
-      ..writeAsStringSync(encoder.convert(ir.toJson()));
+    File(
+      p.join(out.path, 'ir.json'),
+    ).writeAsStringSync(encoder.convert(ir.toJson()));
     final designFile = File(p.join(out.path, 'design.json'))
       ..writeAsStringSync(encoder.convert(design));
     File? previewFile;
@@ -314,38 +356,100 @@ class ExportCommand extends _ProjectCommand {
       count(s.root);
     }
 
+    // What the summary below says is left out of the diagnostics.
     printDiagnostics([
       for (final d in (design['diagnostics'] as List))
-        IrDiagnostic.fromJson(d as Map<String, Object?>),
+        if (!(d as Map)['message'].toString().startsWith('Runtime'))
+          IrDiagnostic.fromJson(d.cast<String, Object?>()),
     ], verbose: argResults!.flag('verbose'));
     stdout
       ..writeln()
-      ..writeln('✓ Export complete')
-      ..writeln()
-      ..writeln('  ${ir.screens.length} screens')
-      ..writeln('  $nodes nodes');
+      ..writeln('✓ Exported ${ir.screens.length} screens, $nodes layers');
     if (ir.designSystem case final ds?) {
       final variants = ds.components.fold(0, (n, c) => n + c.variants.length);
-      stdout
-        ..writeln(
-          '  ${ds.colors.length} color variables (${ds.modes.join(' / ')})',
-        )
-        ..writeln('  ${ds.textStyles.length} text styles')
-        ..writeln('  ${ds.shadows.length} effect styles')
-        ..writeln('  ${ds.components.length} components ($variants variants)');
-    }
-    stdout
-      ..writeln()
-      ..writeln(
-        '  ${p.relative(designFile.path)}   ← import with the Figma plugin',
-      )
-      ..writeln('  ${p.relative(irFile.path)}');
-    if (previewFile != null) {
       stdout.writeln(
-        '  ${p.relative(previewFile.path)}   ← open in a browser to check',
+        '  ${ds.colors.length} color variables (${ds.modes.join(' / ')}), '
+        '${ds.textStyles.length} text styles, ${ds.shadows.length} effect '
+        'styles, ${ds.components.length} components ($variants variants)',
       );
     }
+    _summary(ir.screens.length, rendered);
+    final open = Platform.isMacOS
+        ? 'open'
+        : Platform.isWindows
+        ? 'start'
+        : 'xdg-open';
+    stdout
+      ..writeln()
+      ..writeln('Next:');
+    // Inside the project: short paths. Elsewhere: paths that work from
+    // anywhere.
+    String shown(String path) => p.isWithin(Directory.current.path, path)
+        ? p.relative(path)
+        : p.normalize(p.absolute(path));
+    if (previewFile != null) {
+      stdout.writeln(
+        '  Check:   $open ${shown(previewFile.path)}   '
+        '(${rendered == null || rendered.screens.isEmpty ? 'each screen' : 'each screen beside the app'}, '
+        'in the browser)',
+      );
+    }
+    stdout
+      ..writeln(
+        '  Import:  in Figma, Plugins → Flutter2Figma, then drop '
+        '${shown(designFile.path)}',
+      )
+      ..writeln('           Get the plugin: $pluginUrl');
     return 0;
+  }
+
+  /// How exact the export is: which screens Flutter rendered, which come
+  /// from the code alone and why, and what would fix them.
+  void _summary(int total, RuntimeScreens? rendered) {
+    stdout.writeln();
+    if (rendered == null) {
+      stdout
+        ..writeln('! Exported from the code alone (--static): what the app')
+        ..writeln('  decides at runtime (state, translations, data, custom')
+        ..writeln('  painting) shows as placeholders. Leave out --static to')
+        ..writeln('  run the app and export exactly what each screen draws.');
+      return;
+    }
+    final fallbacks = rendered.fallbacks;
+    if (fallbacks.isEmpty) {
+      stdout.writeln('  All $total screens rendered by Flutter.');
+      return;
+    }
+    stdout.writeln(
+      '  ${total - fallbacks.length} of $total screens rendered by Flutter.',
+    );
+    // One reason for every screen: the app itself didn't start.
+    final reasons = fallbacks.values.toSet();
+    if (fallbacks.length == total && reasons.length == 1) {
+      stdout
+        ..writeln('! All screens exported from the code alone, so they may')
+        ..writeln('  show placeholders. The app didn\'t start in a test:')
+        ..writeln('    ${reasons.single}');
+      // The app's own startup failed (not a missing Flutter): setUp() in
+      // the setup file is where that gets fixed.
+      final startup = RegExp(r'^(main\(\)|setUp|The app has no|flutter test)');
+      if (startup.hasMatch(reasons.single)) {
+        stdout
+          ..writeln('  test/flutter2figma_setup.dart can set things up before')
+          ..writeln('  main() runs: see "Runtime mode" in the README.');
+      }
+      return;
+    }
+    stdout.writeln('! Exported from the code alone (may show placeholders):');
+    for (final MapEntry(key: name, value: reason) in fallbacks.entries) {
+      stdout.writeln('    $name: $reason');
+    }
+    if (reasons.contains('it needs constructor arguments')) {
+      stdout
+        ..writeln('  Build screens that need arguments in')
+        ..writeln('  test/flutter2figma_setup.dart (buildScreen): see')
+        ..writeln('  "Runtime mode" in the README.');
+    }
   }
 }
 

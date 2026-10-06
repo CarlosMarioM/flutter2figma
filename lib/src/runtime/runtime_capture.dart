@@ -104,6 +104,15 @@ class RuntimeCapture {
         skipped: const [],
       );
     }
+    if (!packageRoots(root).containsKey('flutter')) {
+      return CaptureResult(
+        screens: const [],
+        errors: const [
+          'Not a Flutter app with its packages fetched (run flutter pub get)',
+        ],
+        skipped: const [],
+      );
+    }
     final buildable = [
       for (final s in analysis.screens)
         if (s.placeholderArguments != null && s.library != null) s,
@@ -169,23 +178,35 @@ class RuntimeCapture {
     try {
       final command = flutterCommand ?? detectFlutter(root);
       final flutterRoot = flutterSdkRoot(root);
-      final process = await Process.start(
-        command.first,
-        [
-          ...command.skip(1),
-          'test',
-          p.relative(harness.path, from: root),
-          '--dart-define=F2F_OUT=${out.path}',
-          if (flutterRoot != null)
-            '--dart-define=F2F_FLUTTER_ROOT=$flutterRoot',
-          '--dart-define=F2F_WIDTH=$width',
-          '--dart-define=F2F_HEIGHT=$height',
-          if (screenshotsDir != null)
-            '--dart-define=F2F_SCREENSHOTS=${p.absolute(screenshotsDir!)}',
-        ],
-        workingDirectory: root,
-        runInShell: Platform.isWindows,
-      );
+      final Process process;
+      try {
+        process = await Process.start(
+          command.first,
+          [
+            ...command.skip(1),
+            'test',
+            p.relative(harness.path, from: root),
+            '--dart-define=F2F_OUT=${out.path}',
+            if (flutterRoot != null)
+              '--dart-define=F2F_FLUTTER_ROOT=$flutterRoot',
+            '--dart-define=F2F_WIDTH=$width',
+            '--dart-define=F2F_HEIGHT=$height',
+            if (screenshotsDir != null)
+              '--dart-define=F2F_SCREENSHOTS=${p.absolute(screenshotsDir!)}',
+          ],
+          workingDirectory: root,
+          runInShell: Platform.isWindows,
+        );
+      } on ProcessException {
+        return CaptureResult(
+          screens: const [],
+          errors: [
+            'Flutter wasn\'t found (tried "${command.join(' ')}"); install it '
+                'or pass --flutter',
+          ],
+          skipped: skipped,
+        );
+      }
       final stdoutText = process.stdout.transform(utf8.decoder).join();
       final stderrText = process.stderr.transform(utf8.decoder).join();
       var timedOut = false;
