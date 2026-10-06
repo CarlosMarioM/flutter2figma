@@ -1,4 +1,4 @@
-## Unreleased
+## 0.3.0
 
 `design.json` is now version 4 (rotation, vector strokes and image fills,
 background blurs): update the Figma plugin to import it.
