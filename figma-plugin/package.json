@@ -1,7 +1,7 @@
 {
   "name": "flutter2figma-figma-plugin",
   "private": true,
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Imports Flutter2Figma design.json files into Figma as editable, auto-layout frames.",
   "scripts": {
     "build": "esbuild src/code.ts --bundle --target=es2017 --outfile=dist/code.js",
