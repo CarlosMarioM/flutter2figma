@@ -1,4 +1,4 @@
-## Unreleased
+## 0.4.1
 
 ### Figma plugin
 - The plugin's window shows its version, and so does the import

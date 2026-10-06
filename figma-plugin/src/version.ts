@@ -1,6 +1,6 @@
 /** The plugin's version: the flutter2figma release it ships with. Kept
  * equal to package.json and the Dart package by test/version_test.dart. */
-export const PLUGIN_VERSION = '0.4.0';
+export const PLUGIN_VERSION = '0.4.1';
 
 /** Where people get a newer plugin: Figma Community, or a release's zip. */
 export const COMMUNITY_URL = 'https://www.figma.com/community/plugin/1687559887675755742';
