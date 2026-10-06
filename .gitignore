@@ -13,3 +13,6 @@ build/
 figma-plugin/node_modules/
 figma-plugin/dist/
 figma-plugin/release/
+
+# Local Claude Code settings
+.claude/
