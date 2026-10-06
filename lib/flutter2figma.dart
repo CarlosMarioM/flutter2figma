@@ -91,6 +91,7 @@ Future<ExportResult> exportProject(
         analysis,
         rendered: rendered?.screens ?? const {},
         renderedImages: rendered?.images ?? const {},
+        renderedTheme: rendered?.theme,
       );
   final ir = IrDocument(
     project: compiled.project,

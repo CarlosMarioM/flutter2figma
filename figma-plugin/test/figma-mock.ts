@@ -7,7 +7,7 @@ type Sizing = 'FIXED' | 'HUG' | 'FILL';
 const STYLES = ['Thin', 'ExtraLight', 'Light', 'Regular', 'Medium', 'SemiBold', 'Bold', 'ExtraBold', 'Black'];
 
 // Like Figma: Roboto and Inter in every weight, upright and italic.
-export const AVAILABLE_FONTS: FontName[] = ['Roboto', 'Inter'].flatMap((family) =>
+export const AVAILABLE_FONTS: FontName[] = ['Roboto', 'Inter', 'Encode Sans Condensed'].flatMap((family) =>
   STYLES.flatMap((s) => [
     { family, style: s },
     { family, style: s === 'Regular' ? 'Italic' : `${s} Italic` },
@@ -510,6 +510,9 @@ const PATH_DATA = /^(?:[MLQCZ](?: -?\d+(?:\.\d+)?)*)(?: [MLQCZ](?: -?\d+(?:\.\d+
 
 export class MockVector extends MockNode {
   private _paths: VectorPath[] = [];
+  /** Like Figma, a new vector is outlined: a 1 px black stroke. */
+  strokes: Paint[] = [{ type: 'SOLID', color: { r: 0, g: 0, b: 0 } }];
+  strokeWeight = 1;
 
   constructor() {
     super('VECTOR');

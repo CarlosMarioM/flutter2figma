@@ -588,3 +588,41 @@ test('screens exported from the code alone are named after the import', async ()
     /^Profile: exported from the code alone/,
   );
 });
+
+test('vectors without strokes lose the outline Figma gives new vectors', async () => {
+  const { result } = await run(golden());
+  const vectors: MockVector[] = [];
+  const walk = (n: MockNode) => {
+    if (n instanceof MockVector) vectors.push(n);
+    for (const c of (n as MockFrame).children ?? []) walk(c);
+  };
+  for (const s of result.screens) walk(s as unknown as MockNode);
+  assert.ok(vectors.length > 0);
+  for (const v of vectors) assert.deepEqual(v.strokes, [], `${v.name} keeps Figma's default outline`);
+});
+
+test('fonts bundled under a compact name find Figma\'s spelling', async () => {
+  const doc = golden();
+  const font = { family: 'EncodeSansCondensed', style: 'SemiBold' };
+  doc.fonts = [...doc.fonts, font];
+  const screen = doc.screens[0];
+  screen.children.push({
+    type: 'TEXT',
+    name: 'Condensed',
+    characters: 'Condensed',
+    fontName: font,
+    fontSize: 14,
+    lineHeight: { unit: 'AUTO' },
+    letterSpacing: { unit: 'PIXELS', value: 0 },
+    textAlignHorizontal: 'LEFT',
+    textAutoResize: 'WIDTH_AND_HEIGHT',
+    layoutSizingHorizontal: 'HUG',
+    layoutSizingVertical: 'HUG',
+    fills: [],
+    pluginData: {},
+  });
+  const { result } = await run(doc);
+  const text = find(result.screens[0] as unknown as MockNode, 'Condensed') as MockText;
+  assert.deepEqual(text.fontName, { family: 'Encode Sans Condensed', style: 'SemiBold' });
+  assert.equal(result.fontSubstitutions['EncodeSansCondensed SemiBold'], undefined);
+});

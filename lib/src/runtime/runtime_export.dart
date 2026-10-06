@@ -12,6 +12,7 @@ class RuntimeScreens {
     this.images,
     this.diagnostics, {
     this.fallbacks = const {},
+    this.theme,
   });
 
   final Map<String, IrScreen> screens;
@@ -21,6 +22,10 @@ class RuntimeScreens {
   /// Screens Flutter didn't render, and why: they are exported from the
   /// code alone.
   final Map<String, String> fallbacks;
+
+  /// The theme the screens rendered with (`Theme.of`, see `harness.dart`),
+  /// or null when none rendered.
+  final Map<String, Object?>? theme;
 }
 
 /// Renders [analysis]'s screens with Flutter and converts them. Screens
@@ -72,21 +77,27 @@ Future<RuntimeScreens> renderScreens(
                   general.firstOrNull ??
                   'Flutter didn\'t render it',
   };
-  return RuntimeScreens(screens, converter.images, fallbacks: fallbacks, [
-    IrDiagnostic(
-      IrSeverity.info,
-      'Runtime: ${screens.length} of $total screens rendered by Flutter'
-      '${screens.length < total ? '; the others are exported statically' : ''}',
-    ),
-    for (final e in capture.errors)
-      IrDiagnostic(IrSeverity.warning, 'Runtime capture: $e'),
-    for (final w in capture.warnings)
-      IrDiagnostic(IrSeverity.warning, 'In the app: $w'),
-    for (final name in capture.skipped)
+  return RuntimeScreens(
+    screens,
+    converter.images,
+    fallbacks: fallbacks,
+    theme: capture.screens.firstOrNull?.theme,
+    [
       IrDiagnostic(
         IrSeverity.info,
-        'Runtime: $name needs constructor arguments that can\'t be made up; '
-        'exported statically (build it in test/flutter2figma_setup.dart)',
+        'Runtime: ${screens.length} of $total screens rendered by Flutter'
+        '${screens.length < total ? '; the others are exported statically' : ''}',
       ),
-  ]);
+      for (final e in capture.errors)
+        IrDiagnostic(IrSeverity.warning, 'Runtime capture: $e'),
+      for (final w in capture.warnings)
+        IrDiagnostic(IrSeverity.warning, 'In the app: $w'),
+      for (final name in capture.skipped)
+        IrDiagnostic(
+          IrSeverity.info,
+          'Runtime: $name needs constructor arguments that can\'t be made up; '
+          'exported statically (build it in test/flutter2figma_setup.dart)',
+        ),
+    ],
+  );
 }

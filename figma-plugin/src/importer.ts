@@ -36,6 +36,15 @@ const WEIGHT_BY_STYLE: Record<string, number> = {
   Black: 900,
 };
 
+/**
+ * A family name without spaces, dashes or case: apps often bundle a Google
+ * Font under a compact name (`EncodeSansCondensed`) that Figma lists as
+ * "Encode Sans Condensed".
+ */
+function familyKey(family: string): string {
+  return family.toLowerCase().replace(/[\s_-]+/g, '');
+}
+
 function fontKey(f: FontName): string {
   return `${f.family} ${f.style}`;
 }
@@ -67,7 +76,10 @@ async function loadFonts(api: PluginAPI, requested: FontName[]): Promise<Map<str
     const candidates = (family: string) =>
       available!
         .map((f) => f.fontName)
-        .filter((f) => f.family === family && /Italic$/.test(f.style) === italic && hasKnownWeight(f.style))
+        .filter(
+          (f) =>
+            familyKey(f.family) === familyKey(family) && /Italic$/.test(f.style) === italic && hasKnownWeight(f.style),
+        )
         .sort((a, b) => Math.abs(weightOf(a.style) - target) - Math.abs(weightOf(b.style) - target));
     const substitute =
       candidates(font.family)[0] ?? candidates(FALLBACK_FAMILY)[0] ?? { family: FALLBACK_FAMILY, style: 'Regular' };
@@ -245,6 +257,10 @@ export async function importDesign(api: PluginAPI, doc: DesignDocument): Promise
       vector.strokeWeight = spec.strokeWeight ?? 1;
       vector.strokeAlign = spec.strokeAlign ?? 'CENTER';
       vector.strokeCap = spec.strokeCap ?? 'NONE';
+    } else {
+      // Figma outlines a new vector with a black stroke: a fill-only shape
+      // (an icon, a painter's shape) has none.
+      vector.strokes = [];
     }
     return vector;
   };
@@ -289,7 +305,8 @@ export async function importDesign(api: PluginAPI, doc: DesignDocument): Promise
 
   const fontSubstitutions: Record<string, string> = {};
   for (const [requested, actual] of fonts) {
-    if (requested !== fontKey(actual)) fontSubstitutions[requested] = fontKey(actual);
+    // The same font under Figma's spelling of its name isn't a substitute.
+    if (familyKey(requested) !== familyKey(fontKey(actual))) fontSubstitutions[requested] = fontKey(actual);
   }
   const update = updateNote(doc.generator?.version);
   return {

@@ -1,5 +1,17 @@
 ## Unreleased
 
+### Fixes
+- Color variables and text styles take the theme Flutter rendered with,
+  when the screens ran: an app whose theme the code alone can't find (a
+  `MaterialApp` built inside a `BlocBuilder`) got Material's default purple
+  variables, so bound text and icons showed purple in Figma. Without a theme
+  in the code, only the mode Flutter rendered is exported.
+- Vectors without a stroke no longer keep the 1 px black outline Figma
+  gives new vectors (painter shapes, glass borders).
+- Fonts bundled under a compact name (`EncodeSansCondensed`) use Figma's
+  spelling of the same font ("Encode Sans Condensed") instead of a
+  substitute.
+
 ## 0.4.1
 
 ### Figma plugin

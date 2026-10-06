@@ -228,13 +228,19 @@ class FlutterCompiler {
     ProjectAnalysis analysis, {
     Map<String, IrScreen> rendered = const {},
     Map<String, IrImageAsset> renderedImages = const {},
+    Map<String, Object?>? renderedTheme,
   }) {
     _diagnostics.clear();
     _images.clear();
+    _renderedTheme = renderedTheme;
+    _themeInCode = true;
     assets ??= ProjectAssets(analysis.root);
     if (extractTheme) {
       final extractor = ThemeExtractor(eval);
       eval.theme = extractor.fromProject(analysis, brightness: brightness);
+      _themeInCode = !extractor.diagnostics.any(
+        (d) => d.message.startsWith('No MaterialApp found'),
+      );
       _absorb(extractor.diagnostics);
     }
     final screens = [
@@ -306,6 +312,11 @@ class FlutterCompiler {
     }
   }
 
+  /// The theme Flutter rendered with (see `compile`), and whether the code
+  /// alone found the app's theme.
+  Map<String, Object?>? _renderedTheme;
+  var _themeInCode = true;
+
   IrDesignSystem _designSystem(
     ProjectAnalysis analysis,
     List<IrComponent> components,
@@ -330,9 +341,39 @@ class FlutterCompiler {
     } else {
       modes[modeName(active.brightness)] = active;
     }
-    final activeMode = modes.containsKey(modeName(active.brightness))
-        ? modeName(active.brightness)
-        : modes.keys.first;
+    // Flutter's own theme, when the screens were rendered: exact for the
+    // mode it rendered. Without a theme found in the code, the other mode
+    // would only be Material's defaults, so it is left out.
+    final rendered = _renderedTheme;
+    final renderedMode = rendered == null
+        ? null
+        : rendered['brightness'] == 'dark'
+        ? 'Dark'
+        : 'Light';
+    final renderedColors = (rendered?['colorScheme'] as Map?)
+        ?.cast<String, Object?>();
+    if (renderedMode != null) {
+      if (!_themeInCode) modes.removeWhere((mode, _) => mode != renderedMode);
+      modes.putIfAbsent(renderedMode, () => active);
+    }
+    IrColor color(String mode, MaterialTheme t, String role) {
+      if (mode == renderedMode) {
+        final hex = renderedColors?[role] as String?;
+        final argb = hex == null
+            ? null
+            : int.tryParse(hex.substring(1), radix: 16);
+        if (argb != null) return IrColor.fromArgb32(argb);
+      }
+      return t.color(role);
+    }
+
+    final activeMode =
+        renderedMode ??
+        (modes.containsKey(modeName(active.brightness))
+            ? modeName(active.brightness)
+            : modes.keys.first);
+    final renderedText = (rendered?['textTheme'] as Map?)
+        ?.cast<String, Map<String, Object?>>();
 
     return IrDesignSystem(
       modes: modes.keys.toList(),
@@ -342,7 +383,7 @@ class FlutterCompiler {
           if (!_deprecatedRoles.contains(role))
             IrColorToken(MaterialTheme.colorToken(role), {
               for (final MapEntry(key: mode, value: t) in modes.entries)
-                mode: t.color(role),
+                mode: color(mode, t, role),
             }),
         // Project constants (`AppColors.brand`) that are actually painted.
         for (final name in _painted)
@@ -355,11 +396,30 @@ class FlutterCompiler {
         for (final name in active.textTheme.keys)
           IrTextStyleToken(
             MaterialTheme.textToken(name),
-            active.textStyle(name)!.resolve(active.fontFamily),
+            switch (renderedText?[name]) {
+              final Map<String, Object?> s => _renderedTextStyle(s),
+              _ => active.textStyle(name)!.resolve(active.fontFamily),
+            },
           ),
       ],
       shadows: active.shadowTokens,
       components: components,
+    );
+  }
+
+  /// A text style as Flutter rendered it (`harness.dart`'s `_theme`).
+  static IrTextStyle _renderedTextStyle(Map<String, Object?> s) {
+    final size = (s['size'] as num?)?.toDouble() ?? 14;
+    final height = (s['height'] as num?)?.toDouble();
+    return IrTextStyle(
+      fontFamily: s['family'] as String? ?? 'Roboto',
+      fontSize: size,
+      fontWeight: (s['weight'] as num?)?.toInt() ?? 400,
+      color: IrColor.black,
+      lineHeight: height == null
+          ? null
+          : (height * size * 100).roundToDouble() / 100,
+      letterSpacing: (s['letterSpacing'] as num?)?.toDouble() ?? 0,
     );
   }
 
