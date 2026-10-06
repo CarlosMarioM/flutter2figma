@@ -298,6 +298,7 @@ class FlutterCompiler {
         add(n.style.color);
       case IrVector():
         add(n.fill);
+        add(n.stroke?.color);
       case IrFrame():
         add(n.fill);
         add(n.stroke?.color);

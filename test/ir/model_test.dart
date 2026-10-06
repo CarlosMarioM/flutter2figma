@@ -200,7 +200,7 @@ void main() {
     expect(again.images['assets/a.png']!.data, [1, 2, 3]);
     expect(again.screens.single.root.image!.fit, IrBoxFit.cover);
     final vector = again.screens.single.root.children.single as IrVector;
-    expect(vector.fill.token, 'ColorScheme/onSurfaceVariant');
+    expect(vector.fill!.token, 'ColorScheme/onSurfaceVariant');
     expect(vector.position!.left, 5);
   });
 

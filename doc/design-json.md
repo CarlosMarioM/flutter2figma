@@ -19,12 +19,13 @@ representation. Its model is documented in the API docs of
 | Field | Meaning |
 | --- | --- |
 | `format` | Always `"flutter2figma/design"`. |
-| `version` | Format version, currently `3`. It is bumped when a change would break an existing importer. Importers must reject versions newer than they know; the plugin does. |
+| `version` | Format version, currently `4`. It is bumped when a change would break an existing importer. Importers must reject versions newer than they know; the plugin does. |
 | `generator` | `{ "name": "flutter2figma", "version": "<package version>" }`, for diagnostics only. |
 
 Version 1 had no design system, generator, paint variables, text or effect
-style references, or instances. Version 2 had no vectors or images. The
-plugin still imports both.
+style references, or instances. Version 2 had no vectors or images. Version 3
+had no rotation, no strokes, image fills or even-odd paths on vectors, and no
+background blurs. The plugin still imports all of them.
 
 ## Top level
 
@@ -63,6 +64,7 @@ All nodes share these fields:
 | `x`, `y` | number | Screens only (their canvas position). |
 | `layoutPositioning` | `"ABSOLUTE"` | Set for absolute children of an auto-layout parent, e.g. a floating action button. |
 | `position` | `{left?, top?, right?, bottom?}` | Insets inside the parent. Used for children of `NONE` frames (Stack) and for absolute children. Resolve them after the parent has its size. |
+| `rotation` | number | Optional. Degrees, **clockwise**, around the node's top-left corner, which `position.left/top` places (a `Transform.rotate` in the app). Only on children of `NONE` frames. Figma's `rotation` is counterclockwise: set `relativeTransform` to `[[cos a, -sin a, left], [sin a, cos a, top]]` with `a` in radians. |
 | `fills` | Paint[] | See [Paints](#paints). |
 | `instance` | `{component, variant, props?}` | Marks a component occurrence. See [Components](#components). |
 | `pluginData` | `{origin?, source?, role?}` | Provenance. `origin` lists the Flutter widgets folded into this node, outermost first, e.g. `["Padding", "Column"]`. `source` is `"lib/file.dart:line"`. `role` is a hint: `screen`, `app-bar`, `button`, `tap-target`, `list-tile`, `chip`, `navigation-bar`, `card`, `icon`, `image`, `placeholder`, `grid`, `switch`, `checkbox`, `radio`, `text-field`, `progress`. |
@@ -79,7 +81,7 @@ All nodes share these fields:
 | `minWidth`, `minHeight` | Optional; auto layout only. |
 | `strokes`, `strokeWeight`, `strokeAlign` | Optional; `strokeAlign` is `"INSIDE"`. |
 | `cornerRadius` or `topLeftRadius`… | A uniform radius, or four corners. |
-| `effects` | Drop shadows, Figma `DropShadowEffect` shape. |
+| `effects` | Drop shadows (Figma `DropShadowEffect`) and a background blur (`{type: "BACKGROUND_BLUR", blurType: "NORMAL", radius, visible}`, from a `BackdropFilter`). |
 | `effectStyle` | Optional effect style name the `effects` came from, e.g. `"Elevation/level1"`. Prefer applying the style. |
 | `clipsContent` | boolean |
 | `children` | Node[] in paint order. |
@@ -100,12 +102,16 @@ All nodes share these fields:
 
 ### `VECTOR`
 
-A filled outline. Icons export as a `NONE` frame of the icon's size holding
-one vector of the glyph, positioned with `position.left/top`.
+An outline, filled and/or stroked. Icons export as a `NONE` frame of the
+icon's size holding one vector of the glyph, positioned with
+`position.left/top`. In runtime mode, what a `CustomPainter` draws exports
+as vectors too: its shapes, in paint order, inside the `CustomPaint`'s frame.
 
 | Field | Notes |
 | --- | --- |
-| `vectorPaths` | `[{windingRule: "NONZERO", data}]`, Figma's `VectorPath`. `data` uses absolute `M`, `L`, `Q`, `C` and `Z` with space-separated numbers, and its outline starts at 0,0 (control points may lie outside). |
+| `vectorPaths` | `[{windingRule: "NONZERO" \| "EVENODD", data}]`, Figma's `VectorPath`. `data` uses absolute `M`, `L`, `Q`, `C` and `Z` with space-separated numbers, and its outline starts at 0,0 (control points may lie outside). |
+| `fills` | Solid paints, or an `IMAGE` paint (`scaleMode: "CROP"`) covering the outline's bounds: a painter's gradient, rendered. May be empty for a stroke-only vector. |
+| `strokes`, `strokeWeight`, `strokeAlign`, `strokeCap` | Optional. `strokeAlign` is `"CENTER"`, as Flutter strokes; `strokeCap` is `NONE`, `ROUND` or `SQUARE`. |
 | `width`, `height` | The outline's bounds. Don't resize the node: Figma sizes a vector by its geometry, and resizing would scale the outline. |
 
 ## Images
@@ -143,6 +149,11 @@ the SVG inside the frame, scaled uniformly (`FIT` or `FILL`) and centered.
 present, bind the paint's color to that color variable and keep `opacity`.
 So `onSurface` at 38% stays bound to `onSurface`. `variable` is not a Figma
 paint key: remove it before assigning the paint.
+
+Gradients are Figma `GradientPaint`s, ready to assign:
+`GRADIENT_LINEAR`, `GRADIENT_RADIAL` and `GRADIENT_ANGULAR` (a
+`SweepGradient`), with `gradientTransform` mapping the node to gradient
+space and RGBA `gradientStops`.
 
 ## Design system
 

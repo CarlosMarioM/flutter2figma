@@ -3,7 +3,7 @@
 // mirror the Figma Plugin API.
 
 export const DESIGN_FORMAT = 'flutter2figma/design';
-export const DESIGN_VERSION = 3;
+export const DESIGN_VERSION = 4;
 
 export interface DesignDocument {
   format: typeof DESIGN_FORMAT;
@@ -104,6 +104,8 @@ interface BaseSpec {
   layoutSizingVertical: 'FIXED' | 'HUG' | 'FILL';
   layoutPositioning?: 'AUTO' | 'ABSOLUTE';
   position?: Position;
+  /** Degrees, clockwise, around the top-left corner that `position` places. */
+  rotation?: number;
   fills: PaintSpec[];
   instance?: InstanceSpec;
   pluginData: PluginDataSpec;
@@ -132,7 +134,7 @@ export interface FrameSpec extends BaseSpec {
   topRightRadius?: number;
   bottomRightRadius?: number;
   bottomLeftRadius?: number;
-  effects?: DropShadowEffect[];
+  effects?: (DropShadowEffect | BlurEffect)[];
   /** Effect style name the effects came from. */
   effectStyle?: string;
   clipsContent: boolean;
@@ -159,6 +161,10 @@ export interface TextSpec extends BaseSpec {
 export interface VectorSpec extends BaseSpec {
   type: 'VECTOR';
   vectorPaths: VectorPath[];
+  strokes?: PaintSpec[];
+  strokeWeight?: number;
+  strokeAlign?: 'CENTER' | 'INSIDE' | 'OUTSIDE';
+  strokeCap?: 'NONE' | 'ROUND' | 'SQUARE';
 }
 
 export type NodeSpec = FrameSpec | TextSpec | VectorSpec;

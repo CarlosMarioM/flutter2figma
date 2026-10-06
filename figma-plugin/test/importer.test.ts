@@ -529,3 +529,25 @@ for (const file of (process.env.F2F_DESIGNS ?? '').split(':').filter(Boolean)) {
     assert.deepEqual(collapsed, [], 'collapsed frames with content');
   });
 }
+
+// Transform.rotate(angle: pi / 6) in a Stack: turned clockwise around its
+// top-left corner, which the exporter places.
+test('a rotated child is turned around its placed corner', async () => {
+  const doc: DesignDocument = {
+    format: 'flutter2figma/design',
+    version: 3,
+    name: 'rotation',
+    fonts: [],
+    diagnostics: [],
+    screens: [
+      frame('Screen', 'NONE', {
+        children: [frame('Wheel', 'NONE', { width: 100, height: 100, position: { left: 10, top: 20 }, rotation: 30 })],
+      }),
+    ],
+  };
+  const { result } = await run(doc);
+  const wheel = find(result.screens[0] as unknown as MockFrame, 'Wheel')!;
+  assert.deepEqual([wheel.x, wheel.y], [10, 20]);
+  // Figma measures rotation counterclockwise.
+  assert.ok(Math.abs(wheel.rotation + 30) < 1e-9, `rotation ${wheel.rotation}`);
+});

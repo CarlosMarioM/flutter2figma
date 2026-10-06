@@ -24,6 +24,7 @@ Future<RuntimeScreens> renderScreens(
   int height = 844,
   Duration timeout = const Duration(minutes: 10),
   String? screenshotsDir,
+  bool autoLayout = true,
 }) async {
   final capture = await RuntimeCapture(
     analysis.root,
@@ -35,6 +36,7 @@ Future<RuntimeScreens> renderScreens(
   ).run(analysis);
   final converter = CaptureConverter(
     iconFonts: projectIconFonts(analysis.root),
+    autoLayout: autoLayout,
   );
   final sources = {for (final w in analysis.screens) w.name: w.source};
   final screens = {

@@ -9,6 +9,7 @@ import 'package:flutter2figma/figma.dart';
 import 'package:flutter2figma/ir.dart';
 import 'package:path/path.dart' as p;
 
+import '../preview/preview.dart';
 import '../runtime/runtime_export.dart';
 import '../version.dart';
 
@@ -179,11 +180,24 @@ class ExportCommand extends _ProjectCommand {
             'Flutter command for --runtime, e.g. "fvm flutter". Detected '
             'when omitted (FVM if the project pins a version).',
       )
+      ..addFlag(
+        'auto-layout',
+        help:
+            'With --runtime: turn rows and columns into Figma auto layout '
+            'where it keeps Flutter\'s positions. Off: everything absolute.',
+        defaultsTo: true,
+      )
       ..addOption(
         'screenshots',
         help:
             'With --runtime: also save Flutter\'s own render of each screen '
             'as PNG in this directory, to compare with the Figma import.',
+      )
+      ..addFlag(
+        'preview',
+        help:
+            'Also write preview.html: every screen drawn from design.json in '
+            'the browser, beside Flutter\'s own render with --runtime.',
       )
       ..addFlag('verbose', abbr: 'v', help: 'Show info diagnostics.');
   }
@@ -212,14 +226,23 @@ class ExportCommand extends _ProjectCommand {
       usageException('--min-component-uses must be a positive integer');
     }
     RuntimeScreens? rendered;
+    final preview = argResults!.flag('preview');
+    // The preview shows Flutter's renders beside the export.
+    var shots = argResults!.option('screenshots');
+    Directory? tempShots;
+    if (preview && shots == null && argResults!.flag('runtime')) {
+      tempShots = Directory.systemTemp.createTempSync('flutter2figma_shots');
+      shots = tempShots.path;
+    }
     if (argResults!.flag('runtime')) {
       stdout.writeln('Rendering screens with Flutter...');
       rendered = await renderScreens(
         analysis,
         flutterCommand: argResults!.option('flutter')?.split(' '),
+        autoLayout: argResults!.flag('auto-layout'),
         width: double.parse(size.group(1)!).round(),
         height: double.parse(size.group(2)!).round(),
-        screenshotsDir: argResults!.option('screenshots'),
+        screenshotsDir: shots,
       );
     }
     final compiled =
@@ -257,6 +280,29 @@ class ExportCommand extends _ProjectCommand {
       ..writeAsStringSync(encoder.convert(ir.toJson()));
     final designFile = File(p.join(out.path, 'design.json'))
       ..writeAsStringSync(encoder.convert(design));
+    File? previewFile;
+    if (preview) {
+      final screenshots = <String, List<int>>{};
+      final dir = shots == null ? null : Directory(shots);
+      if (dir != null && dir.existsSync()) {
+        for (final f in dir.listSync().whereType<File>()) {
+          if (!f.path.endsWith('.png')) continue;
+          screenshots[p.basenameWithoutExtension(f.path)] = halfSize(
+            f.readAsBytesSync(),
+          );
+        }
+      }
+      tempShots?.deleteSync(recursive: true);
+      previewFile = File(p.join(out.path, 'preview.html'))
+        ..writeAsStringSync(
+          previewPage(
+            design: design,
+            title: analysis.name,
+            screenshots: screenshots,
+            fonts: usedFonts(design, projectFontFiles(analysis.root)),
+          ),
+        );
+    }
 
     var nodes = 0;
     void count(IrNode n) {
@@ -294,6 +340,11 @@ class ExportCommand extends _ProjectCommand {
         '  ${p.relative(designFile.path)}   ← import with the Figma plugin',
       )
       ..writeln('  ${p.relative(irFile.path)}');
+    if (previewFile != null) {
+      stdout.writeln(
+        '  ${p.relative(previewFile.path)}   ← open in a browser to check',
+      );
+    }
     return 0;
   }
 }

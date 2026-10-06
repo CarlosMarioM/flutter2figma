@@ -1,11 +1,12 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter2figma/ir.dart';
 
 import '../version.dart';
 
 const designFormat = 'flutter2figma/design';
-const designVersion = 3;
+const designVersion = 4;
 
 /// Renders IR into `design.json`: a tree of nodes whose properties use Figma
 /// Plugin API names and enums, so the plugin can apply them almost verbatim.
@@ -88,6 +89,7 @@ class FigmaRenderer {
     if (absolute) {
       if (autoLayoutParent) json['layoutPositioning'] = 'ABSOLUTE';
       json['position'] = node.position!.toJson();
+      if (node.rotation != 0) json['rotation'] = node.rotation;
     }
 
     json['layoutSizingHorizontal'] = horizontal;
@@ -193,7 +195,11 @@ class FigmaRenderer {
     json['fills'] = [
       if (f.fill != null) _paint(f.fill!),
       if (f.gradient != null)
-        _gradient(f.gradient!, f.width.value, f.height.value),
+        _gradient(
+          f.gradient!,
+          f.width.value ?? f.gradient!.size?.$1,
+          f.height.value ?? f.gradient!.size?.$2,
+        ),
       if (image != null && !svg)
         {
           'type': 'IMAGE',
@@ -222,9 +228,21 @@ class FigmaRenderer {
         });
       }
     }
-    if (f.shadows.isNotEmpty) {
-      json['effects'] = [for (final e in f.shadows) _effect(e)];
-      if (f.shadowToken != null) json['effectStyle'] = f.shadowToken;
+    if (f.shadows.isNotEmpty || f.backgroundBlur != null) {
+      json['effects'] = [
+        for (final e in f.shadows) _effect(e),
+        if (f.backgroundBlur case final radius?)
+          {
+            'type': 'BACKGROUND_BLUR',
+            'blurType': 'NORMAL',
+            'radius': radius,
+            'visible': true,
+          },
+      ];
+      // An effect style holds only the shadows.
+      if (f.shadowToken != null && f.backgroundBlur == null) {
+        json['effectStyle'] = f.shadowToken;
+      }
     }
     json['clipsContent'] = f.clip;
     json['children'] = [
@@ -257,9 +275,27 @@ class FigmaRenderer {
     'type': 'VECTOR',
     'name': v.name,
     'vectorPaths': [
-      {'windingRule': 'NONZERO', 'data': v.path},
+      {'windingRule': v.evenOdd ? 'EVENODD' : 'NONZERO', 'data': v.path},
     ],
-    'fills': [_paint(v.fill)],
+    'fills': [
+      if (v.fill != null) _paint(v.fill!),
+      if (v.image case final image?)
+        {
+          'type': 'IMAGE',
+          'image': image.asset,
+          'scaleMode': _scaleMode(image.fit),
+        },
+    ],
+    if (v.stroke case final stroke?) ...{
+      'strokes': [_paint(stroke.color)],
+      'strokeWeight': stroke.width,
+      'strokeAlign': 'CENTER',
+      'strokeCap': switch (v.strokeCap) {
+        IrStrokeCap.none => 'NONE',
+        IrStrokeCap.round => 'ROUND',
+        IrStrokeCap.square => 'SQUARE',
+      },
+    },
   };
 
   /// Font, size, line height and letter spacing, in Figma's shape.
@@ -285,7 +321,19 @@ class FigmaRenderer {
   /// radius 0.5.
   Map<String, Object?> _gradient(IrGradient g, double? width, double? height) {
     List<List<double>> transform;
-    if (g.radial) {
+    if (g.sweep) {
+      // Figma's angular gradient starts toward +x of its unit square and
+      // turns clockwise, like Flutter's. Angles are kept true in pixels on
+      // a non-square frame, and the start is turned by [rotation].
+      final (cx, cy) = g.center;
+      final w = width ?? 1, h = height ?? 1;
+      final k = 1 / (w > h ? w : h);
+      final c = cos(g.rotation), s = sin(g.rotation);
+      transform = [
+        [c * w * k, s * h * k, 0.5 - c * cx * w * k - s * cy * h * k],
+        [-s * w * k, c * h * k, 0.5 + s * cx * w * k - c * cy * h * k],
+      ];
+    } else if (g.radial) {
       final (cx, cy) = g.center;
       // The radius is a fraction of the shortest side; in the unit square
       // that is a different fraction per axis (unknown sizes: square).
@@ -314,7 +362,11 @@ class FigmaRenderer {
             ];
     }
     return {
-      'type': g.radial ? 'GRADIENT_RADIAL' : 'GRADIENT_LINEAR',
+      'type': g.sweep
+          ? 'GRADIENT_ANGULAR'
+          : g.radial
+          ? 'GRADIENT_RADIAL'
+          : 'GRADIENT_LINEAR',
       'gradientTransform': transform,
       'gradientStops': [
         for (var i = 0; i < g.colors.length; i++)

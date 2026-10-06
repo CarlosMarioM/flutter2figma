@@ -145,6 +145,19 @@ The export lists every screen it couldn't render and why (`-v` shows the
 rest). Add `--screenshots shots/` to also save Flutter's own render of each
 screen, to compare with the Figma import.
 
+### Preview
+
+```sh
+flutter2figma export --runtime --preview
+```
+
+also writes `preview.html` next to `design.json`: every screen drawn from
+`design.json` in the browser, beside Flutter's own render, with a wipe slider
+between the two and a toggle that outlines what each Figma layer will be
+(vector, text or image). The app's fonts are embedded, so it opens offline.
+It is a quick check of an export before importing it; the browser and Figma
+can still differ in details. Without `--runtime`, it shows the export alone.
+
 ## Commands
 
 | Command | Does |
@@ -163,6 +176,11 @@ screen, to compare with the Figma import.
 | `--screen-size` | `390x844` | Frame size for screens |
 | `--[no-]design-system` | on | Variables, styles and components |
 | `--min-component-uses` | `2` | Uses before one of your widgets becomes a component |
+| `--runtime` | off | Render the screens with Flutter (see [Runtime mode](#runtime-mode)) |
+| `--[no-]auto-layout` | on | With `--runtime`: rows and columns become auto layout where it keeps Flutter's positions |
+| `--screenshots` | | With `--runtime`: save Flutter's render of each screen (PNG) in this directory |
+| `--preview` | off | Also write `preview.html` (see [Preview](#preview)) |
+| `--flutter` | detected | Flutter command for `--runtime`, e.g. `"fvm flutter"` |
 | `-v, --verbose` | off | Also show info diagnostics |
 
 ## Dart API
@@ -213,9 +231,14 @@ diagnostic, and anything it can't draw becomes a magenta `⚠` placeholder.
   and `CupertinoIcons` are exact vectors read from the fonts the app ships;
   icons from other fonts are placeholders.
   `GridView` cell heights are estimated from the screen width.
-- **Runtime mode** positions everything absolutely (no auto layout), records
-  each screen in the state it starts in, and keeps only the visible part of
-  scrolling content. Pixels from custom painters are images, not vectors.
+- **Runtime mode** records each screen in the state it starts in, and keeps
+  only the visible part of scrolling content. What custom painters draw
+  becomes vectors (shapes, solid fills and strokes; gradients fill their
+  shape as an image). Blurs, blend modes, shadows and text they draw are
+  images: a painter's text can't be read back, so it isn't editable, and
+  text a painter draws without naming a font family renders as boxes in
+  tests. Painters that use layers with filters, vertices or atlases stay one
+  image.
 - **Not supported yet:**
   - tab bars, navigation rails and drawers, dialogs and sheets;
   - Cupertino widgets, Material 2 themes, and input/chip/list tile/navigation

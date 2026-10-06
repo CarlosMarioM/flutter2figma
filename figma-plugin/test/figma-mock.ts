@@ -27,7 +27,8 @@ const images = new Map<string, Uint8Array>();
 /** Figma rejects paints with unknown keys or RGBA in a solid paint's color. */
 function checkPaints(paints: readonly Paint[]): void {
   for (const p of paints) {
-    const gradient = p.type === 'GRADIENT_LINEAR' || p.type === 'GRADIENT_RADIAL';
+    const gradient =
+      p.type === 'GRADIENT_LINEAR' || p.type === 'GRADIENT_RADIAL' || p.type === 'GRADIENT_ANGULAR' || p.type === 'GRADIENT_DIAMOND';
     const allowed = p.type === 'IMAGE' ? IMAGE_PAINT_KEYS : gradient ? GRADIENT_PAINT_KEYS : PAINT_KEYS;
     for (const k of Object.keys(p)) {
       if (!allowed.has(k)) throw new Error(`Unrecognized key "${k}" in paint`);
@@ -72,7 +73,24 @@ export class MockNode {
   explicitModes = new Map<string, string>();
   private sizing: Record<'Horizontal' | 'Vertical', Sizing> = { Horizontal: 'FIXED', Vertical: 'FIXED' };
 
+  /** Degrees, counterclockwise as in Figma; set through [relativeTransform]. */
+  rotation = 0;
+
   constructor(public type: string) {}
+
+  get relativeTransform(): Transform {
+    const a = (-this.rotation * Math.PI) / 180;
+    return [
+      [Math.cos(a), -Math.sin(a), this.x],
+      [Math.sin(a), Math.cos(a), this.y],
+    ];
+  }
+
+  set relativeTransform(t: Transform) {
+    this.x = t[0][2];
+    this.y = t[1][2];
+    this.rotation = (-Math.atan2(t[1][0], t[0][0]) * 180) / Math.PI;
+  }
 
   get fills(): Paint[] {
     return this._fills;

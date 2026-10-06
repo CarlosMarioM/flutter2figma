@@ -10,7 +10,7 @@ import 'dart:typed_data';
 import '../version.dart';
 
 const irFormat = 'flutter2figma/ir';
-const irVersion = 3;
+const irVersion = 4;
 
 class IrDocument {
   IrDocument({
@@ -128,10 +128,13 @@ class IrGradient {
     required this.colors,
     List<double>? stops,
     this.radial = false,
+    this.sweep = false,
+    this.rotation = 0,
     this.begin = (0, 0.5),
     this.end = (1, 0.5),
     this.center = (0.5, 0.5),
     this.radius = 0.5,
+    this.size,
   }) : stops =
            stops ??
            [
@@ -143,6 +146,11 @@ class IrGradient {
   final List<double> stops;
   final bool radial;
 
+  /// Sweep (Figma: angular) around [center], starting at [rotation]
+  /// (radians, clockwise from the right) and going clockwise.
+  final bool sweep;
+  final double rotation;
+
   /// Linear: from [begin] to [end].
   final (double, double) begin, end;
 
@@ -150,14 +158,24 @@ class IrGradient {
   final (double, double) center;
   final double radius;
 
+  /// The size it was painted at, when known: radial and sweep gradients
+  /// keep their shape on a frame whose own size isn't fixed (fill, hug).
+  final (double, double)? size;
+
   Map<String, Object?> toJson() => {
-    'type': radial ? 'radial' : 'linear',
+    'type': sweep
+        ? 'sweep'
+        : radial
+        ? 'radial'
+        : 'linear',
     'colors': [for (final c in colors) c.toJson()],
     'stops': stops,
-    if (!radial) 'begin': [begin.$1, begin.$2],
-    if (!radial) 'end': [end.$1, end.$2],
-    if (radial) 'center': [center.$1, center.$2],
+    if (!radial && !sweep) 'begin': [begin.$1, begin.$2],
+    if (!radial && !sweep) 'end': [end.$1, end.$2],
+    if (radial || sweep) 'center': [center.$1, center.$2],
     if (radial) 'radius': radius,
+    if (sweep) 'rotation': rotation,
+    if (size case (final w, final h)) 'size': [w, h],
   };
 
   static IrGradient? fromJson(Object? json) {
@@ -172,10 +190,16 @@ class IrGradient {
       colors: [for (final c in m['colors'] as List) IrColor.fromJson(c)],
       stops: [for (final s in (m['stops'] as List)) (s as num).toDouble()],
       radial: m['type'] == 'radial',
+      sweep: m['type'] == 'sweep',
+      rotation: _d(m['rotation']) ?? 0,
       begin: point(m['begin'], (0, 0.5)),
       end: point(m['end'], (1, 0.5)),
       center: point(m['center'], (0.5, 0.5)),
       radius: _d(m['radius']) ?? 0.5,
+      size: switch (m['size']) {
+        [final num w, final num h] => (w.toDouble(), h.toDouble()),
+        _ => null,
+      },
     );
   }
 }
@@ -602,6 +626,10 @@ sealed class IrNode {
   /// Only meaningful when the parent is a `stack` frame.
   IrPosition? position;
 
+  /// Degrees, clockwise, around the node's top-left corner (which
+  /// [position] places). Only meaningful when the parent is a `stack` frame.
+  double rotation = 0;
+
   String get type;
 
   Map<String, Object?> toJson() => {
@@ -612,6 +640,7 @@ sealed class IrNode {
     if (origin.isNotEmpty) 'origin': origin,
     if (source != null) 'source': source,
     if (position != null) 'position': position!.toJson(),
+    if (rotation != 0) 'rotation': rotation,
     if (instance != null) 'instance': instance!.toJson(),
     ..._props(),
   };
@@ -629,6 +658,7 @@ sealed class IrNode {
       ..origin = [...(json['origin'] as List? ?? const []).cast<String>()]
       ..source = json['source'] as String?
       ..position = IrPosition.fromJson(json['position'])
+      ..rotation = _d(json['rotation']) ?? 0
       ..instance = IrInstanceRef.fromJson(json['instance']);
     return node;
   }
@@ -687,6 +717,10 @@ class IrFrame extends IrNode {
 
   /// Effect style [shadows] came from, e.g. `Elevation/level1`.
   String? shadowToken;
+
+  /// Blurs what is behind the frame (a `BackdropFilter`), Figma's
+  /// background blur radius.
+  double? backgroundBlur;
   bool clip;
   double? minWidth;
   double? minHeight;
@@ -701,6 +735,7 @@ class IrFrame extends IrNode {
       image == null &&
       stroke == null &&
       shadows.isEmpty &&
+      backgroundBlur == null &&
       !clip;
 
   @override
@@ -727,6 +762,7 @@ class IrFrame extends IrNode {
     if (stroke != null) 'stroke': stroke!.toJson(),
     if (shadows.isNotEmpty) 'shadows': [for (final s in shadows) s.toJson()],
     if (shadowToken != null) 'shadowToken': shadowToken,
+    if (backgroundBlur != null) 'backgroundBlur': backgroundBlur,
     if (clip) 'clip': true,
     'children': [for (final c in children) c.toJson()],
   };
@@ -768,7 +804,7 @@ class IrFrame extends IrNode {
         for (final c in (json['children'] as List? ?? const []))
           IrNode.fromJson(c as Map<String, Object?>),
       ],
-    );
+    )..backgroundBlur = _d(json['backgroundBlur']);
   }
 }
 
@@ -899,27 +935,56 @@ class IrVector extends IrNode {
     super.origin,
     super.source,
     super.position,
+    this.image,
+    this.stroke,
+    this.strokeCap = IrStrokeCap.none,
+    this.evenOdd = false,
   });
 
   /// SVG path data (`M`, `L`, `Q`, `C`, `Z`) in this node's coordinates,
-  /// filled with the nonzero rule.
+  /// filled with the nonzero rule (even-odd when [evenOdd]).
   String path;
-  IrColor fill;
+  IrColor? fill;
+
+  /// Painted inside the path over [fill] (a custom painter's shader,
+  /// rendered to an image the size of the path's bounds).
+  IrImagePaint? image;
+
+  /// Centered on the path, as Flutter strokes it.
+  IrStroke? stroke;
+  IrStrokeCap strokeCap;
+  bool evenOdd;
 
   @override
   String get type => 'vector';
 
   @override
-  Map<String, Object?> _props() => {'path': path, 'fill': fill.toJson()};
+  Map<String, Object?> _props() => {
+    'path': path,
+    if (fill != null) 'fill': fill!.toJson(),
+    if (image != null) 'image': image!.toJson(),
+    if (stroke != null) 'stroke': stroke!.toJson(),
+    if (strokeCap != IrStrokeCap.none) 'strokeCap': strokeCap.name,
+    if (evenOdd) 'evenOdd': true,
+  };
 
   static IrVector _fromJson(Map<String, Object?> json) => IrVector(
     name: json['name'] as String,
     path: json['path'] as String,
-    fill: IrColor.fromJson(json['fill']),
+    fill: json['fill'] == null ? null : IrColor.fromJson(json['fill']),
     width: IrSizing.fromJson(json['width']),
     height: IrSizing.fromJson(json['height']),
+    image: IrImagePaint.fromJson(json['image']),
+    stroke: IrStroke.fromJson(json['stroke']),
+    strokeCap: IrStrokeCap.values.byName(
+      json['strokeCap'] as String? ?? 'none',
+    ),
+    evenOdd: json['evenOdd'] as bool? ?? false,
   );
 }
+
+/// How an open stroke ends (Flutter's `StrokeCap`; `none` is butt).
+enum IrStrokeCap { none, round, square }
 
 // ---------------------------------------------------------------------------
 // Design system

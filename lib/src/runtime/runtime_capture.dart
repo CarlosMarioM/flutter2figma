@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 
 import '../analyzer/project_analyzer.dart';
 import 'harness.dart';
+import 'platform_stubs.dart';
 
 /// One screen as Flutter rendered it: a tree of recorded nodes (see
 /// `harness.dart`), the theme it rendered with, and its images (PNG).
@@ -153,6 +154,14 @@ class RuntimeCapture {
 
     final dir = Directory(p.join(root, '.dart_tool', 'flutter2figma'))
       ..createSync(recursive: true);
+    // Declared assets that are missing (a gitignored .env) stop the build:
+    // stand in for them during the run.
+    final placeholders = missingAssets(root);
+    for (final MapEntry(key: path, value: contents) in placeholders.entries) {
+      File(path)
+        ..createSync(recursive: true)
+        ..writeAsStringSync(contents);
+    }
     final harness = File(p.join(dir.path, 'capture_test.dart'))
       ..writeAsStringSync(source);
     final temp = Directory.systemTemp.createTempSync('flutter2figma_capture');
@@ -229,6 +238,9 @@ class RuntimeCapture {
         log: log,
       );
     } finally {
+      for (final path in placeholders.keys) {
+        if (File(path).existsSync()) File(path).deleteSync();
+      }
       if (harness.existsSync()) harness.deleteSync();
       temp.deleteSync(recursive: true);
     }
@@ -246,7 +258,9 @@ class RuntimeCapture {
   _setup(String root) {
     final packages = packageRoots(root);
     final imports = <String>[];
-    final code = <String>[];
+    // Generic answers first: the fakes below replace them where they know
+    // better.
+    final code = <String>[...pigeonStubs(packages)];
     for (final (i, fake) in _fakes.indexed) {
       final dir = packages[fake.package];
       if (dir == null || !File(p.join(dir, fake.file)).existsSync()) continue;
@@ -327,7 +341,61 @@ final _fakes = [
     ['package:flutter_secure_storage/flutter_secure_storage.dart'],
     (i) => 'fk${i}_0.FlutterSecureStorage.setMockInitialValues({});',
   ),
+  _Fake(
+    'firebase_core_platform_interface',
+    'lib/src/pigeon/test_api.dart',
+    ['package:firebase_core_platform_interface/test.dart'],
+    // No native app exists, and Firebase.initializeApp(options) gets an app
+    // with the options it asked for (a canned one would clash with them).
+    (i) =>
+        'final codec = fk${i}_0.TestFirebaseCoreHostApi.pigeonChannelCodec; '
+        'const api = \'dev.flutter.pigeon.firebase_core_platform_interface.FirebaseCoreHostApi\'; '
+        'final messenger = t.TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger; '
+        'messenger.setMockMessageHandler(\'\$api.initializeCore\', '
+        '(_) async => codec.encodeMessage(<Object?>[<Object?>[]])); '
+        'messenger.setMockMessageHandler(\'\$api.initializeApp\', (message) async { '
+        'final args = codec.decodeMessage(message)! as List<Object?>; '
+        'return codec.encodeMessage(<Object?>[fk${i}_0.CoreInitializeResponse('
+        'name: args[0]! as String, options: args[1]! as fk${i}_0.CoreFirebaseOptions, '
+        'pluginConstants: <String?, Object?>{$_remoteConfigConstants})]); });',
+  ),
+  _Fake(
+    'firebase_remote_config_platform_interface',
+    'lib/src/pigeon/messages.pigeon.dart',
+    const [],
+    (i) =>
+        "_stubPigeon('dev.flutter.pigeon.firebase_remote_config_platform_interface"
+        ".FirebaseRemoteConfigHostApi.getProperties', $_remoteConfigProperties);",
+  ),
+  _Fake(
+    'package_info_plus',
+    'lib/package_info_plus.dart',
+    ['package:package_info_plus/package_info_plus.dart'],
+    (i) =>
+        "fk${i}_0.PackageInfo.setMockInitialValues(appName: 'App', "
+        "packageName: 'com.example.app', version: '1.0.0', buildNumber: '1', "
+        "buildSignature: '');",
+  ),
+  _Fake(
+    'path_provider',
+    'lib/path_provider.dart',
+    const [],
+    // Every directory is a fresh temporary one.
+    (i) =>
+        't.TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger'
+        ".setMockMethodCallHandler(const s.MethodChannel('plugins.flutter.io/path_provider'), "
+        "(_) async => Directory.systemTemp.createTempSync('f2f').path);",
+  ),
 ];
+
+/// Firebase Remote Config's state before its first fetch, which it reads
+/// from the app's plugin constants and from `getProperties`.
+const _remoteConfigProperties =
+    "<String, Object?>{'fetchTimeout': 60, 'minimumFetchInterval': 43200, "
+    "'lastFetchTime': 0, 'lastFetchStatus': 'noFetchYet', "
+    "'parameters': <String, Object?>{}}";
+const _remoteConfigConstants =
+    "'plugins.flutter.io/firebase_remote_config': $_remoteConfigProperties";
 
 /// Package name → root directory, from `.dart_tool/package_config.json`.
 Map<String, String> packageRoots(String projectRoot) {

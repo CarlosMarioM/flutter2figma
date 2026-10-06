@@ -15,6 +15,8 @@
 /// - `/*BUILD*/`: how a screen is built, from `name` and `fallback`.
 library;
 
+import 'vector_canvas.dart';
+
 /// The test file for the given imports and screen builders.
 ///
 /// [setupImports] and [setup] run before the app starts (plugin fakes, the
@@ -42,12 +44,16 @@ String harnessSource({
       "  '$key': () => $value,",
   ].join('\n');
   return _template
-      .replaceFirst('/*IMPORTS*/', imports)
-      .replaceFirst('/*SCREENS*/', builders)
-      .replaceFirst('/*SETUP*/', setup.join('\n'))
-      .replaceFirst('/*WRAP*/', wrap)
-      .replaceFirst('/*BUILD*/', build)
-      .replaceFirst('/*PROVIDERS*/', nested ? _nestedProviders : _noProviders);
+          .replaceFirst('/*IMPORTS*/', imports)
+          .replaceFirst('/*SCREENS*/', builders)
+          .replaceFirst('/*SETUP*/', setup.join('\n'))
+          .replaceFirst('/*WRAP*/', wrap)
+          .replaceFirst('/*BUILD*/', build)
+          .replaceFirst(
+            '/*PROVIDERS*/',
+            nested ? _nestedProviders : _noProviders,
+          ) +
+      vectorCanvasSource;
 }
 
 const _noProviders = r'''
@@ -84,6 +90,7 @@ const _template = r'''
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -109,6 +116,15 @@ final Map<String, f.Widget Function()> _screens = {
 /// Plugin fakes and the app's own test setup, before main() runs.
 Future<void> _setUp() async {
 /*SETUP*/
+}
+
+/// Answers a Pigeon channel with [value], as a plugin would on a device.
+void _stubPigeon(String channel, Object? value) {
+  const codec = s.StandardMessageCodec();
+  t.TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMessageHandler(
+    channel,
+    (_) async => codec.encodeMessage(<Object?>[value]),
+  );
 }
 
 f.Widget _wrap(String name, f.Widget screen) => /*WRAP*/;
@@ -178,10 +194,29 @@ Future<bool> _loadMissingFamilies(r.RenderObject root) async {
 
   visit(root);
   final missing = families.difference(_loadedFamilies);
+  final systemFont = _systemFont(root);
   for (final family in missing) {
     await _loadFamily(family, _robotoFiles.map((b) => Future.value(ByteData.sublistView(b))));
   }
-  return missing.isNotEmpty;
+  return missing.isNotEmpty || systemFont;
+}
+
+/// Text with no family at all (a DefaultTextStyle that replaces the
+/// theme's) is drawn in the device's system font, but tests draw it in
+/// FlutterTest's boxes, and no font loaded later replaces those: give it
+/// Roboto, Android's system font, as a parent style.
+bool _systemFont(r.RenderObject root) {
+  var changed = false;
+  void visit(r.RenderObject o) {
+    if (o is r.RenderParagraph && o.text.style?.fontFamily == null) {
+      o.text = f.TextSpan(style: const f.TextStyle(fontFamily: 'Roboto'), children: [o.text]);
+      changed = true;
+    }
+    o.visitChildren(visit);
+  }
+
+  visit(root);
+  return changed;
 }
 
 // ---------------------------------------------------------------------------
@@ -278,6 +313,35 @@ class _Recorder {
     return id;
   }
 
+  /// What [painter] draws, in its own coordinates (`local` nodes): vectors
+  /// where they show it (see `_VectorCanvas`), else one image of it all.
+  List<Map<String, Object?>> _painted(f.CustomPainter painter, ui.Size size) {
+    if (size.isEmpty) return const [];
+    final name = painter.runtimeType.toString();
+    final canvas = _VectorCanvas(this, size, name);
+    try {
+      painter.paint(canvas, size);
+    } catch (_) {
+      canvas.whole = true;
+    }
+    if (!canvas.whole) return canvas.nodes;
+    for (final n in canvas.nodes) {
+      _pending.remove(n['image']);
+    }
+    final id = _paint(painter, size);
+    if (id == null) return const [];
+    return [
+      {
+        'type': 'image',
+        'name': name,
+        'local': true,
+        'rect': [0.0, 0.0, size.width, size.height],
+        'image': id,
+        'fit': 'fill',
+      },
+    ];
+  }
+
   /// What [o] paints itself, without its children: the part painted
   /// before its children, and the part painted after (on top of them).
   (String?, String?) _paintAlone(r.RenderBox o) {
@@ -319,6 +383,28 @@ class _Recorder {
 
     return (image(layer), image(front));
   }
+
+  /// How [o] is turned on screen (a `Transform.rotate` above it), as its
+  /// angle (radians, clockwise), where its own top-left corner lands, and
+  /// its size there; null when it is upright. `rect` stays its upright
+  /// bounding box.
+  Map<String, Object?>? _rotation(r.RenderBox o) {
+    final m = o.getTransformTo(null).storage;
+    final angle = math.atan2(m[1], m[0]);
+    if (angle.abs() < 1e-3) return null;
+    return {
+      'angle': angle,
+      'origin': [m[12], m[13]],
+      'size': [
+        o.size.width * math.sqrt(m[0] * m[0] + m[1] * m[1]),
+        o.size.height * math.sqrt(m[4] * m[4] + m[5] * m[5]),
+      ],
+    };
+  }
+
+  /// Pixels cut from the screenshot are already turned.
+  Map<String, Object?> _upright(Map<String, Object?> n) =>
+      n..remove('angle')..remove('origin')..remove('size');
 
   /// A region of the screenshot.
   String? _crop(ui.Rect rect) {
@@ -392,7 +478,7 @@ class _Recorder {
           if (kept.isEmpty && n['type'] == 'group') return const <Map<String, Object?>>[];
           return [{...n, 'children': kept}];
         })()
-      else if (n['type'] == 'box' && n['image'] != null && !images.containsKey(n['image']))
+      else if ((n['type'] == 'box' || n['type'] == 'vector') && n['image'] != null && !images.containsKey(n['image']))
         {...n, 'image': null}
       else
         n,
@@ -496,10 +582,12 @@ class _Recorder {
     }
     final rect = _bounds(o);
     final name = _creator(o);
+    final turned = _rotation(o);
     Map<String, Object?> node(String type, [Map<String, Object?> props = const {}]) => {
       'type': type,
       'name': name,
       'rect': _rect(rect),
+      ...?turned,
       ...props,
     };
 
@@ -521,6 +609,13 @@ class _Recorder {
       return [node('group', {'clip': true, 'radius': radius, 'children': children(o)})];
     }
 
+    if (o is r.RenderBackdropFilter && o.enabled) {
+      // Only the sigma of a blur is readable (from its description).
+      final sigma = RegExp(r'blur\(([\d.]+)').firstMatch(o.filter.toString())?.group(1);
+      if (sigma != null) {
+        return [node('group', {'blur': double.parse(sigma), 'children': children(o)})];
+      }
+    }
     if (o is r.RenderParagraph) return [_text(o, node)];
     if (o is r.RenderEditable) {
       return [node('text', _textProps(o.text ?? const f.TextSpan(), o.textAlign, o.maxLines))];
@@ -531,19 +626,15 @@ class _Recorder {
       return [node('image', {'image': _encode(image), 'fit': o.fit?.name ?? 'scaleDown'})];
     }
     if (o is r.RenderCustomPaint) {
-      final back = o.painter == null ? null : _paint(o.painter!, o.size);
+      final back = o.painter == null ? const <Map<String, Object?>>[] : _painted(o.painter!, o.size);
       final front = o.foregroundPainter == null || o.foregroundPainter.runtimeType.toString().contains('Scrollbar')
-          ? null
-          : _paint(o.foregroundPainter!, o.size);
+          ? const <Map<String, Object?>>[]
+          : _painted(o.foregroundPainter!, o.size);
       final inner = children(o);
-      if (back == null && front == null) return inner;
+      if (back.isEmpty && front.isEmpty) return inner;
       return [
         node('group', {
-          'children': [
-            if (back != null) node('image', {'image': back, 'fit': 'fill', 'name': '${name} painter'}),
-            ...inner,
-            if (front != null) node('image', {'image': front, 'fit': 'fill', 'name': '${name} painter'}),
-          ],
+          'children': [...back, ...inner, ...front],
         }),
       ];
     }
@@ -588,6 +679,37 @@ class _Recorder {
       }
     }
 
+    if (o is r.RenderPositionedBox) {
+      // Align / Center around a smaller child: the alignment box is layout
+      // (a chat bubble aligned in a full-width row), so keep it.
+      final inner = children(o);
+      final child = o.child;
+      if (child != null &&
+          child.hasSize &&
+          (child.size.width < o.size.width - 0.5 || child.size.height < o.size.height - 0.5) &&
+          inner.isNotEmpty) {
+        return [node('group', {'align': true, 'children': inner})];
+      }
+      return inner;
+    }
+    if (o is r.RenderFlex) {
+      // Rows and columns: their children carry their flex factor, so the
+      // converter can make `Expanded` children fill in Figma auto layout.
+      final kids = <Map<String, Object?>>[];
+      for (final c in _paintedChildren(o)) {
+        final nodes = record(c);
+        final data = c.parentData;
+        if (data is r.FlexParentData && (data.flex ?? 0) > 0) {
+          for (final n in nodes) {
+            n['flexFactor'] = data.flex;
+          }
+        }
+        kids.addAll(nodes);
+      }
+      if (kids.isEmpty) return const [];
+      return [node('group', {'flex': o.direction.name, 'children': kids})];
+    }
+
     final ink = _ink(o);
     final inkDecoration = ink?.decoration;
     if (inkDecoration != null) {
@@ -617,10 +739,7 @@ class _Recorder {
     if (isLeaf && !_silent.contains(type)) {
       // Something we don't model paints here: keep its pixels.
       final id = _crop(rect);
-      if (id != null) return [node('image', {'image': id, 'fit': 'fill', 'crop': type})];
-    }
-    if (o is r.RenderFlex && inner.length > 1) {
-      return [node('group', {'flex': o.direction.name, 'children': inner})];
+      if (id != null) return [_upright(node('image', {'image': id, 'fit': 'fill', 'crop': type}))];
     }
     return inner;
   }
@@ -641,7 +760,7 @@ class _Recorder {
     if (_createdBy<f.Icon>(o)) {
       // An icon from a font Figma won't have: keep its pixels.
       final id = _crop(_bounds(o));
-      if (id != null) return node('image', {'image': id, 'fit': 'fill'});
+      if (id != null) return _upright(node('image', {'image': id, 'fit': 'fill'}));
     }
     return node('text', _textProps(o.text, o.textAlign, o.maxLines));
   }
@@ -726,6 +845,21 @@ class _Recorder {
       return [(r.x + 1) / 2, (r.y + 1) / 2];
     }
 
+    if (g is f.SweepGradient) {
+      // Stops as fractions of the full turn, starting at [rotation].
+      final span = (g.endAngle - g.startAngle) / (2 * math.pi);
+      final count = g.colors.length;
+      final stops = g.stops ?? [for (var i = 0; i < count; i++) count == 1 ? 0.0 : i / (count - 1)];
+      final transform = g.transform;
+      return {
+        'type': 'sweep',
+        'colors': [for (final c in g.colors) _hex(c)],
+        // A sweep past a full turn: Figma's stops end at 1.
+        'stops': [for (final s in stops) (s * span).clamp(0.0, 1.0)],
+        'center': point(g.center),
+        'rotation': g.startAngle + (transform is f.GradientRotation ? transform.radians : 0),
+      };
+    }
     return {
       'type': g is f.RadialGradient ? 'radial' : 'linear',
       'colors': [for (final c in g.colors) _hex(c)],
@@ -882,6 +1016,9 @@ void main() {
     void save() => File(_out).writeAsStringSync(jsonEncode(result));
     save();
 
+    // flutter_test draws shadows as black outlines; the app draws shadows.
+    // Restored before the test ends: flutter_test checks it.
+    r.debugDisableShadows = false;
     await tester.runAsync(_loadFonts);
     try {
       await tester.runAsync(_setUp);
@@ -913,6 +1050,7 @@ void main() {
 
     if (navigators.evaluate().isEmpty) {
       errors.add('The app has no Navigator to push screens onto');
+      r.debugDisableShadows = true;
       save();
       return;
     }
@@ -1010,6 +1148,7 @@ void main() {
         tester.takeException();
       }
     }
+    r.debugDisableShadows = true;
     save();
   }, timeout: const t.Timeout(Duration(minutes: 10)));
 }

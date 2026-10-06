@@ -1,5 +1,37 @@
 ## Unreleased
 
+`design.json` is now version 4 (rotation, vector strokes and image fills,
+background blurs): update the Figma plugin to import it.
+
+### Preview
+- `export --preview` writes `preview.html`: every screen drawn from
+  `design.json` in the browser beside Flutter's own render (with
+  `--runtime`), a wipe slider between them, and layer outlines by kind
+  (vector, text, image). The app's fonts are embedded.
+
+### Export
+- Radial and sweep gradients on frames that fill or hug kept the shape of a
+  1 px box in Figma (the angle of a sweep was wrong); they now use the size
+  they were painted at.
+- `--no-auto-layout` keeps runtime screens absolutely positioned.
+
+### Runtime mode
+- Custom painters export as vectors: rects, rounded rects, circles, ovals,
+  arcs, lines and paths, with their fills and strokes, in paint order. A
+  gradient fills its shape as an image; blurs, shadows, blend modes and text
+  are drawn alone as images where they paint, and text keeps its rotation.
+- `Transform.rotate` is kept: rotated widgets keep their own size and turn
+  in Figma, instead of an unrotated bounding box.
+- `SweepGradient` becomes a Figma angular gradient, and `BackdropFilter`
+  blurs become background blurs.
+- Apps with plugins start in more cases: every Pigeon plugin call gets an
+  empty answer, and Firebase (core and Remote Config), `package_info_plus`
+  and `path_provider` get fakes. Assets the pubspec lists but that are
+  missing (a gitignored `.env`) are stood in for during the run, with the
+  keys the app reads from `dotenv`.
+- Shadows render as shadows (tests draw them as black outlines), and text
+  with no font family uses Roboto instead of the test font's boxes.
+
 ## 0.2.0
 
 flutter2figma is now labeled **beta**.

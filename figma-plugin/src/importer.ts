@@ -238,7 +238,13 @@ export async function importDesign(api: PluginAPI, doc: DesignDocument): Promise
   const buildVector = (spec: VectorSpec): VectorNode => {
     const vector = api.createVector();
     vector.vectorPaths = spec.vectorPaths;
-    vector.fills = toPaints(api, spec.fills, ds);
+    vector.fills = toPaints(api, spec.fills, ds, imageHash);
+    if (spec.strokes) {
+      vector.strokes = toPaints(api, spec.strokes, ds);
+      vector.strokeWeight = spec.strokeWeight ?? 1;
+      vector.strokeAlign = spec.strokeAlign ?? 'CENTER';
+      vector.strokeCap = spec.strokeCap ?? 'NONE';
+    }
     return vector;
   };
 
@@ -436,8 +442,19 @@ function placeChild(frame: FrameNode, spec: NodeSpec, node: Built): void {
     }
   }
 
-  node.x = p.left ?? (p.right !== undefined ? frame.width - p.right - node.width : 0);
-  node.y = p.top ?? (p.bottom !== undefined ? frame.height - p.bottom - node.height : 0);
+  const x = p.left ?? (p.right !== undefined ? frame.width - p.right - node.width : 0);
+  const y = p.top ?? (p.bottom !== undefined ? frame.height - p.bottom - node.height : 0);
+  if (spec.rotation) {
+    // Turned around its top-left corner, which lands at (x, y).
+    const a = (spec.rotation * Math.PI) / 180;
+    node.relativeTransform = [
+      [Math.cos(a), -Math.sin(a), x],
+      [Math.sin(a), Math.cos(a), y],
+    ];
+  } else {
+    node.x = x;
+    node.y = y;
+  }
   if ('constraints' in node) {
     // STRETCH keeps the child sized with its parent when an ancestor resizes
     // later; otherwise pin it to the side it is positioned from.

@@ -56,6 +56,8 @@ class ExportResult {
 /// exported exactly as drawn; this runs the app's `main()`, so only use it
 /// on trusted code. Screens that can't run are exported statically.
 /// [flutterCommand] is e.g. `['fvm', 'flutter']`, detected when null.
+/// Without [autoLayout], runtime screens keep Flutter's positions absolutely
+/// instead of becoming auto layout.
 Future<ExportResult> exportProject(
   String path, {
   ThemeBrightness? brightness,
@@ -65,12 +67,14 @@ Future<ExportResult> exportProject(
   double screenHeight = 844,
   bool runtime = false,
   List<String>? flutterCommand,
+  bool autoLayout = true,
 }) async {
   final analysis = await FlutterProjectAnalyzer(path).analyze();
   final rendered = runtime
       ? await renderScreens(
           analysis,
           flutterCommand: flutterCommand,
+          autoLayout: autoLayout,
           width: screenWidth.round(),
           height: screenHeight.round(),
         )

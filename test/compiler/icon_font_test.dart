@@ -90,7 +90,7 @@ void main() {
     expect(vector.path, startsWith('M '));
     expect(vector.position!.left, closeTo(5, 0.05));
     expect(vector.width.value, closeTo(14, 0.05));
-    expect(vector.fill.token, 'ColorScheme/onSurfaceVariant');
+    expect(vector.fill!.token, 'ColorScheme/onSurfaceVariant');
   });
 
   test('an icon picked by an unknown condition shows the true branch', () {
