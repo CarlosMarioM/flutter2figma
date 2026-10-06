@@ -1,5 +1,6 @@
 import type { ComponentSpec, DesignDocument, FrameSpec, NodeSpec, TextSpec, VectorSpec } from './design';
 import { DesignSystem, setupDesignSystem, toPaints } from './design-system';
+import { updateNote } from './version';
 
 export const PLUGIN_DATA_KEY = 'flutter2figma';
 
@@ -290,6 +291,7 @@ export async function importDesign(api: PluginAPI, doc: DesignDocument): Promise
   for (const [requested, actual] of fonts) {
     if (requested !== fontKey(actual)) fontSubstitutions[requested] = fontKey(actual);
   }
+  const update = updateNote(doc.generator?.version);
   return {
     page,
     screens,
@@ -300,7 +302,7 @@ export async function importDesign(api: PluginAPI, doc: DesignDocument): Promise
     effectStyles: ds?.effectStyles.size ?? 0,
     components: masters.size,
     instances,
-    notes: ds?.notes ?? [],
+    notes: [update, ...(ds?.notes ?? [])].filter((n): n is string => n !== undefined),
   };
 }
 

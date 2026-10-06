@@ -5,6 +5,7 @@ import { test } from 'node:test';
 
 import { DesignDocument, FrameSpec, parseDesign } from '../src/design';
 import { importDesign, PLUGIN_DATA_KEY } from '../src/importer';
+import { compareVersions, PLUGIN_VERSION } from '../src/version';
 import { createMockFigma, MockFrame, MockInstance, MockNode, MockText, MockVector } from './figma-mock';
 
 // The same golden the Dart CLI test checks, so both sides share one contract.
@@ -550,4 +551,21 @@ test('a rotated child is turned around its placed corner', async () => {
   assert.deepEqual([wheel.x, wheel.y], [10, 20]);
   // Figma measures rotation counterclockwise.
   assert.ok(Math.abs(wheel.rotation + 30) < 1e-9, `rotation ${wheel.rotation}`);
+});
+
+test('a file from a newer flutter2figma asks for a plugin update', async () => {
+  const newer = { ...golden(), generator: { name: 'flutter2figma', version: '99.0.0' } };
+  const { result } = await run(newer);
+  assert.match(result.notes[0], /exported by flutter2figma 99\.0\.0; this plugin is \d+\.\d+\.\d+\. Update the plugin/);
+
+  const same = { ...golden(), generator: { name: 'flutter2figma', version: PLUGIN_VERSION } };
+  const { result: current } = await run(same);
+  assert.ok(current.notes.every((n) => !n.includes('Update the plugin')));
+});
+
+test('versions compare by number, a pre-release before its release', () => {
+  assert.equal(compareVersions('0.10.0', '0.9.1'), 1);
+  assert.equal(compareVersions('0.3.0', '0.3.0'), 0);
+  assert.equal(compareVersions('0.3.0-dev.1', '0.3.0'), -1);
+  assert.equal(compareVersions('1.0.0', '0.99.99'), 1);
 });

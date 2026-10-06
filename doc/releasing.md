@@ -29,13 +29,14 @@ on the GitHub release, and later Figma Community). Both are cut from the same
 
 ## Steps
 
-1. **Version.** Set the new version in all three places:
+1. **Version.** Set the new version in all four places:
 
    | File | Line |
    | --- | --- |
    | `pubspec.yaml` | `version: X.Y.Z` |
    | `lib/src/version.dart` | `const packageVersion = 'X.Y.Z';` |
    | `figma-plugin/package.json` | `"version": "X.Y.Z"` |
+   | `figma-plugin/src/version.ts` | `export const PLUGIN_VERSION = 'X.Y.Z';` |
 
    Rename `## Unreleased` in `CHANGELOG.md` to `## X.Y.Z`. The release notes
    on GitHub are taken from that section. On tag builds,
@@ -103,13 +104,19 @@ on the GitHub release, and later Figma Community). Both are cut from the same
 7. **Figma plugin.**
    - The zip on the GitHub release is what people install today
      (**Plugins → Development → Import plugin from manifest…**).
-   - On Figma Community: in the Figma desktop app, **Plugins → Development →
+   - On Figma Community: Figma has no API for this, so it is done by hand.
+     The release workflow opens an issue, **Publish X.Y.Z to Figma
+     Community**, with the steps, the zip and the version note ready to
+     paste, and a warning when `manifest.json` changed since the last
+     release. In the Figma desktop app, **Plugins → Development →
      Flutter2Figma → Publish** (first time: fill in the form from
      `figma-plugin/listing/LISTING.md`, with `icon.png` and `cover.png`).
-     For an update, publish a new version with a short note from the
-     changelog. Figma reviews it before it goes live.
+     Figma reviews it before it goes live; close the issue once it does.
    - Re-check the data-security answers in `LISTING.md` if the plugin's
      capabilities changed (network access, storage).
+   - People with an older plugin are told to update when they import a file
+     from this version: the plugin compares its version
+     (`figma-plugin/src/version.ts`) with the one that wrote the file.
 
 8. **Open the next version.** Add an empty `## Unreleased` section at the
    top of `CHANGELOG.md` and commit.

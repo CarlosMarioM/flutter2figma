@@ -1,5 +1,6 @@
 import { parseDesign } from './design';
 import { importDesign } from './importer';
+import { updateNote } from './version';
 
 type UiMessage = { type: 'import'; json: string } | { type: 'close' };
 
@@ -15,6 +16,8 @@ figma.ui.onmessage = async (msg: UiMessage) => {
     const result = await importDesign(figma, doc);
     const warnings = doc.diagnostics.filter((d) => d.severity !== 'info');
     figma.notify(`Imported ${result.screens.length} screens, ${result.components} components`);
+    const update = updateNote(doc.generator?.version);
+    if (update) figma.notify(update, { timeout: 10000 });
     figma.ui.postMessage({
       type: 'done',
       screens: result.screens.length,

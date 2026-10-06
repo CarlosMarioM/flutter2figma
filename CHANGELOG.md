@@ -1,5 +1,12 @@
 ## Unreleased
 
+### Figma plugin
+- Importing a `design.json` from a newer flutter2figma says so and links to
+  the latest plugin; the import still goes ahead. The plugin stays offline:
+  it compares its version with the one that wrote the file.
+- Each release opens a "Publish X.Y.Z to Figma Community" issue with the
+  steps and the version note, since Figma has no publishing API.
+
 ## 0.3.0
 
 `design.json` is now version 4 (rotation, vector strokes and image fills,

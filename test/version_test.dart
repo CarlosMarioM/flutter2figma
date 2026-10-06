@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter2figma/flutter2figma.dart';
@@ -11,6 +12,18 @@ void main() {
       multiLine: true,
     ).firstMatch(pubspec)!.group(1);
     expect(packageVersion, version);
+
+    // The Figma plugin ships with the same version; it compares it with the
+    // version that wrote a design.json to ask for an update.
+    final plugin =
+        jsonDecode(File('figma-plugin/package.json').readAsStringSync())
+            as Map<String, Object?>;
+    expect(plugin['version'], version, reason: 'figma-plugin/package.json');
+    expect(
+      File('figma-plugin/src/version.ts').readAsStringSync(),
+      contains("export const PLUGIN_VERSION = '$version';"),
+      reason: 'figma-plugin/src/version.ts',
+    );
 
     var changelog = File('CHANGELOG.md').readAsStringSync();
     // Work in progress is listed under "## Unreleased" until it's released;
