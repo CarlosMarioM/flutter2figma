@@ -239,7 +239,10 @@ test('positions stack children and absolute children in auto layout', async () =
 test('rejects files that are not design.json', () => {
   assert.throws(() => parseDesign('{"format":"flutter2figma/ir"}'), /Not a Flutter2Figma design.json/);
   assert.throws(() => parseDesign('nope'), /Not valid JSON/);
-  assert.throws(() => parseDesign('{"format":"flutter2figma/design","version":99}'), /newer than this plugin/);
+  assert.throws(
+    () => parseDesign('{"format":"flutter2figma/design","version":99}'),
+    /needs a newer Flutter2Figma plugin \(file format 99; this plugin, \d+\.\d+\.\d+, reads up to \d+\)\. Update it from Figma Community \(https:\/\/www\.figma\.com\/community\/plugin\//,
+  );
 });
 
 // https://github.com/CarlosMarioM/flutter2figma/issues/1
@@ -556,11 +559,14 @@ test('a rotated child is turned around its placed corner', async () => {
 test('a file from a newer flutter2figma asks for a plugin update', async () => {
   const newer = { ...golden(), generator: { name: 'flutter2figma', version: '99.0.0' } };
   const { result } = await run(newer);
-  assert.match(result.notes[0], /exported by flutter2figma 99\.0\.0; this plugin is \d+\.\d+\.\d+\. Update the plugin/);
+  assert.match(
+    result.notes[0],
+    /exported by flutter2figma 99\.0\.0; this plugin is \d+\.\d+\.\d+\. To import everything in it, update the plugin\. Update it from Figma Community/,
+  );
 
   const same = { ...golden(), generator: { name: 'flutter2figma', version: PLUGIN_VERSION } };
   const { result: current } = await run(same);
-  assert.ok(current.notes.every((n) => !n.includes('Update the plugin')));
+  assert.ok(current.notes.every((n) => !n.includes('update the plugin')));
 });
 
 test('versions compare by number, a pre-release before its release', () => {

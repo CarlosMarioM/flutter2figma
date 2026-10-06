@@ -83,7 +83,12 @@ Next:
 > also has it as a zip (`flutter2figma-figma-plugin-<version>.zip`): unzip
 > it and choose **Plugins → Development → Import plugin from manifest…** in
 > the Figma desktop app. If a file needs a newer plugin, the plugin says so.
-> The source is in [`figma-plugin/`](figma-plugin/).
+> The plugin's window shows its version.
+>
+> **Remove old copies** you imported from zips, so only one Flutter2Figma
+> shows up: **Plugins → Development → Manage plugins in development**, then
+> remove the ones you don't use. The source is in
+> [`figma-plugin/`](figma-plugin/).
 
 ## What you get in Figma
 

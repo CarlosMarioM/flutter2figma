@@ -1,5 +1,14 @@
 ## Unreleased
 
+### Figma plugin
+- The plugin's window shows its version, and so does the import
+  notification, so several installed copies can be told apart.
+- "Update the plugin" messages point to Figma Community first, with the
+  GitHub release as the fallback.
+
+### Export
+- The end-of-export summary says which plugin version the file needs.
+
 ## 0.4.0
 
 **`flutter2figma export` now runs the app by default** (runtime mode) and

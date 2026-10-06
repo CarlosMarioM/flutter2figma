@@ -10,6 +10,12 @@ GitHub release.
 
 ## Install (users)
 
+Install it from
+[Figma Community](https://www.figma.com/community/plugin/1687559887675755742).
+
+A release can reach Figma Community a few days after it's out (Figma reviews
+each version). To use a new version before then:
+
 1. Download `flutter2figma-figma-plugin-<version>.zip` from the
    [latest release](https://github.com/CarlosMarioM/flutter2figma/releases/latest)
    and unzip it.
@@ -17,6 +23,9 @@ GitHub release.
    from manifest…** and pick `manifest.json`.
 3. Run **Plugins → Development → Flutter2Figma** and drop a `design.json` on
    its window.
+
+The plugin's window shows its version. To remove copies you no longer use,
+choose **Plugins → Development → Manage plugins in development**.
 
 ## Develop
 

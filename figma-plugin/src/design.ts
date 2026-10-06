@@ -2,7 +2,7 @@
 // (lib/src/figma/renderer.dart in the Dart package). Property names and enum values
 // mirror the Figma Plugin API.
 
-import { RELEASES_URL } from './version';
+import { PLUGIN_VERSION, UPDATE_HELP } from './version';
 
 export const DESIGN_FORMAT = 'flutter2figma/design';
 export const DESIGN_VERSION = 4;
@@ -185,8 +185,8 @@ export function parseDesign(text: string): DesignDocument {
   }
   if (doc.version > DESIGN_VERSION) {
     throw new Error(
-      `design.json version ${doc.version} is newer than this plugin supports (${DESIGN_VERSION}). ` +
-        `Update the plugin: ${RELEASES_URL}`,
+      `This design.json needs a newer Flutter2Figma plugin (file format ${doc.version}; ` +
+        `this plugin, ${PLUGIN_VERSION}, reads up to ${DESIGN_VERSION}). ${UPDATE_HELP}.`,
     );
   }
   return doc;

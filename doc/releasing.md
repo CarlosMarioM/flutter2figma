@@ -13,8 +13,9 @@ on the GitHub release, and later Figma Community). Both are cut from the same
 - **`design.json` / IR format:** a separate integer (`designVersion` in
   `lib/src/figma/renderer.dart`, `irVersion` in `lib/src/ir/model.dart`,
   `DESIGN_VERSION` in `figma-plugin/src/design.ts`). Bump it when an older
-  plugin would misread new files; the plugin then asks people to update. Say
-  so in the changelog.
+  plugin would misread new files; the plugin then asks people to update. Set
+  `minPluginVersion` (next to `designVersion`) to the release being made: the
+  export tells people which plugin they need. Say so in the changelog.
 - **pub.dev versions are permanent.** A published version can't be deleted
   or replaced, only retracted (within 7 days) and superseded. Check twice.
 

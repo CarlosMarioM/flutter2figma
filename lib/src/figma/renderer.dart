@@ -8,6 +8,11 @@ import '../version.dart';
 const designFormat = 'flutter2figma/design';
 const designVersion = 4;
 
+/// The first Figma plugin release that reads [designVersion]. Bump both
+/// together (see doc/releasing.md): the export tells people which plugin
+/// they need.
+const minPluginVersion = '0.3.0';
+
 /// Renders IR into `design.json`: a tree of nodes whose properties use Figma
 /// Plugin API names and enums, so the plugin can apply them almost verbatim.
 ///

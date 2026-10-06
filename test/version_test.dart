@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter2figma/figma.dart';
 import 'package:flutter2figma/flutter2figma.dart';
 import 'package:test/test.dart';
 
@@ -23,6 +24,12 @@ void main() {
       File('figma-plugin/src/version.ts').readAsStringSync(),
       contains("export const PLUGIN_VERSION = '$version';"),
       reason: 'figma-plugin/src/version.ts',
+    );
+    // The exporter and the plugin agree on the file format version.
+    expect(
+      File('figma-plugin/src/design.ts').readAsStringSync(),
+      contains('export const DESIGN_VERSION = $designVersion;'),
+      reason: 'figma-plugin/src/design.ts',
     );
 
     var changelog = File('CHANGELOG.md').readAsStringSync();

@@ -11,6 +11,7 @@
         background: var(--figma-color-bg);
       }
       h1 { font-size: 13px; font-weight: 600; margin: 0 0 4px; }
+      h1 small { font-weight: 400; color: var(--figma-color-text-secondary); margin-left: 4px; }
       p { margin: 0 0 12px; color: var(--figma-color-text-secondary); }
       code { font-family: ui-monospace, monospace; font-size: 11px; }
       #drop {
@@ -28,8 +29,8 @@
     </style>
   </head>
   <body>
-    <h1>Flutter2Figma</h1>
-    <p>Run <code>flutter2figma export</code>, then drop <code>design.json</code> here.</p>
+    <h1>Flutter2Figma <small id="version"></small></h1>
+    <p>Run <code>flutter2figma</code> in your Flutter app, then drop <code>build/flutter2figma/design.json</code> here.</p>
     <div id="drop">Drop design.json or click to choose</div>
     <input id="file" type="file" accept=".json,application/json" hidden />
     <div id="status"></div>
@@ -59,6 +60,10 @@
       onmessage = (event) => {
         const msg = event.data.pluginMessage;
         if (!msg) return;
+        if (msg.type === 'version') {
+          document.getElementById('version').textContent = msg.version;
+          return;
+        }
         if (msg.type === 'error') {
           status.className = 'error';
           status.textContent = msg.message;

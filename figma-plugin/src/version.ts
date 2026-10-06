@@ -2,8 +2,10 @@
  * equal to package.json and the Dart package by test/version_test.dart. */
 export const PLUGIN_VERSION = '0.4.0';
 
-/** Where people get a newer plugin. */
+/** Where people get a newer plugin: Figma Community, or a release's zip. */
+export const COMMUNITY_URL = 'https://www.figma.com/community/plugin/1687559887675755742';
 export const RELEASES_URL = 'https://github.com/CarlosMarioM/flutter2figma/releases/latest';
+export const UPDATE_HELP = `Update it from Figma Community (${COMMUNITY_URL}) or, if the new version isn't there yet, from ${RELEASES_URL}`;
 
 /**
  * A note naming the screens exported from the code alone (not rendered by
@@ -48,6 +50,6 @@ export function updateNote(generatorVersion: string | undefined): string | undef
   if (!generatorVersion || compareVersions(generatorVersion, PLUGIN_VERSION) <= 0) return undefined;
   return (
     `This file was exported by flutter2figma ${generatorVersion}; this plugin is ${PLUGIN_VERSION}. ` +
-    `Update the plugin to import everything in it: ${RELEASES_URL}`
+    `To import everything in it, update the plugin. ${UPDATE_HELP}.`
   );
 }

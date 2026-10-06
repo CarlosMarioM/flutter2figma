@@ -399,7 +399,9 @@ class ExportCommand extends _ProjectCommand {
         '  Import:  in Figma, Plugins → Flutter2Figma, then drop '
         '${shown(designFile.path)}',
       )
-      ..writeln('           Get the plugin: $pluginUrl');
+      ..writeln(
+        '           Needs the plugin $minPluginVersion or later: $pluginUrl',
+      );
     return 0;
   }
 
