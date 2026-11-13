@@ -6,8 +6,9 @@
 
 > **Beta.** flutter2figma works on real apps, but not every widget or app
 > setup is covered yet. Expect gaps, and please
-> [report them](https://github.com/CarlosMarioM/flutter2figma/issues) with the
-> widget or screen that didn't come out right.
+> [report them](https://github.com/CarlosMarioM/flutter2figma/issues/new/choose)
+> with the widget or screen that didn't come out right. The guided template asks
+> for the version, export mode (runtime or static), widget and a screenshot.
 
 Convert a Flutter UI that already exists into an **editable** Figma design.
 You get frames, text layers, vector icons, color variables with light/dark
