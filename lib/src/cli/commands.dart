@@ -374,7 +374,7 @@ class ExportCommand extends _ProjectCommand {
         'styles, ${ds.components.length} components ($variants variants)',
       );
     }
-    _summary(ir.screens.length, rendered);
+    writeExportSummary(stdout, ir.screens.length, rendered);
     final open = Platform.isMacOS
         ? 'open'
         : Platform.isWindows
@@ -405,55 +405,68 @@ class ExportCommand extends _ProjectCommand {
       );
     return 0;
   }
+}
 
-  /// How exact the export is: which screens Flutter rendered, which come
-  /// from the code alone and why, and what would fix them.
-  void _summary(int total, RuntimeScreens? rendered) {
-    stdout.writeln();
-    if (rendered == null) {
-      stdout
-        ..writeln('! Exported from the code alone (--static): what the app')
-        ..writeln('  decides at runtime (state, translations, data, custom')
-        ..writeln('  painting) shows as placeholders. Leave out --static to')
-        ..writeln('  run the app and export exactly what each screen draws.');
-      return;
-    }
-    final fallbacks = rendered.fallbacks;
-    if (fallbacks.isEmpty) {
-      stdout.writeln('  All $total screens rendered by Flutter.');
-      return;
-    }
-    stdout.writeln(
-      '  ${total - fallbacks.length} of $total screens rendered by Flutter.',
-    );
-    // One reason for every screen: the app itself didn't start.
-    final reasons = fallbacks.values.toSet();
-    if (fallbacks.length == total && reasons.length == 1) {
-      stdout
-        ..writeln('! All screens exported from the code alone, so they may')
-        ..writeln('  show placeholders. The app didn\'t start in a test:')
-        ..writeln('    ${reasons.single}');
-      // The app's own startup failed (not a missing Flutter): setUp() in
-      // the setup file is where that gets fixed.
-      final startup = RegExp(r'^(main\(\)|setUp|The app has no|flutter test)');
-      if (startup.hasMatch(reasons.single)) {
-        stdout
-          ..writeln('  test/flutter2figma_setup.dart can set things up before')
-          ..writeln('  main() runs: see "Runtime mode" in the README.');
-      }
-      return;
-    }
-    stdout.writeln('! Exported from the code alone (may show placeholders):');
-    for (final MapEntry(key: name, value: reason) in fallbacks.entries) {
-      stdout.writeln('    $name: $reason');
-    }
-    if (reasons.contains('it needs constructor arguments')) {
-      stdout
-        ..writeln('  Build screens that need arguments in')
-        ..writeln('  test/flutter2figma_setup.dart (buildScreen): see')
-        ..writeln('  "Runtime mode" in the README.');
-    }
+/// How exact the export is: which screens Flutter rendered, which come
+/// from the code alone and why (grouped by cause), and what would fix them.
+void writeExportSummary(StringSink out, int total, RuntimeScreens? rendered) {
+  out.writeln();
+  if (rendered == null) {
+    out
+      ..writeln('! Exported from the code alone (--static): what the app')
+      ..writeln('  decides at runtime (state, translations, data, custom')
+      ..writeln('  painting) shows as placeholders. Leave out --static to')
+      ..writeln('  run the app and export exactly what each screen draws.');
+    return;
   }
+  final fallbacks = rendered.fallbacks;
+  if (fallbacks.isEmpty) {
+    out.writeln('  All $total screens rendered by Flutter.');
+    return;
+  }
+  out.writeln(
+    '  ${total - fallbacks.length} of $total screens rendered by Flutter.',
+  );
+  // One reason for every screen: the app itself didn't start.
+  final reasons = fallbacks.values.toSet();
+  if (fallbacks.length == total && reasons.length == 1) {
+    final e = explainFallback(reasons.single);
+    out
+      ..writeln('! All screens exported from the code alone, so they may')
+      ..writeln('  show placeholders. ${e.category}:')
+      ..writeln('    ${_oneLine(reasons.single)}')
+      ..writeln('  Fix: ${e.hint} See "Runtime mode" in the README.');
+    return;
+  }
+  // Group by category, in order of first appearance.
+  final groups = <String, List<MapEntry<String, String>>>{};
+  final explained = <String, FallbackExplanation>{};
+  for (final entry in fallbacks.entries) {
+    final e = explainFallback(entry.value);
+    explained.putIfAbsent(e.category, () => e);
+    groups.putIfAbsent(e.category, () => []).add(entry);
+  }
+  out.writeln('! Exported from the code alone (may show placeholders):');
+  for (final MapEntry(key: category, value: entries) in groups.entries) {
+    final e = explained[category]!;
+    final unknown = category == unknownFallbackCategory;
+    out.writeln(
+      unknown
+          ? '  $category (${entries.length}):'
+          : '  $category (${entries.length}): ${e.cause}',
+    );
+    for (final MapEntry(key: name, value: reason) in entries) {
+      // Known causes are explained above; unknown ones show their own error.
+      out.writeln(unknown ? '    $name: ${_oneLine(reason)}' : '    $name');
+    }
+    out.writeln('    Fix: ${e.hint}');
+  }
+  out.writeln('  See "Runtime mode" in the README.');
+}
+
+String _oneLine(String s) {
+  final line = s.split('\n').first.trim();
+  return line.length > 120 ? '${line.substring(0, 117)}...' : line;
 }
 
 class ThemeCommand extends _ProjectCommand {
