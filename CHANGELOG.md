@@ -1,5 +1,10 @@
 ## Unreleased
 
+### Improvements
+- The summary groups screens that fell back to static export by cause
+  (constructor arguments, startup failure, missing Navigator, plugin,
+  provider/bloc, timeout) and gives one concrete fix per group.
+
 ## 0.4.2
 
 ### Fixes

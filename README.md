@@ -57,12 +57,16 @@ do next:
 ✓ Exported 12 screens, 333 layers
   46 color variables (Light / Dark), 15 text styles, 5 effect styles, 0 components (0 variants)
 
-  11 of 12 screens rendered by Flutter.
+  9 of 12 screens rendered by Flutter.
 ! Exported from the code alone (may show placeholders):
-    AiInsightsScreen: it needs constructor arguments
-  Build screens that need arguments in
-  test/flutter2figma_setup.dart (buildScreen): see
-  "Runtime mode" in the README.
+  Needs constructor arguments (1): the constructor takes arguments that can't be made up
+    AiInsightsScreen
+    Fix: Build it in buildScreen in test/flutter2figma_setup.dart.
+  Provider or bloc not found (2): the screen reads a provider/bloc no ancestor gives it
+    CartScreen
+    CheckoutScreen
+    Fix: Provide it in wrapScreen in test/flutter2figma_setup.dart.
+  See "Runtime mode" in the README.
 
 Next:
   Check:   open build/flutter2figma/preview.html   (each screen beside the app, in the browser)
@@ -159,8 +163,20 @@ Widget? buildScreen(String name) => switch (name) {
 };
 ```
 
-The export lists every screen it couldn't render and why (`-v` shows the
-rest). Add `--screenshots shots/` to also save Flutter's own render of each
+The export lists every screen it couldn't render, grouped by why, with one
+fix per group (`-v` shows the rest):
+
+| Why a screen is static | Fix |
+| --- | --- |
+| Needs constructor arguments | Build it in `buildScreen` |
+| The app didn't start in a test (`main()` / `setUp` threw) | Mock what it needs in `setUp` |
+| Missing Navigator | Wrap it in a `MaterialApp` in `wrapScreen` |
+| Plugin or platform channel | Mock the channel or service in `setUp` |
+| Provider or bloc not found | Provide it in `wrapScreen` |
+| Timed out | Fake the slow call or stop the animation in `setUp` |
+| Unknown error | The raw first line of the error is shown; run with `-v` |
+
+All of these live in `test/flutter2figma_setup.dart`. Add `--screenshots shots/` to also save Flutter's own render of each
 screen, to compare with the Figma import.
 
 ### Preview
