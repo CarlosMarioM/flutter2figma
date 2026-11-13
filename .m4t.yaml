@@ -1,0 +1,16 @@
+name: flutter2figma
+stack: [dart, flutter, node]
+commands:
+  test: 'fvm dart test'
+  run: 'dart run'
+  build: '((cd example && flutter build) && (cd figma-plugin && npm run build)) && (cd showcase && flutter build)'
+  format: 'fvm dart format .'
+  setup: 'fvm dart pub get'
+  generate: TODO
+license: MIT
+docs: TODO
+agents: []
+status: active
+tools:
+  node: lts
+github: CarlosMarioM
