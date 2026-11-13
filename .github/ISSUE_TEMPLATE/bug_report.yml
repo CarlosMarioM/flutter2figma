@@ -1,14 +1,37 @@
 name: Export or import problem
-description: Something exported wrong, is missing, or fails in Figma.
+description: A widget or screen came out wrong, is missing, or fails in Figma.
 labels: [bug]
 body:
+  - type: input
+    id: widget
+    attributes:
+      label: Widget or screen that failed
+      description: Name of the widget or screen (e.g. `DropdownButton`, `LoginScreen`).
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Export mode
+      description: Runtime means exporting from the running app; static means exporting without running it.
+      options:
+        - Runtime (running app)
+        - Static (without running the app)
+        - Not sure
+    validations:
+      required: true
   - type: textarea
     id: what
     attributes:
       label: What happened
-      description: What you expected to see in Figma, and what you got instead. Screenshots of both help a lot.
+      description: What you expected to see in Figma, and what you got instead.
     validations:
       required: true
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshots
+      description: Paste or drag screenshots of the Flutter app and of the Figma result.
   - type: textarea
     id: code
     attributes:
